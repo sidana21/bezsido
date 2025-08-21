@@ -20,7 +20,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen max-w-7xl mx-auto bg-white dark:bg-gray-800 shadow-2xl">
+    <div className="flex h-screen max-w-7xl mx-auto bg-white dark:bg-gray-800 shadow-2xl pb-16">
       {/* Mobile overlay */}
       {isMobile && sidebarVisible && selectedChatId && (
         <div 
