@@ -110,7 +110,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             variant="ghost"
             size="icon"
             onClick={onToggleSidebar}
-            className="md:hidden ml-3 text-gray-600 dark:text-gray-300"
+            className="sm:hidden ml-3 text-gray-600 dark:text-gray-300 mobile-touch-target"
             data-testid="button-toggle-sidebar"
           >
             <ArrowRight className="h-5 w-5" />
@@ -139,11 +139,11 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           </div>
         </div>
         
-        <div className="flex items-center space-x-4 space-x-reverse">
+        <div className="flex items-center space-x-2 sm:space-x-4 space-x-reverse">
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target hidden sm:flex"
             data-testid="button-search"
           >
             <Search className="h-5 w-5" />
@@ -151,7 +151,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target"
             data-testid="button-call"
           >
             <Phone className="h-5 w-5" />
@@ -159,7 +159,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target hidden sm:flex"
             data-testid="button-video-call"
           >
             <Video className="h-5 w-5" />
@@ -167,7 +167,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target"
             data-testid="button-menu"
           >
             <MoreVertical className="h-5 w-5" />
@@ -177,7 +177,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
       {/* Messages Area */}
       <div 
-        className="flex-1 overflow-y-auto chat-scroll p-4 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800" 
+        className="flex-1 overflow-y-auto chat-scroll p-3 sm:p-4 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800" 
         style={{
           backgroundImage: `url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><defs><pattern id='grain' width='100' height='100' patternUnits='userSpaceOnUse'><circle cx='25' cy='25' r='1' fill='%23f3f4f6' opacity='0.1'/><circle cx='75' cy='75' r='1' fill='%23f3f4f6' opacity='0.1'/><circle cx='50' cy='10' r='0.5' fill='%23f3f4f6' opacity='0.05'/></pattern></defs><rect width='100' height='100' fill='url(%23grain)'/></svg>")`,
         }}
@@ -212,12 +212,12 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       </div>
 
       {/* Message Input Area */}
-      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex items-center space-x-3 space-x-reverse">
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4">
+        <div className="flex items-center space-x-2 sm:space-x-3 space-x-reverse">
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mobile-touch-target"
             data-testid="button-emoji"
           >
             <Smile className="h-5 w-5" />
@@ -226,7 +226,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mobile-touch-target"
             data-testid="button-attach"
           >
             <Paperclip className="h-5 w-5" />
@@ -236,7 +236,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <Input
               type="text"
               placeholder="اكتب رسالة..."
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full py-3 px-5 focus:border-[var(--whatsapp-primary)] focus:bg-white dark:focus:bg-gray-600"
+              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full py-2 sm:py-3 px-4 sm:px-5 focus:border-[var(--whatsapp-primary)] focus:bg-white dark:focus:bg-gray-600 text-base"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -248,7 +248,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             onClick={handleSendMessage}
             disabled={!messageText.trim() || sendMessageMutation.isPending}
-            className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-3 rounded-full shadow-lg"
+            className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-2 sm:p-3 rounded-full shadow-lg mobile-touch-target"
             size="icon"
             data-testid="button-send"
           >

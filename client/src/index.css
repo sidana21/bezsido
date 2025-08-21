@@ -154,4 +154,32 @@
     0%, 60%, 100% { opacity: 0.3; }
     30% { opacity: 1; }
   }
+
+  /* Mobile-specific optimizations */
+  @media (max-width: 640px) {
+    .mobile-touch-target {
+      @apply min-h-[44px] min-w-[44px];
+    }
+    
+    .mobile-text-size {
+      @apply text-base;
+    }
+    
+    .mobile-padding {
+      @apply p-4;
+    }
+    
+    .mobile-spacing {
+      @apply space-y-3;
+    }
+  }
+  
+  /* Support for dynamic viewport height */
+  .dvh-full {
+    height: 100dvh;
+  }
+  
+  .dvh-screen {
+    min-height: 100dvh;
+  }
 }

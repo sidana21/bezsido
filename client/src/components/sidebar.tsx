@@ -111,7 +111,7 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
   if (!isVisible) return null;
 
   return (
-    <div className="w-full md:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="w-full sm:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
       {/* Header */}
       <div className="bg-[var(--whatsapp-secondary)] dark:bg-gray-700 p-4 flex items-center justify-between">
         <Avatar className="w-10 h-10 border-2 border-white" data-testid="user-avatar">
@@ -193,7 +193,7 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
               }`}
               onClick={() => {
                 onChatSelect(chat.id);
-                if (window.innerWidth < 768) {
+                if (window.innerWidth < 640) {
                   onToggle();
                 }
               }}

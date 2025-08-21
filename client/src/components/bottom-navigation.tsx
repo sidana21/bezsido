@@ -28,9 +28,9 @@ export function BottomNavigation() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 sm:hidden">
       <div className="max-w-7xl mx-auto px-2">
-        <nav className="flex justify-around items-center h-16">
+        <nav className="flex justify-around items-center h-16 min-h-[64px]">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -38,7 +38,7 @@ export function BottomNavigation() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-colors",
+                  "flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-colors min-h-[44px] min-w-[44px]",
                   item.isActive 
                     ? "text-whatsapp-green bg-green-50 dark:bg-green-950/20" 
                     : "text-gray-600 dark:text-gray-400 hover:text-whatsapp-green hover:bg-gray-50 dark:hover:bg-gray-700"

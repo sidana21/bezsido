@@ -20,7 +20,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen max-w-7xl mx-auto bg-white dark:bg-gray-800 shadow-2xl pb-16">
+    <div className="flex h-[100dvh] max-w-7xl mx-auto bg-white dark:bg-gray-800 shadow-2xl pb-16 sm:pb-16">
       {/* Mobile overlay */}
       {isMobile && sidebarVisible && selectedChatId && (
         <div 
@@ -33,7 +33,7 @@ export default function Chat() {
       <div className={`${
         isMobile 
           ? sidebarVisible 
-            ? 'fixed inset-y-0 right-0 z-50 w-full'
+            ? 'fixed inset-y-0 right-0 z-50 w-full h-[100dvh]'
             : 'hidden'
           : sidebarVisible 
             ? 'block'
