@@ -1,8 +1,8 @@
-# WhatsApp Clone
+# BizChat
 
 ## Overview
 
-A full-stack WhatsApp-style messaging application built with React, TypeScript, and Express. The application features real-time chat functionality with a modern, responsive UI that closely mimics WhatsApp's design and user experience. It supports individual and group chats, message status tracking (sent, delivered, read), and includes Arabic language support.
+A full-stack business messaging application built with React, TypeScript, and Express. BizChat combines messaging functionality with commerce features, providing a modern, responsive UI for business communication and trade. The application supports individual and group chats, stories/status updates for product promotion, message status tracking (sent, delivered, read), and includes Arabic language support for Middle Eastern markets.
 
 ## User Preferences
 

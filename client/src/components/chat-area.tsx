@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageBubble } from "./message-bubble";
 import { Message, User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import bizChatLogo from "@/assets/bizchat-logo.png";
 
 interface ChatAreaProps {
   chatId: string | null;
@@ -38,9 +39,13 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!chatId) throw new Error("No chat selected");
-      return apiRequest("POST", `/api/chats/${chatId}/messages`, {
-        content,
-        messageType: "text",
+      return apiRequest(`/api/chats/${chatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          messageType: "text",
+        }),
       });
     },
     onSuccess: () => {
@@ -73,12 +78,12 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     return (
       <div className="flex-1 flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 text-center hidden lg:flex">
         <div className="max-w-md">
-          <div className="w-20 h-20 bg-[var(--whatsapp-primary)] rounded-full flex items-center justify-center mx-auto mb-6">
-            <MessageCircle className="text-white text-3xl" />
+          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <img src={bizChatLogo} alt="BizChat" className="w-16 h-16 object-contain" />
           </div>
-          <h2 className="text-2xl font-light text-gray-800 dark:text-gray-200 mb-4">واتساب ويب</h2>
+          <h2 className="text-2xl font-light text-gray-800 dark:text-gray-200 mb-4">BizChat</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            أرسل واستقبل الرسائل بدون الحاجة للهاتف متصلاً بالإنترنت.
+            منصة التواصل التجاري الذكية - تواصل مع عملائك وأنجز صفقاتك.
           </p>
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -203,7 +208,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <MessageBubble
               key={message.id}
               message={message}
-              isOwn={message.senderId === currentUser?.id}
+              isOwn={message.senderId === (currentUser as any)?.id}
             />
           ))
         )}
