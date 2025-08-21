@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   name: text("name").notNull(),
   avatar: text("avatar"),
+  location: text("location").notNull(), // المنطقة الجغرافية
   isOnline: boolean("is_online").default(false),
   lastSeen: timestamp("last_seen").defaultNow(),
 });
@@ -48,6 +49,7 @@ export const insertChatSchema = createInsertSchema(chats).omit({
 export const stories = pgTable("stories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  location: text("location").notNull(), // المنطقة الجغرافية للحالة
   content: text("content"),
   imageUrl: text("image_url"),
   videoUrl: text("video_url"),

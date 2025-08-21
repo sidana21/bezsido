@@ -48,6 +48,7 @@ export class MemStorage implements IStorage {
       username: "me",
       name: "أنا",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
+      location: "تندوف",
       isOnline: true,
       lastSeen: new Date(),
     };
@@ -57,6 +58,7 @@ export class MemStorage implements IStorage {
       username: "sarah",
       name: "سارة أحمد",
       avatar: "https://pixabay.com/get/g5ede2eab7ebacb14e91863d35be3f093549755f13131724e5e19c6a49a45921c44adc3a540b01f28abed2c4568cf8e907881a83c9d0679b2c22c054985afc7d2_1280.jpg",
+      location: "تندوف",
       isOnline: true,
       lastSeen: new Date(),
     };
@@ -66,6 +68,7 @@ export class MemStorage implements IStorage {
       username: "ahmed",
       name: "أحمد محمد",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
+      location: "وهران",
       isOnline: false,
       lastSeen: new Date(Date.now() - 86400000), // 1 day ago
     };
@@ -75,6 +78,7 @@ export class MemStorage implements IStorage {
       username: "fatima",
       name: "فاطمة علي",
       avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
+      location: "تندوف",
       isOnline: true,
       lastSeen: new Date(),
     };
@@ -298,6 +302,7 @@ export class MemStorage implements IStorage {
       {
         id: "story-sarah-1",
         userId: "sarah-user",
+        location: "تندوف",
         content: "في رحلة جميلة 🌟",
         imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=600",
         videoUrl: null,
@@ -311,6 +316,7 @@ export class MemStorage implements IStorage {
       {
         id: "story-fatima-1",
         userId: "fatima-user",
+        location: "تندوف",
         content: "يوم رائع! ☀️",
         imageUrl: null,
         videoUrl: null,
@@ -324,6 +330,7 @@ export class MemStorage implements IStorage {
       {
         id: "story-mariam-1",
         userId: "mariam-user",
+        location: "الجزائر",
         content: null,
         imageUrl: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=600",
         videoUrl: null,
@@ -357,6 +364,7 @@ export class MemStorage implements IStorage {
       ...insertUser, 
       id,
       avatar: insertUser.avatar ?? null,
+      location: insertUser.location,
       isOnline: insertUser.isOnline ?? false,
       lastSeen: new Date(),
     };
@@ -443,11 +451,18 @@ export class MemStorage implements IStorage {
     }
   }
 
-  // Stories methods
+  // Stories methods - filtered by user location
   async getActiveStories(): Promise<(Story & { user: User })[]> {
+    const currentUser = await this.getUser("current-user");
+    if (!currentUser) return [];
+
     const now = new Date();
     const activeStories = Array.from(this.stories.values())
-      .filter(story => story.expiresAt && story.expiresAt > now)
+      .filter(story => 
+        story.expiresAt && 
+        story.expiresAt > now && 
+        story.location === currentUser.location // Filter by location
+      )
       .sort((a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0));
 
     const storiesWithUsers = await Promise.all(

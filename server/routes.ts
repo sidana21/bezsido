@@ -135,9 +135,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create story
   app.post("/api/stories", async (req, res) => {
     try {
+      const currentUser = await storage.getUser("current-user");
+      if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
       const storyData = insertStorySchema.parse({
         ...req.body,
         userId: "current-user",
+        location: currentUser.location, // Use user's location
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
       });
       
