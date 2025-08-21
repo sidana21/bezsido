@@ -7,7 +7,8 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
-  const formatTime = (date: Date) => {
+  const formatTime = (date: Date | null) => {
+    if (!date) return "";
     return new Date(date).toLocaleTimeString('ar-SA', {
       hour: '2-digit',
       minute: '2-digit',

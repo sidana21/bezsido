@@ -31,7 +31,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     enabled: !!chatId,
   });
 
-  const { data: chats = [] } = useQuery({
+  const { data: chats = [] } = useQuery<any[]>({
     queryKey: ['/api/chats'],
   });
 
@@ -199,7 +199,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <div className="text-gray-500 dark:text-gray-400">لا توجد رسائل بعد</div>
           </div>
         ) : (
-          messages.map((message) => (
+          messages.map((message: any) => (
             <MessageBubble
               key={message.id}
               message={message}

@@ -45,9 +45,29 @@ export const insertChatSchema = createInsertSchema(chats).omit({
   updatedAt: true,
 });
 
+export const stories = pgTable("stories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  content: text("content"),
+  imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
+  backgroundColor: text("background_color").default("#075e54"),
+  textColor: text("text_color").default("#ffffff"),
+  timestamp: timestamp("timestamp").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  viewCount: text("view_count").default("0"), // Store as text to handle large numbers
+  viewers: jsonb("viewers").$type<string[]>().default([]),
+});
+
 export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   timestamp: true,
+});
+
+export const insertStorySchema = createInsertSchema(stories).omit({
+  id: true,
+  timestamp: true,
+  viewCount: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -56,3 +76,5 @@ export type InsertChat = z.infer<typeof insertChatSchema>;
 export type Chat = typeof chats.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+export type InsertStory = z.infer<typeof insertStorySchema>;
+export type Story = typeof stories.$inferSelect;

@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme-provider";
+import { StoriesRing } from "./stories-ring";
+import { StoryViewer } from "./story-viewer";
+import { CreateStoryModal } from "./create-story-modal";
 import { useState } from "react";
 
 interface Chat {
@@ -39,8 +42,10 @@ interface SidebarProps {
 export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewingStoryId, setViewingStoryId] = useState<string | null>(null);
+  const [showCreateStory, setShowCreateStory] = useState(false);
 
-  const { data: currentUser } = useQuery({
+  const { data: currentUser } = useQuery<any>({
     queryKey: ['/api/user/current'],
   });
 
@@ -161,6 +166,12 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
         </div>
       </div>
 
+      {/* Stories Ring */}
+      <StoriesRing
+        onStoryClick={(storyId) => setViewingStoryId(storyId)}
+        onCreateStory={() => setShowCreateStory(true)}
+      />
+
       {/* Contacts List */}
       <div className="flex-1 overflow-y-auto chat-scroll">
         {isLoading ? (
@@ -234,6 +245,20 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
           ))
         )}
       </div>
+
+      {/* Story Viewer */}
+      {viewingStoryId && (
+        <StoryViewer
+          storyId={viewingStoryId}
+          onClose={() => setViewingStoryId(null)}
+        />
+      )}
+
+      {/* Create Story Modal */}
+      <CreateStoryModal
+        isOpen={showCreateStory}
+        onClose={() => setShowCreateStory(false)}
+      />
     </div>
   );
 }

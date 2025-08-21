@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertMessageSchema } from "@shared/schema";
+import { insertMessageSchema, insertStorySchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user (for simplicity, always return the current user)
@@ -108,6 +108,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+
+  // Get active stories
+  app.get("/api/stories", async (req, res) => {
+    try {
+      const stories = await storage.getActiveStories();
+      res.json(stories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get stories" });
+    }
+  });
+
+  // Get user stories
+  app.get("/api/users/:userId/stories", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const stories = await storage.getUserStories(userId);
+      res.json(stories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user stories" });
+    }
+  });
+
+  // Create story
+  app.post("/api/stories", async (req, res) => {
+    try {
+      const storyData = insertStorySchema.parse({
+        ...req.body,
+        userId: "current-user",
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+      });
+      
+      const story = await storage.createStory(storyData);
+      res.json(story);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create story" });
+    }
+  });
+
+  // View story
+  app.patch("/api/stories/:storyId/view", async (req, res) => {
+    try {
+      const { storyId } = req.params;
+      await storage.viewStory(storyId, "current-user");
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to view story" });
+    }
+  });
+
+  // Get single story
+  app.get("/api/stories/:storyId", async (req, res) => {
+    try {
+      const { storyId } = req.params;
+      const story = await storage.getStory(storyId);
+      if (!story) {
+        return res.status(404).json({ message: "Story not found" });
+      }
+      const user = await storage.getUser(story.userId);
+      res.json({ ...story, user });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get story" });
     }
   });
 

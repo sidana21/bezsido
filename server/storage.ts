@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Chat, type InsertChat, type Message, type InsertMessage } from "@shared/schema";
+import { type User, type InsertUser, type Chat, type InsertChat, type Message, type InsertMessage, type Story, type InsertStory } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -18,17 +18,26 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(messageId: string): Promise<void>;
   markMessageAsDelivered(messageId: string): Promise<void>;
+  
+  // Stories
+  getActiveStories(): Promise<(Story & { user: User })[]>;
+  getUserStories(userId: string): Promise<Story[]>;
+  createStory(story: InsertStory): Promise<Story>;
+  viewStory(storyId: string, viewerId: string): Promise<void>;
+  getStory(storyId: string): Promise<Story | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private chats: Map<string, Chat>;
   private messages: Map<string, Message>;
+  private stories: Map<string, Story>;
 
   constructor() {
     this.users = new Map();
     this.chats = new Map();
     this.messages = new Map();
+    this.stories = new Map();
     this.initializeMockData();
   }
 
@@ -283,6 +292,53 @@ export class MemStorage implements IStorage {
     sarahMessages.forEach(message => {
       this.messages.set(message.id, message);
     });
+
+    // Create mock stories
+    const mockStories: Story[] = [
+      {
+        id: "story-sarah-1",
+        userId: "sarah-user",
+        content: "في رحلة جميلة 🌟",
+        imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=600",
+        videoUrl: null,
+        backgroundColor: "#075e54",
+        textColor: "#ffffff",
+        timestamp: new Date(Date.now() - 3600000), // 1 hour ago
+        expiresAt: new Date(Date.now() + 82800000), // expires in 23 hours
+        viewCount: "5",
+        viewers: ["current-user", "ahmed-user"],
+      },
+      {
+        id: "story-fatima-1",
+        userId: "fatima-user",
+        content: "يوم رائع! ☀️",
+        imageUrl: null,
+        videoUrl: null,
+        backgroundColor: "#25D366",
+        textColor: "#ffffff",
+        timestamp: new Date(Date.now() - 7200000), // 2 hours ago
+        expiresAt: new Date(Date.now() + 79200000), // expires in 22 hours
+        viewCount: "12",
+        viewers: ["current-user"],
+      },
+      {
+        id: "story-mariam-1",
+        userId: "mariam-user",
+        content: null,
+        imageUrl: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=600",
+        videoUrl: null,
+        backgroundColor: "#075e54",
+        textColor: "#ffffff",
+        timestamp: new Date(Date.now() - 10800000), // 3 hours ago
+        expiresAt: new Date(Date.now() + 75600000), // expires in 21 hours
+        viewCount: "8",
+        viewers: ["current-user", "sarah-user", "ahmed-user"],
+      }
+    ];
+
+    mockStories.forEach(story => {
+      this.stories.set(story.id, story);
+    });
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -300,7 +356,8 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
-      isOnline: false,
+      avatar: insertUser.avatar ?? null,
+      isOnline: insertUser.isOnline ?? false,
       lastSeen: new Date(),
     };
     this.users.set(id, user);
@@ -323,7 +380,7 @@ export class MemStorage implements IStorage {
   async getUserChats(userId: string): Promise<Chat[]> {
     return Array.from(this.chats.values()).filter(
       (chat) => chat.participants.includes(userId)
-    ).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    ).sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0));
   }
 
   async createChat(insertChat: InsertChat): Promise<Chat> {
@@ -331,6 +388,9 @@ export class MemStorage implements IStorage {
     const chat: Chat = { 
       ...insertChat, 
       id,
+      name: insertChat.name ?? null,
+      avatar: insertChat.avatar ?? null,
+      isGroup: insertChat.isGroup ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -341,7 +401,7 @@ export class MemStorage implements IStorage {
   async getChatMessages(chatId: string): Promise<Message[]> {
     return Array.from(this.messages.values())
       .filter((message) => message.chatId === chatId)
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
@@ -349,6 +409,8 @@ export class MemStorage implements IStorage {
     const message: Message = { 
       ...insertMessage, 
       id,
+      messageType: insertMessage.messageType ?? "text",
+      imageUrl: insertMessage.imageUrl ?? null,
       timestamp: new Date(),
       isRead: false,
       isDelivered: true,
@@ -379,6 +441,62 @@ export class MemStorage implements IStorage {
       message.isDelivered = true;
       this.messages.set(messageId, message);
     }
+  }
+
+  // Stories methods
+  async getActiveStories(): Promise<(Story & { user: User })[]> {
+    const now = new Date();
+    const activeStories = Array.from(this.stories.values())
+      .filter(story => story.expiresAt && story.expiresAt > now)
+      .sort((a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0));
+
+    const storiesWithUsers = await Promise.all(
+      activeStories.map(async (story) => {
+        const user = await this.getUser(story.userId);
+        return {
+          ...story,
+          user: user!,
+        };
+      })
+    );
+
+    return storiesWithUsers;
+  }
+
+  async getUserStories(userId: string): Promise<Story[]> {
+    const now = new Date();
+    return Array.from(this.stories.values())
+      .filter(story => story.userId === userId && story.expiresAt && story.expiresAt > now)
+      .sort((a, b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0));
+  }
+
+  async createStory(insertStory: InsertStory): Promise<Story> {
+    const id = randomUUID();
+    const story: Story = {
+      ...insertStory,
+      id,
+      timestamp: new Date(),
+      viewCount: "0",
+      viewers: (insertStory.viewers ?? []) as string[],
+    };
+    this.stories.set(id, story);
+    return story;
+  }
+
+  async viewStory(storyId: string, viewerId: string): Promise<void> {
+    const story = this.stories.get(storyId);
+    if (story) {
+      const viewers = story.viewers ?? [];
+      if (!viewers.includes(viewerId)) {
+        story.viewers = [...viewers, viewerId];
+        story.viewCount = String(parseInt(story.viewCount ?? "0") + 1);
+        this.stories.set(storyId, story);
+      }
+    }
+  }
+
+  async getStory(storyId: string): Promise<Story | undefined> {
+    return this.stories.get(storyId);
   }
 }
 
