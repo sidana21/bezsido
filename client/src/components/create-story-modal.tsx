@@ -72,6 +72,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
       <DialogContent className="max-w-md" data-testid="create-story-modal">
         <DialogHeader>
           <DialogTitle>إنشاء حالة جديدة</DialogTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-400">انشر منتجك واعرضه لجميع متابعيك</p>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -104,7 +105,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
                 <Label htmlFor="content">المحتوى</Label>
                 <Textarea
                   id="content"
-                  placeholder="اكتب حالتك هنا..."
+                  placeholder="انشر منتجك هنا... اكتب وصف منتجك أو خدمتك"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="min-h-[100px]"
@@ -183,7 +184,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
                 <Label htmlFor="caption">تعليق (اختياري)</Label>
                 <Input
                   id="caption"
-                  placeholder="اكتب تعليق..."
+                  placeholder="انشر منتجك... اكتب وصف المنتج"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   data-testid="input-image-caption"

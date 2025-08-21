@@ -45,7 +45,10 @@ export function StoriesRing({ onStoryClick, onCreateStory }: StoriesRingProps) {
   return (
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div className="p-4">
-        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">الحالة</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">الحالة</h3>
+          <span className="text-xs text-[var(--whatsapp-primary)] bg-[var(--whatsapp-light)] px-2 py-1 rounded-full">انشر منتجك</span>
+        </div>
         
         <div className="flex space-x-4 space-x-reverse overflow-x-auto pb-2">
           {/* Add Story Button */}
@@ -68,7 +71,10 @@ export function StoriesRing({ onStoryClick, onCreateStory }: StoriesRingProps) {
                   <Plus className="w-3 h-3 text-white" />
                 </div>
               </div>
-              <span className="text-xs text-gray-600 dark:text-gray-300">حالتي</span>
+              <div className="text-center">
+                <span className="text-xs text-gray-600 dark:text-gray-300">حالتي</span>
+                <div className="text-xs text-[var(--whatsapp-primary)] font-medium">انشر منتجك</div>
+              </div>
             </Button>
           </div>
 
