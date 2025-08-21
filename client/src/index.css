@@ -182,4 +182,29 @@
   .dvh-screen {
     min-height: 100dvh;
   }
+
+  /* RTL Scrolling for stories */
+  .scrolling-touch {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  .rtl-scroll {
+    direction: ltr;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .rtl-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Story items RTL positioning */
+  .story-container {
+    transform: scaleX(-1);
+  }
+  
+  .story-item {
+    transform: scaleX(-1);
+  }
 }

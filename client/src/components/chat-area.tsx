@@ -199,7 +199,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <div className="text-gray-500 dark:text-gray-400">لا توجد رسائل بعد</div>
           </div>
         ) : (
-          messages.map((message: any) => (
+          messages.map((message: ChatMessage) => (
             <MessageBubble
               key={message.id}
               message={message}

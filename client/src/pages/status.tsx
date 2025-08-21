@@ -54,9 +54,9 @@ export default function Status() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+    <div className="min-h-[100dvh] bg-gray-50 dark:bg-gray-900 pb-16 sm:pb-20">
       {/* Header */}
-      <div className="bg-whatsapp-green text-white p-4">
+      <div className="bg-whatsapp-green text-white p-3 sm:p-4">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -83,9 +83,9 @@ export default function Status() {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-4xl mx-auto p-3 sm:p-4">
         {/* Promote banner */}
-        <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg p-4 mb-6">
+        <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
           <div className="text-center">
             <h2 className="text-lg font-bold mb-2">انشر منتجك 📱</h2>
             <p className="text-sm opacity-90">استخدم الحالات لعرض منتجاتك وخدماتك للمستخدمين في منطقتك</p>
@@ -93,9 +93,9 @@ export default function Status() {
         </div>
 
         {/* My Status */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-6">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-4 sm:mb-6">
+          <div className="p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-lg font-semibold">حالتي</h3>
               <Button
                 onClick={() => setIsCreateModalOpen(true)}
@@ -131,7 +131,7 @@ export default function Status() {
 
         {/* Recent Updates */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+          <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-semibold">التحديثات الأخيرة</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               من منطقة {currentUser?.location}
@@ -143,7 +143,7 @@ export default function Status() {
               جاري التحميل...
             </div>
           ) : stories.length > 0 ? (
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
               <StoriesRing 
                 onStoryClick={(storyId) => {
                   const index = stories.findIndex(s => s.id === storyId);
