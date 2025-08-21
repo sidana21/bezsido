@@ -5,12 +5,33 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  phoneNumber: varchar("phone_number").notNull().unique(),
   name: text("name").notNull(),
   avatar: text("avatar"),
   location: text("location").notNull(), // المنطقة الجغرافية
   isOnline: boolean("is_online").default(false),
   lastSeen: timestamp("last_seen").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Sessions table for phone authentication
+export const sessions = pgTable("sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// OTP verification table
+export const otpCodes = pgTable("otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phoneNumber: varchar("phone_number").notNull(),
+  code: varchar("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const chats = pgTable("chats", {
@@ -38,6 +59,18 @@ export const messages = pgTable("messages", {
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   lastSeen: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSessionSchema = createInsertSchema(sessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOtpSchema = createInsertSchema(otpCodes).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertChatSchema = createInsertSchema(chats).omit({
@@ -80,3 +113,7 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertStory = z.infer<typeof insertStorySchema>;
 export type Story = typeof stories.$inferSelect;
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+export type Session = typeof sessions.$inferSelect;
+export type InsertOtp = z.infer<typeof insertOtpSchema>;
+export type OtpCode = typeof otpCodes.$inferSelect;

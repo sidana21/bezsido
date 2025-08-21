@@ -5,12 +5,28 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BottomNavigation } from "@/components/bottom-navigation";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import Chat from "@/pages/chat";
 import Status from "@/pages/status";
 import Stores from "@/pages/stores";
+import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#075e54] flex items-center justify-center">
+        <div className="text-white text-lg">جارِ التحميل...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
   return (
     <>
       <Switch>
@@ -28,10 +44,12 @@ function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="whatsapp-ui-theme">
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

@@ -8,19 +8,34 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
   url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+  options: RequestInit = {},
+): Promise<any> {
+  const token = localStorage.getItem("auth_token");
+  
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      ...(token && { "Authorization": `Bearer ${token}` }),
+    },
   });
 
-  await throwIfResNotOk(res);
-  return res;
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = `${response.status}: ${response.statusText}`;
+    
+    try {
+      const errorData = JSON.parse(errorText);
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      // If not JSON, use default message
+    }
+    
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -29,8 +44,12 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const token = localStorage.getItem("auth_token");
+    
     const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
+      headers: {
+        ...(token && { "Authorization": `Bearer ${token}` }),
+      },
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
