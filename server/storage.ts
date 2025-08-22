@@ -150,6 +150,19 @@ export class MemStorage implements IStorage {
     this.orders = new Map();
     this.orderItems = new Map();
     this.initializeMockData();
+    this.initializeTestSession();
+  }
+
+  private initializeTestSession() {
+    // Create a test session for development
+    const testSession: Session = {
+      id: "test-session-123",
+      userId: "current-user",
+      token: "test-token-123",
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+      createdAt: new Date()
+    };
+    this.sessions.set(testSession.token, testSession);
   }
 
   private initializeMockData() {

@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -61,6 +62,9 @@ const requireAuth = async (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve uploaded files statically
+  app.use('/uploads', express.static('uploads'));
+  
   // File upload endpoint for images and videos
   app.post("/api/upload/media", requireAuth, upload.single('media'), async (req: any, res) => {
     try {
@@ -271,17 +275,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update user profile
   app.put("/api/user/profile", requireAuth, async (req: any, res) => {
     try {
-      const { name, location, avatarUrl } = req.body;
+      const { name, location, avatar, avatarUrl } = req.body;
       
       if (!name || !location) {
         return res.status(400).json({ message: "Name and location are required" });
       }
       
-      // Update user data
+      // Update user data - accept both avatar and avatarUrl for compatibility
       const updatedUser = await storage.updateUser(req.userId, {
         name: name.trim(),
         location: location.trim(),
-        avatar: avatarUrl || null,
+        avatar: avatar || avatarUrl || null,
       });
       
       if (!updatedUser) {
@@ -1097,8 +1101,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve uploaded files statically
-  app.use("/uploads", (await import("express")).static("uploads"));
 
   const httpServer = createServer(app);
   return httpServer;
