@@ -22,18 +22,18 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// Configure multer for file uploads
+// Configure multer for file uploads (images and videos)
 const upload = multer({
   dest: 'uploads/',
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 50 * 1024 * 1024, // 50MB limit for videos
   },
   fileFilter: (req, file, cb) => {
-    // Accept only image files
-    if (file.mimetype.startsWith('image/')) {
+    // Accept both image and video files
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'));
+      cb(new Error('Only image and video files are allowed'));
     }
   }
 });
@@ -56,11 +56,11 @@ const requireAuth = async (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // File upload endpoint
-  app.post("/api/upload/image", requireAuth, upload.single('image'), async (req: any, res) => {
+  // File upload endpoint for images and videos
+  app.post("/api/upload/media", requireAuth, upload.single('media'), async (req: any, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "No image file provided" });
+        return res.status(400).json({ message: "No media file provided" });
       }
       
       // Generate a unique filename
@@ -68,15 +68,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fileName = `${randomUUID()}${fileExtension}`;
       const filePath = path.join('uploads', fileName);
       
-      // In a real app, you might want to move the file to a proper location
-      // or upload to cloud storage like AWS S3 or Cloudinary
+      // Determine file type
+      const fileType = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
       
       // For this demo, we'll return a URL that points to the uploaded file
-      const imageUrl = `/uploads/${req.file.filename}`;
+      const mediaUrl = `/uploads/${req.file.filename}`;
       
-      res.json({ imageUrl });
+      res.json({ 
+        mediaUrl,
+        fileType,
+        fileName: req.file.originalname,
+        size: req.file.size
+      });
     } catch (error) {
-      res.status(500).json({ message: "Failed to upload image" });
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Failed to upload media file" });
     }
   });
 
@@ -254,6 +260,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (error) {
       res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
+  // Update user profile
+  app.put("/api/user/profile", requireAuth, async (req: any, res) => {
+    try {
+      const { name, location, avatarUrl } = req.body;
+      
+      if (!name || !location) {
+        return res.status(400).json({ message: "Name and location are required" });
+      }
+      
+      // Update user data
+      const updatedUser = await storage.updateUser(req.userId, {
+        name: name.trim(),
+        location: location.trim(),
+        avatar: avatarUrl || null,
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
     }
   });
 

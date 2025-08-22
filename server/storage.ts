@@ -29,6 +29,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined>;
   updateUserOnlineStatus(id: string, isOnline: boolean): Promise<void>;
   
   // Authentication
@@ -728,6 +729,19 @@ export class MemStorage implements IStorage {
       user.lastSeen = new Date();
       this.users.set(id, user);
     }
+  }
+
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+
+    const updatedUser: User = {
+      ...user,
+      ...userData,
+      updatedAt: new Date(),
+    };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   async getChat(id: string): Promise<Chat | undefined> {

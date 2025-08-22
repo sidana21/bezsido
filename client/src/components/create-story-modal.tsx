@@ -39,9 +39,9 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
   const uploadImageMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('media', file);
       
-      const response = await fetch("/api/upload/image", {
+      const response = await fetch("/api/upload/media", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
@@ -50,25 +50,25 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
       });
       
       if (!response.ok) {
-        throw new Error("فشل في رفع الصورة");
+        throw new Error("فشل في رفع الملف");
       }
       
       return response.json();
     },
     onSuccess: (data) => {
-      setImageUrl(data.imageUrl);
+      setImageUrl(data.mediaUrl);
       setSelectedFile(null);
       setIsUploading(false);
       toast({
-        title: "تم رفع الصورة",
-        description: "تم رفع الصورة بنجاح",
+        title: "تم رفع الملف",
+        description: `تم رفع ${data.fileType === 'video' ? 'الفيديو' : 'الصورة'} بنجاح`,
       });
     },
     onError: (error: any) => {
       setIsUploading(false);
       toast({
         title: "خطأ",
-        description: error.message || "فشل في رفع الصورة",
+        description: error.message || "فشل في رفع الملف",
         variant: "destructive",
       });
     },
@@ -248,7 +248,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
               {/* File Upload Section */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>إضافة صورة</Label>
+                  <Label>إضافة صورة أو فيديو</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       type="button"
@@ -278,7 +278,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
                     capture="environment"
                     onChange={handleFileSelect}
                     className="hidden"
@@ -287,7 +287,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
                   
                   {isUploading && (
                     <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                      جاري رفع الصورة...
+                      جاري رفع الملف...
                     </div>
                   )}
                 </div>
@@ -301,10 +301,10 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
 
                 {/* Image URL */}
                 <div className="space-y-2">
-                  <Label htmlFor="imageUrl">رابط الصورة</Label>
+                  <Label htmlFor="imageUrl">رابط الصورة أو الفيديو</Label>
                   <Input
                     id="imageUrl"
-                    placeholder="https://example.com/image.jpg"
+                    placeholder="https://example.com/media.jpg"
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                     disabled={isUploading}
@@ -355,7 +355,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
               className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]"
               data-testid="button-create"
             >
-              {createStoryMutation.isPending ? "جاري الإنشاء..." : isUploading ? "جاري رفع الصورة..." : "إنشاء"}
+              {createStoryMutation.isPending ? "جاري الإنشاء..." : isUploading ? "جاري رفع الملف..." : "إنشاء"}
             </Button>
           </div>
         </div>

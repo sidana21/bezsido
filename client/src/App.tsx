@@ -11,6 +11,7 @@ import Status from "@/pages/status";
 import Stores from "@/pages/stores";
 import MyStore from "@/pages/my-store";
 import Affiliate from "@/pages/affiliate";
+import Profile from "@/pages/profile";
 import AffiliateRedirect from "@/pages/affiliate-redirect";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
@@ -40,6 +41,7 @@ function Router() {
         <Route path="/my-store" component={MyStore} />
         <Route path="/affiliate" component={Affiliate} />
         <Route path="/affiliate/:uniqueCode" component={AffiliateRedirect} />
+        <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
       <BottomNavigation />
