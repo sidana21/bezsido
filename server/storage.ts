@@ -38,6 +38,7 @@ export interface IStorage {
   getChat(id: string): Promise<Chat | undefined>;
   getUserChats(userId: string): Promise<Chat[]>;
   createChat(chat: InsertChat): Promise<Chat>;
+  deleteChat(id: string): Promise<boolean>;
   
   // Messages
   getChatMessages(chatId: string): Promise<Message[]>;
@@ -663,6 +664,22 @@ export class MemStorage implements IStorage {
     };
     this.chats.set(id, chat);
     return chat;
+  }
+
+  async deleteChat(id: string): Promise<boolean> {
+    const chat = this.chats.get(id);
+    if (!chat) return false;
+    
+    // Delete all messages in this chat
+    const messagesToDelete = Array.from(this.messages.values())
+      .filter(message => message.chatId === id);
+    messagesToDelete.forEach(message => {
+      this.messages.delete(message.id);
+    });
+    
+    // Delete the chat itself
+    this.chats.delete(id);
+    return true;
   }
 
   async getChatMessages(chatId: string): Promise<Message[]> {

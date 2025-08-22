@@ -341,6 +341,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/chats/:chatId", requireAuth, async (req: any, res) => {
+    try {
+      const { chatId } = req.params;
+      
+      // Check if user is participant in this chat
+      const chat = await storage.getChat(chatId);
+      if (!chat || !chat.participants.includes(req.userId)) {
+        return res.status(403).json({ message: "Unauthorized to delete this chat" });
+      }
+      
+      const deleted = await storage.deleteChat(chatId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete chat" });
+    }
+  });
+
   // Mark message as read
   app.patch("/api/messages/:messageId/read", requireAuth, async (req: any, res) => {
     try {

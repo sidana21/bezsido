@@ -1,14 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
-import { Search, MessageCircle, MoreVertical, Moon, Sun } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Search, MessageCircle, MoreVertical, Moon, Sun, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
 import { useTheme } from "@/components/theme-provider";
 import { StoriesRing } from "./stories-ring";
 import { StoryViewer } from "./story-viewer";
 import { CreateStoryModal } from "./create-story-modal";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 interface Chat {
   id: string;
@@ -41,9 +51,13 @@ interface SidebarProps {
 
 export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: SidebarProps) {
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [viewingStoryId, setViewingStoryId] = useState<string | null>(null);
   const [showCreateStory, setShowCreateStory] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<Chat | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   const { data: currentUser } = useQuery<any>({
     queryKey: ['/api/user/current'],
@@ -51,6 +65,38 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
 
   const { data: chats = [], isLoading } = useQuery<Chat[]>({
     queryKey: ['/api/chats'],
+  });
+
+  // Delete chat mutation
+  const deleteChatMutation = useMutation({
+    mutationFn: async (chatId: string) => {
+      return apiRequest(`/api/chats/${chatId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      setShowDeleteDialog(false);
+      setChatToDelete(null);
+      
+      // If the deleted chat was selected, clear selection
+      if (selectedChatId === chatToDelete?.id) {
+        onChatSelect("");
+      }
+      
+      toast({
+        title: "تم حذف المحادثة",
+        description: "تم حذف المحادثة وجميع رسائلها بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف المحادثة",
+        variant: "destructive",
+      });
+    },
   });
 
   const toggleTheme = () => {
@@ -107,6 +153,26 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
     const name = getChatDisplayName(chat).toLowerCase();
     return name.includes(searchTerm.toLowerCase());
   });
+
+  const handleLongPressStart = (chat: Chat) => {
+    longPressTimer.current = setTimeout(() => {
+      setChatToDelete(chat);
+      setShowDeleteDialog(true);
+    }, 800); // 800ms for long press
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleDeleteChat = () => {
+    if (chatToDelete) {
+      deleteChatMutation.mutate(chatToDelete.id);
+    }
+  };
 
   if (!isVisible) return null;
 
@@ -197,6 +263,12 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
                   onToggle();
                 }
               }}
+              onMouseDown={() => handleLongPressStart(chat)}
+              onMouseUp={handleLongPressEnd}
+              onMouseLeave={handleLongPressEnd}
+              onTouchStart={() => handleLongPressStart(chat)}
+              onTouchEnd={handleLongPressEnd}
+              onTouchCancel={handleLongPressEnd}
               data-testid={`chat-item-${chat.id}`}
             >
               <div className="relative ml-3">
@@ -259,6 +331,46 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
         isOpen={showCreateStory}
         onClose={() => setShowCreateStory(false)}
       />
+
+      {/* Delete Chat Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-500" />
+              حذف المحادثة
+            </DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد من رغبتك في حذف المحادثة مع{" "}
+              <span className="font-semibold">
+                {chatToDelete ? getChatDisplayName(chatToDelete) : ""}
+              </span>
+              ؟
+              <br />
+              <span className="text-red-600">
+                سيتم حذف جميع الرسائل ولا يمكن التراجع عن هذا الإجراء.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={deleteChatMutation.isPending}
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteChat}
+              disabled={deleteChatMutation.isPending}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {deleteChatMutation.isPending ? "جارِ الحذف..." : "حذف المحادثة"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
