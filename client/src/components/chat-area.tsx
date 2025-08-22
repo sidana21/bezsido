@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageBubble } from "./message-bubble";
 import { Message, User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import bizChatLogo from "@/assets/bizchat-logo.png";
 
 interface ChatAreaProps {
   chatId: string | null;
@@ -78,9 +77,6 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     return (
       <div className="flex-1 flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 text-center hidden lg:flex">
         <div className="max-w-md">
-          <div className="flex items-center justify-center mx-auto mb-6">
-            <img src={bizChatLogo} alt="BizChat" className="w-20 h-20 object-cover rounded-full" />
-          </div>
           <h2 className="text-2xl font-light text-gray-800 dark:text-gray-200 mb-4">BizChat</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             منصة التواصل التجاري الذكية - تواصل مع عملائك وأنجز صفقاتك.

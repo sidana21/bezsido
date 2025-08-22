@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { MessageCircle, Shield, Users, ChevronDown } from "lucide-react";
-import bizChatLogo from "@/assets/bizchat-logo.png";
 
 const countries = [
   { code: "+213", name: "Algeria", flag: "🇩🇿" },
@@ -187,9 +186,6 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center mb-4">
-              <img src={bizChatLogo} alt="BizChat" className="w-20 h-20 object-cover rounded-full" />
-            </div>
             <h1 className="text-2xl font-bold text-white mb-2">BizChat</h1>
             <p className="text-green-100 text-sm">
 منصة التواصل التجاري الذكية - سنرسل لك رمز تحقق للتأكد من رقم هاتفك
