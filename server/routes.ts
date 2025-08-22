@@ -46,6 +46,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // In a real app, you would send the OTP via SMS
       console.log(`OTP for ${phoneNumber}: ${code}`);
       
+      // Store last OTP for development
+      (global as any).lastOtp = { phoneNumber, code, timestamp: Date.now() };
+      
       res.json({ success: true, message: "OTP sent successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to send OTP" });
@@ -106,6 +109,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to verify OTP" });
+    }
+  });
+
+  // Development endpoint to get last OTP
+  app.get("/api/dev/last-otp", (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    const lastOtp = (global as any).lastOtp;
+    if (lastOtp && Date.now() - lastOtp.timestamp < 300000) { // 5 minutes
+      res.json({ code: lastOtp.code, phoneNumber: lastOtp.phoneNumber });
+    } else {
+      res.json({ code: null });
     }
   });
   

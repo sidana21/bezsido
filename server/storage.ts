@@ -556,15 +556,6 @@ export class MemStorage implements IStorage {
   }
 
   async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> {
-    console.log(`Verifying OTP for ${phoneNumber} with code ${code}`);
-    console.log('Available OTPs:', Array.from(this.otpCodes.values()).map(otp => ({
-      phone: otp.phoneNumber,
-      code: otp.code,
-      isUsed: otp.isUsed,
-      expiresAt: otp.expiresAt,
-      isExpired: otp.expiresAt <= new Date()
-    })));
-    
     const otp = Array.from(this.otpCodes.values()).find(
       (otp) => otp.phoneNumber === phoneNumber && otp.code === code && !otp.isUsed && otp.expiresAt > new Date()
     );
@@ -572,11 +563,9 @@ export class MemStorage implements IStorage {
     if (otp) {
       otp.isUsed = true;
       this.otpCodes.set(otp.id, otp);
-      console.log('OTP verification successful');
       return true;
     }
     
-    console.log('OTP verification failed');
     return false;
   }
 

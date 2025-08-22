@@ -30,6 +30,8 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [lastGeneratedOtp, setLastGeneratedOtp] = useState("");
+  const [currentOtp, setCurrentOtp] = useState("");
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -58,9 +60,18 @@ export default function LoginPage() {
         body: JSON.stringify({ phoneNumber: fullPhone }),
       });
 
+      // Try to extract OTP from response if available in development
+      try {
+        const logs = await fetch('/api/dev/last-otp').then(r => r.json()).catch(() => null);
+        if (logs?.code) {
+          setLastGeneratedOtp(logs.code);
+          setCurrentOtp(logs.code);
+        }
+      } catch {}
+      
       toast({
         title: "تم الإرسال",
-        description: "تم إرسال رمز التحقق إلى هاتفك",
+        description: "تم إرسال رمز التحقق إلى هاتفك - تحقق من سجلات الخادم للحصول على الرمز",
       });
       setStep("otp");
     } catch (error: any) {
@@ -118,6 +129,16 @@ export default function LoginPage() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fillOtpAuto = () => {
+    if (lastGeneratedOtp) {
+      setOtp(lastGeneratedOtp);
+      toast({
+        title: "تم ملء الرمز",
+        description: "تم ملء رمز التحقق تلقائياً",
+      });
     }
   };
 
@@ -279,6 +300,23 @@ export default function LoginPage() {
                   </InputOTPGroup>
                 </InputOTP>
               </div>
+
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    الرمز الحالي من السجلات: <strong>{currentOtp || "غير متوفر"}</strong>
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => currentOtp && setOtp(currentOtp)}
+                    className="text-sm"
+                    disabled={!currentOtp}
+                    data-testid="button-auto-fill"
+                  >
+                    ملء تلقائي
+                  </Button>
+                </div>
+              )}
 
               <Button 
                 onClick={handleVerifyOtp} 
