@@ -1931,9 +1931,14 @@ export class MemStorage implements IStorage {
   async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> {
     const id = randomUUID();
     const verificationRequest: VerificationRequest = {
-      ...request,
       id,
+      userId: request.userId,
+      storeId: request.storeId || null,
+      requestType: request.requestType,
+      status: request.status || "pending",
       documents: (request.documents as string[]) || [],
+      reason: request.reason || null,
+      adminNote: request.adminNote || null,
       submittedAt: new Date(),
       reviewedAt: null,
       reviewedBy: null,
