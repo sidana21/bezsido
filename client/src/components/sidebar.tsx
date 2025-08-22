@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search, MessageCircle, MoreVertical, Moon, Sun, Trash2, Users } from "lucide-react";
+import { Search, MessageCircle, MoreVertical, Moon, Sun, Trash2, Users, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,13 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Link } from "wouter";
 import { useTheme } from "@/components/theme-provider";
 import { StoriesRing } from "./stories-ring";
 import { StoryViewer } from "./story-viewer";
@@ -217,14 +224,26 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
           >
             <MessageCircle className="h-5 w-5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:text-gray-200 hover:bg-white/10"
-            data-testid="button-menu"
-          >
-            <MoreVertical className="h-5 w-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:text-gray-200 hover:bg-white/10"
+                data-testid="button-menu"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <Link href="/profile">
+                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" data-testid="menu-profile">
+                  <User className="h-4 w-4" />
+                  <span>الملف الشخصي</span>
+                </DropdownMenuItem>
+              </Link>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
