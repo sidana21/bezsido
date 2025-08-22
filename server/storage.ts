@@ -11,6 +11,8 @@ import {
   type InsertSession, 
   type OtpCode, 
   type InsertOtp,
+  type Store,
+  type InsertStore,
   type Product,
   type InsertProduct,
   type AffiliateLink,
@@ -53,10 +55,19 @@ export interface IStorage {
   viewStory(storyId: string, viewerId: string): Promise<void>;
   getStory(storyId: string): Promise<Story | undefined>;
   
+  // Stores
+  getStores(location?: string, category?: string): Promise<(Store & { owner: User })[]>;
+  getStore(id: string): Promise<Store | undefined>;
+  getUserStore(userId: string): Promise<Store | undefined>;
+  createStore(store: InsertStore): Promise<Store>;
+  updateStore(id: string, store: Partial<InsertStore>): Promise<Store | undefined>;
+  deleteStore(id: string): Promise<boolean>;
+
   // Products
   getProducts(location?: string, category?: string): Promise<(Product & { owner: User })[]>;
   getProduct(id: string): Promise<Product | undefined>;
   getUserProducts(userId: string): Promise<Product[]>;
+  getStoreProducts(storeId: string): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<boolean>;
@@ -81,6 +92,7 @@ export class MemStorage implements IStorage {
   private stories: Map<string, Story>;
   private sessions: Map<string, Session>;
   private otpCodes: Map<string, OtpCode>;
+  private stores: Map<string, Store>;
   private products: Map<string, Product>;
   private affiliateLinks: Map<string, AffiliateLink>;
   private commissions: Map<string, Commission>;
@@ -92,6 +104,7 @@ export class MemStorage implements IStorage {
     this.stories = new Map();
     this.sessions = new Map();
     this.otpCodes = new Map();
+    this.stores = new Map();
     this.products = new Map();
     this.affiliateLinks = new Map();
     this.commissions = new Map();
@@ -466,6 +479,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-1",
         userId: "user-store-1", // Electronics store owner
+        storeId: null,
         name: "سماعة بلوتوث لاسلكية",
         description: "سماعة عالية الجودة مع تقنية إلغاء الضوضاء وبطارية تدوم 24 ساعة",
         price: "15000",
@@ -480,6 +494,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-2", 
         userId: "user-store-1",
+        storeId: null,
         name: "شاحن سريع للهاتف",
         description: "شاحن سريع 65W متوافق مع جميع الهواتف الذكية",
         price: "3500",
@@ -494,6 +509,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-3",
         userId: "user-store-2", // Grocery store owner
+        storeId: null,
         name: "عسل طبيعي صحراوي",
         description: "عسل طبيعي 100% من الصحراء الجزائرية، غني بالفوائد الطبية",
         price: "2500",
@@ -508,6 +524,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-4",
         userId: "user-store-3", // Bakery owner
+        storeId: null,
         name: "خبز تندوف التقليدي",
         description: "خبز طازج يومياً من الفرن التقليدي بوصفة محلية أصيلة",
         price: "150",
@@ -522,6 +539,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-5",
         userId: "sarah-user", // Regular user selling
+        storeId: null,
         name: "حقيبة يد نسائية",
         description: "حقيبة أنيقة مصنوعة من الجلد الطبيعي، مناسبة لجميع المناسبات",
         price: "8500",
@@ -846,6 +864,88 @@ export class MemStorage implements IStorage {
   }
 
   // Products methods
+  // Store methods
+  async getStores(location?: string, category?: string): Promise<(Store & { owner: User })[]> {
+    let stores = Array.from(this.stores.values()).filter(s => s.isActive);
+    
+    if (location) {
+      stores = stores.filter(s => s.location === location);
+    }
+    
+    if (category) {
+      stores = stores.filter(s => s.category === category);
+    }
+    
+    const storesWithOwners = await Promise.all(
+      stores.map(async (store) => {
+        const owner = await this.getUser(store.userId);
+        return {
+          ...store,
+          owner: owner!,
+        };
+      })
+    );
+
+    return storesWithOwners.sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0));
+  }
+
+  async getStore(id: string): Promise<Store | undefined> {
+    return this.stores.get(id);
+  }
+
+  async getUserStore(userId: string): Promise<Store | undefined> {
+    return Array.from(this.stores.values()).find(s => s.userId === userId && s.isActive);
+  }
+
+  async createStore(insertStore: InsertStore): Promise<Store> {
+    const id = randomUUID();
+    const store: Store = {
+      ...insertStore,
+      id,
+      imageUrl: insertStore.imageUrl ?? null,
+      phoneNumber: insertStore.phoneNumber ?? null,
+      isOpen: insertStore.isOpen ?? true,
+      isActive: insertStore.isActive ?? true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.stores.set(id, store);
+    return store;
+  }
+
+  async updateStore(id: string, updateData: Partial<InsertStore>): Promise<Store | undefined> {
+    const store = this.stores.get(id);
+    if (!store) return undefined;
+
+    const updatedStore: Store = {
+      ...store,
+      ...updateData,
+      updatedAt: new Date(),
+    };
+    this.stores.set(id, updatedStore);
+    return updatedStore;
+  }
+
+  async deleteStore(id: string): Promise<boolean> {
+    const store = this.stores.get(id);
+    if (!store) return false;
+    
+    // Instead of deleting, mark as inactive
+    const updatedStore: Store = {
+      ...store,
+      isActive: false,
+      updatedAt: new Date(),
+    };
+    this.stores.set(id, updatedStore);
+    return true;
+  }
+
+  async getStoreProducts(storeId: string): Promise<Product[]> {
+    return Array.from(this.products.values())
+      .filter(p => p.storeId === storeId && p.isActive)
+      .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0));
+  }
+
   async getProducts(location?: string, category?: string): Promise<(Product & { owner: User })[]> {
     let products = Array.from(this.products.values()).filter(p => p.isActive);
     
@@ -885,6 +985,7 @@ export class MemStorage implements IStorage {
     const product: Product = {
       ...insertProduct,
       id,
+      storeId: insertProduct.storeId ?? null,
       imageUrl: insertProduct.imageUrl ?? null,
       isActive: insertProduct.isActive ?? true,
       commissionRate: insertProduct.commissionRate ?? "0.05",

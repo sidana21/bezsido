@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Upload, Type, Palette } from "lucide-react";
+import { X, Upload, Type, Palette, Camera, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,9 +29,50 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
   const [backgroundColor, setBackgroundColor] = useState("#075e54");
   const [textColor, setTextColor] = useState("#ffffff");
   const [activeTab, setActiveTab] = useState<'text' | 'image'>('text');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const uploadImageMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error("فشل في رفع الصورة");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setImageUrl(data.imageUrl);
+      setSelectedFile(null);
+      setIsUploading(false);
+      toast({
+        title: "تم رفع الصورة",
+        description: "تم رفع الصورة بنجاح",
+      });
+    },
+    onError: (error: any) => {
+      setIsUploading(false);
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في رفع الصورة",
+        variant: "destructive",
+      });
+    },
+  });
 
   const createStoryMutation = useMutation({
     mutationFn: async () => {
@@ -64,12 +105,32 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
     },
   });
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setIsUploading(true);
+      uploadImageMutation.mutate(file);
+    }
+  };
+
+  const handleCameraCapture = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const resetForm = () => {
     setContent("");
     setImageUrl("");
+    setSelectedFile(null);
+    setIsUploading(false);
     setBackgroundColor("#075e54");
     setTextColor("#ffffff");
     setActiveTab('text');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = () => {
@@ -184,46 +245,102 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
             </>
           ) : (
             <>
-              {/* Image URL */}
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">رابط الصورة</Label>
-                <Input
-                  id="imageUrl"
-                  placeholder="https://example.com/image.jpg"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  data-testid="input-image-url"
-                />
-              </div>
-
-              {/* Caption */}
-              <div className="space-y-2">
-                <Label htmlFor="caption">تعليق (اختياري)</Label>
-                <Input
-                  id="caption"
-                  placeholder="انشر منتجك... اكتب وصف المنتج"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  data-testid="input-image-caption"
-                />
-              </div>
-
-              {/* Image Preview */}
-              {imageUrl && (
+              {/* File Upload Section */}
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>معاينة الصورة</Label>
-                  <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-                    <img 
-                      src={imageUrl} 
-                      alt="Preview" 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                  <Label>إضافة صورة</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCameraCapture}
+                      className="h-24 flex-col space-y-2"
+                      disabled={isUploading}
+                      data-testid="button-camera-upload"
+                    >
+                      <Camera className="w-8 h-8" />
+                      <span className="text-sm">كاميرا</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCameraCapture}
+                      className="h-24 flex-col space-y-2"
+                      disabled={isUploading}
+                      data-testid="button-gallery-upload"
+                    >
+                      <ImageIcon className="w-8 h-8" />
+                      <span className="text-sm">معرض الصور</span>
+                    </Button>
                   </div>
+                  
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    data-testid="input-file-upload"
+                  />
+                  
+                  {isUploading && (
+                    <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                      جاري رفع الصورة...
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* OR Divider */}
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                  <span className="text-sm text-gray-500 dark:text-gray-400 px-2">أو</span>
+                  <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+
+                {/* Image URL */}
+                <div className="space-y-2">
+                  <Label htmlFor="imageUrl">رابط الصورة</Label>
+                  <Input
+                    id="imageUrl"
+                    placeholder="https://example.com/image.jpg"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    disabled={isUploading}
+                    data-testid="input-image-url"
+                  />
+                </div>
+
+                {/* Caption */}
+                <div className="space-y-2">
+                  <Label htmlFor="caption">تعليق (اختياري)</Label>
+                  <Input
+                    id="caption"
+                    placeholder="انشر منتجك... اكتب وصف المنتج"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    data-testid="input-image-caption"
+                  />
+                </div>
+
+                {/* Image Preview */}
+                {imageUrl && (
+                  <div className="space-y-2">
+                    <Label>معاينة الصورة</Label>
+                    <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                      <img 
+                        src={imageUrl} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
@@ -234,11 +351,11 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={(!content.trim() && !imageUrl.trim()) || createStoryMutation.isPending}
+              disabled={(!content.trim() && !imageUrl.trim()) || createStoryMutation.isPending || isUploading}
               className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]"
               data-testid="button-create"
             >
-              {createStoryMutation.isPending ? "جاري الإنشاء..." : "إنشاء"}
+              {createStoryMutation.isPending ? "جاري الإنشاء..." : isUploading ? "جاري رفع الصورة..." : "إنشاء"}
             </Button>
           </div>
         </div>

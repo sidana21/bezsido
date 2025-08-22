@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import multer from "multer";
+import path from "path";
 import { 
   insertMessageSchema, 
   insertStorySchema, 
@@ -8,14 +10,32 @@ import {
   insertUserSchema, 
   insertSessionSchema,
   insertChatSchema,
+  insertStoreSchema,
   insertProductSchema,
   insertAffiliateLinkSchema,
   insertCommissionSchema,
+  type Store,
   type Product,
   type AffiliateLink,
   type Commission
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+
+// Configure multer for file uploads
+const upload = multer({
+  dest: 'uploads/',
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Middleware to check authentication
 const requireAuth = async (req: any, res: any, next: any) => {
@@ -35,6 +55,30 @@ const requireAuth = async (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // File upload endpoint
+  app.post("/api/upload/image", requireAuth, upload.single('image'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      // Generate a unique filename
+      const fileExtension = path.extname(req.file.originalname);
+      const fileName = `${randomUUID()}${fileExtension}`;
+      const filePath = path.join('uploads', fileName);
+      
+      // In a real app, you might want to move the file to a proper location
+      // or upload to cloud storage like AWS S3 or Cloudinary
+      
+      // For this demo, we'll return a URL that points to the uploaded file
+      const imageUrl = `/uploads/${req.file.filename}`;
+      
+      res.json({ imageUrl });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/send-otp", async (req, res) => {
     try {
@@ -442,6 +486,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stores endpoints
+  app.get("/api/stores", requireAuth, async (req: any, res) => {
+    try {
+      const { location, category } = req.query;
+      const stores = await storage.getStores(location, category);
+      res.json(stores);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get stores" });
+    }
+  });
+
+  app.get("/api/stores/:storeId", requireAuth, async (req: any, res) => {
+    try {
+      const { storeId } = req.params;
+      const store = await storage.getStore(storeId);
+      if (!store) {
+        return res.status(404).json({ message: "Store not found" });
+      }
+      const owner = await storage.getUser(store.userId);
+      res.json({ ...store, owner });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get store" });
+    }
+  });
+
+  app.get("/api/user/store", requireAuth, async (req: any, res) => {
+    try {
+      const store = await storage.getUserStore(req.userId);
+      res.json(store || null);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user store" });
+    }
+  });
+
+  app.get("/api/stores/:storeId/products", requireAuth, async (req: any, res) => {
+    try {
+      const { storeId } = req.params;
+      const products = await storage.getStoreProducts(storeId);
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get store products" });
+    }
+  });
+
+  app.post("/api/stores", requireAuth, async (req: any, res) => {
+    try {
+      // Check if user already has a store
+      const existingStore = await storage.getUserStore(req.userId);
+      if (existingStore) {
+        return res.status(400).json({ message: "User already has a store" });
+      }
+
+      const storeData = insertStoreSchema.parse({
+        ...req.body,
+        userId: req.userId,
+      });
+      
+      const store = await storage.createStore(storeData);
+      res.json(store);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create store" });
+    }
+  });
+
+  app.patch("/api/stores/:storeId", requireAuth, async (req: any, res) => {
+    try {
+      const { storeId } = req.params;
+      
+      // Check if user owns this store
+      const store = await storage.getStore(storeId);
+      if (!store || store.userId !== req.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const updatedStore = await storage.updateStore(storeId, req.body);
+      if (!updatedStore) {
+        return res.status(404).json({ message: "Store not found" });
+      }
+      
+      res.json(updatedStore);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update store" });
+    }
+  });
+
+  app.delete("/api/stores/:storeId", requireAuth, async (req: any, res) => {
+    try {
+      const { storeId } = req.params;
+      
+      // Check if user owns this store
+      const store = await storage.getStore(storeId);
+      if (!store || store.userId !== req.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const deleted = await storage.deleteStore(storeId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Store not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete store" });
+    }
+  });
+
   // Products endpoints
   app.get("/api/products", requireAuth, async (req: any, res) => {
     try {
@@ -630,6 +780,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get commissions by status" });
     }
   });
+
+  // Serve uploaded files statically
+  app.use("/uploads", (await import("express")).static("uploads"));
 
   const httpServer = createServer(app);
   return httpServer;

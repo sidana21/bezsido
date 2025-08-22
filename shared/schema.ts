@@ -105,10 +105,27 @@ export const insertStorySchema = createInsertSchema(stories).omit({
   viewCount: true,
 });
 
+// Stores for users
+export const stores = pgTable("stores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // Store owner
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  imageUrl: text("image_url"),
+  category: text("category").notNull(),
+  location: text("location").notNull(), // Store location
+  phoneNumber: text("phone_number"),
+  isOpen: boolean("is_open").default(true),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Products for affiliate marketing
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id), // Product owner
+  storeId: varchar("store_id").references(() => stores.id), // Optional: link to store
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: decimal("price").notNull(),
@@ -145,6 +162,12 @@ export const commissions = pgTable("commissions", {
   paidAt: timestamp("paid_at"),
 });
 
+export const insertStoreSchema = createInsertSchema(stores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
@@ -178,6 +201,8 @@ export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessions.$inferSelect;
 export type InsertOtp = z.infer<typeof insertOtpSchema>;
 export type OtpCode = typeof otpCodes.$inferSelect;
+export type InsertStore = z.infer<typeof insertStoreSchema>;
+export type Store = typeof stores.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
 export type InsertAffiliateLink = z.infer<typeof insertAffiliateLinkSchema>;
