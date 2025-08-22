@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   TrendingUp, 
   Share2, 
@@ -19,7 +20,8 @@ import {
   Clock,
   CheckCircle,
   Plus,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from "lucide-react";
 
 interface Product {
@@ -62,6 +64,7 @@ interface Commission {
 
 export default function Affiliate() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreateLinkDialogOpen, setIsCreateLinkDialogOpen] = useState(false);
 
@@ -114,6 +117,20 @@ export default function Affiliate() {
         description: "فشل في إنشاء رابط التسويق",
         variant: "destructive",
       });
+    },
+  });
+
+  // Start chat mutation
+  const startChatMutation = useMutation({
+    mutationFn: async (otherUserId: string) => {
+      return apiRequest("/api/chats/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId }),
+      });
+    },
+    onSuccess: (data: any) => {
+      setLocation(`/chat/${data.chatId}`);
     },
   });
 
@@ -367,6 +384,17 @@ export default function Affiliate() {
                           <p>البائع: {product.owner.name}</p>
                           <p>الموقع: {product.location}</p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startChatMutation.mutate(product.owner.id)}
+                          disabled={startChatMutation.isPending}
+                          className="text-whatsapp-green hover:bg-green-50 dark:hover:bg-green-950"
+                          data-testid={`button-contact-owner-${product.id}`}
+                        >
+                          <MessageSquare className="w-4 h-4 ml-1" />
+                          تواصل
+                        </Button>
                       </div>
 
                       {hasAffiliateLink ? (
