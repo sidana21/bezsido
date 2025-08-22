@@ -451,6 +451,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search messages in a chat
+  app.get("/api/chats/:chatId/messages/search", requireAuth, async (req: any, res) => {
+    try {
+      const { chatId } = req.params;
+      const { q: searchTerm } = req.query;
+      
+      if (!searchTerm) {
+        return res.status(400).json({ message: "Search term is required" });
+      }
+      
+      const messages = await storage.searchMessages(chatId, searchTerm as string);
+      
+      // Include sender info with each message
+      const messagesWithSenders = await Promise.all(
+        messages.map(async (message) => {
+          const sender = await storage.getUser(message.senderId);
+          return {
+            ...message,
+            sender,
+          };
+        })
+      );
+      
+      res.json(messagesWithSenders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to search messages" });
+    }
+  });
+
+  // Update message content
+  app.patch("/api/messages/:messageId", requireAuth, async (req: any, res) => {
+    try {
+      const { messageId } = req.params;
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+      
+      const message = await storage.updateMessage(messageId, content);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found or cannot be edited" });
+      }
+      
+      const sender = await storage.getUser(message.senderId);
+      res.json({
+        ...message,
+        sender,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update message" });
+    }
+  });
+
+  // Delete message
+  app.delete("/api/messages/:messageId", requireAuth, async (req: any, res) => {
+    try {
+      const { messageId } = req.params;
+      await storage.deleteMessage(messageId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
   // Get active stories
   app.get("/api/stories", requireAuth, async (req: any, res) => {
     try {

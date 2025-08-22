@@ -48,12 +48,20 @@ export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   chatId: varchar("chat_id").notNull().references(() => chats.id),
   senderId: varchar("sender_id").notNull().references(() => users.id),
-  content: text("content").notNull(),
-  messageType: text("message_type").notNull().default("text"), // text, image, file
+  content: text("content"),
+  messageType: text("message_type").notNull().default("text"), // text, image, file, audio, location
   imageUrl: text("image_url"),
+  audioUrl: text("audio_url"),
+  locationLat: decimal("location_lat"),
+  locationLon: decimal("location_lon"),
+  locationName: text("location_name"),
+  replyToMessageId: varchar("reply_to_message_id"),
   timestamp: timestamp("timestamp").defaultNow(),
   isRead: boolean("is_read").default(false),
   isDelivered: boolean("is_delivered").default(false),
+  isEdited: boolean("is_edited").default(false),
+  editedAt: timestamp("edited_at"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({

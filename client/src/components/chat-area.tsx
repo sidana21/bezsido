@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
-import { Search, Phone, Video, MoreVertical, Smile, Paperclip, Send, ArrowRight, Menu } from "lucide-react";
+import { Search, Phone, Video, MoreVertical, Smile, Paperclip, Send, ArrowRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MessageBubble } from "./message-bubble";
 import { Message, User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -19,6 +20,11 @@ interface ChatMessage extends Message {
 
 export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const [messageText, setMessageText] = useState("");
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -50,6 +56,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
         body: JSON.stringify({
           content: content.trim(),
           messageType: "text",
+          replyToId: replyingTo?.id || null,
         }),
       });
       
@@ -61,9 +68,34 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
       setMessageText("");
+      setReplyingTo(null);
     },
     onError: (error) => {
       console.error("خطأ في إرسال الرسالة:", error);
+    },
+  });
+
+  const editMessageMutation = useMutation({
+    mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
+      return apiRequest(`/api/messages/${messageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+    },
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      return apiRequest(`/api/messages/${messageId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
     },
   });
 
@@ -96,6 +128,57 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleSearch = async (term: string) => {
+    if (!chatId || !term.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const results = await apiRequest(`/api/chats/${chatId}/messages/search?q=${encodeURIComponent(term.trim())}`);
+      setSearchResults(results);
+    } catch (error) {
+      console.error("فشل في البحث:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const openSearchModal = () => {
+    setShowSearchModal(true);
+    setSearchTerm("");
+    setSearchResults([]);
+  };
+
+  const closeSearchModal = () => {
+    setShowSearchModal(false);
+    setSearchTerm("");
+    setSearchResults([]);
+  };
+
+  const handleReply = (message: ChatMessage) => {
+    setReplyingTo(message);
+  };
+
+  const handleEdit = (message: Message) => {
+    const newContent = prompt("تحرير الرسالة:", message.content);
+    if (newContent && newContent.trim() !== message.content) {
+      editMessageMutation.mutate({ messageId: message.id, content: newContent.trim() });
+    }
+  };
+
+  const handleDelete = (messageId: string) => {
+    if (confirm("هل أنت متأكد من حذف هذه الرسالة؟")) {
+      deleteMessageMutation.mutate(messageId);
+    }
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
   };
 
   if (!chatId) {
@@ -169,6 +252,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
+            onClick={openSearchModal}
             className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target hidden sm:flex"
             data-testid="button-search"
           >
@@ -230,6 +314,9 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
               key={message.id}
               message={message}
               isOwn={message.senderId === (currentUser as any)?.id}
+              onReply={handleReply}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />
           ))
         )}
@@ -239,6 +326,30 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
       {/* Message Input Area */}
       <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4">
+        {/* Reply Preview */}
+        {replyingTo && (
+          <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-[var(--whatsapp-primary)]">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-sm font-medium text-[var(--whatsapp-primary)] mb-1">
+                  رد على {replyingTo.sender?.name || "غير معروف"}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                  {replyingTo.content}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelReply}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-center space-x-2 sm:space-x-3 space-x-reverse">
           <Button
             variant="ghost"
@@ -282,6 +393,62 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           </Button>
         </div>
       </div>
+
+      {/* Search Modal */}
+      <Dialog open={showSearchModal} onOpenChange={setShowSearchModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-right">البحث في الرسائل</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="ابحث في المحادثة..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                className="w-full text-right"
+                data-testid="input-search"
+              />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+
+            <div className="max-h-96 overflow-y-auto">
+              {isSearching ? (
+                <div className="text-center py-4 text-gray-500">جار البحث...</div>
+              ) : searchResults.length > 0 ? (
+                <div className="space-y-3">
+                  {searchResults.map((message) => (
+                    <div
+                      key={message.id}
+                      className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                      data-testid={`search-result-${message.id}`}
+                    >
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {message.sender?.name || "غير معروف"}
+                      </div>
+                      <div className="text-gray-700 dark:text-gray-300 text-right">
+                        {message.content}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 text-right">
+                        {new Date(message.createdAt).toLocaleString('ar-SA')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : searchTerm ? (
+                <div className="text-center py-4 text-gray-500">لم يتم العثور على نتائج</div>
+              ) : (
+                <div className="text-center py-4 text-gray-500">اكتب للبحث في الرسائل</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

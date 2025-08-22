@@ -50,6 +50,9 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(messageId: string): Promise<void>;
   markMessageAsDelivered(messageId: string): Promise<void>;
+  searchMessages(chatId: string, searchTerm: string): Promise<Message[]>;
+  updateMessage(messageId: string, content: string): Promise<Message | undefined>;
+  deleteMessage(messageId: string): Promise<void>;
   
   // Stories
   getActiveStories(): Promise<(Story & { user: User })[]>;
@@ -315,9 +318,17 @@ export class MemStorage implements IStorage {
         content: "أهلاً! كيف حالك؟ 😊",
         messageType: "text",
         imageUrl: null,
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1800000), // 30 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-2",
@@ -326,9 +337,17 @@ export class MemStorage implements IStorage {
         content: "الحمد لله بخير! وأنت كيف حالك؟",
         messageType: "text",
         imageUrl: null,
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1740000), // 29 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-3",
@@ -337,9 +356,17 @@ export class MemStorage implements IStorage {
         content: "شاهد هذا المنظر الرائع!",
         messageType: "image",
         imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1500000), // 25 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-4",
@@ -348,9 +375,17 @@ export class MemStorage implements IStorage {
         content: "واو! 😍 منظر خلاب فعلاً. أين هذا المكان؟",
         messageType: "text",
         imageUrl: null,
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1440000), // 24 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-5",
@@ -359,9 +394,17 @@ export class MemStorage implements IStorage {
         content: "هذا في جبال الألب السويسرية 🏔️",
         messageType: "text",
         imageUrl: null,
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1380000), // 23 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-6",
@@ -370,9 +413,17 @@ export class MemStorage implements IStorage {
         content: "وهذا الغداء الذي تناولته هناك 🍽️",
         messageType: "image",
         imageUrl: "https://pixabay.com/get/gea1be77aa5dcbc2d39439c59e6b5feac148a0dfca36adf924c39583adb8620c2dc7693eb1b91ae3403b59786254a797ddd8c179d871743545cf7ddeb15b970ef_1280.jpg",
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1320000), // 22 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-7",
@@ -381,9 +432,17 @@ export class MemStorage implements IStorage {
         content: "يبدو لذيذاً جداً! 🤤 متى ستعودين؟",
         messageType: "text",
         imageUrl: null,
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1200000), // 20 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-8",
@@ -392,9 +451,17 @@ export class MemStorage implements IStorage {
         content: "سأعود الأسبوع القادم إن شاء الله",
         messageType: "image",
         imageUrl: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1140000), // 19 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-9",
@@ -403,9 +470,17 @@ export class MemStorage implements IStorage {
         content: "بالمناسبة، هل تتذكرين هذا المكان؟ 🌲",
         messageType: "image",
         imageUrl: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 1020000), // 17 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-10",
@@ -414,9 +489,17 @@ export class MemStorage implements IStorage {
         content: "أجل! المقهى الذي كنا نذهب إليه ☕",
         messageType: "image",
         imageUrl: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 960000), // 16 min ago
         isRead: true,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
       {
         id: "msg-11",
@@ -425,9 +508,17 @@ export class MemStorage implements IStorage {
         content: "نعم! ذكريات جميلة 😊 سأنتظر عودتك",
         messageType: "text",
         imageUrl: null,
+        audioUrl: null,
+        locationLat: null,
+        locationLon: null,
+        locationName: null,
+        replyToMessageId: null,
         timestamp: new Date(Date.now() - 900000), // 15 min ago
         isRead: false,
         isDelivered: true,
+        isEdited: false,
+        editedAt: null,
+        deletedAt: null,
       },
     ];
 
@@ -797,11 +888,20 @@ export class MemStorage implements IStorage {
     const message: Message = { 
       ...insertMessage, 
       id,
+      content: insertMessage.content ?? null,
       messageType: insertMessage.messageType ?? "text",
       imageUrl: insertMessage.imageUrl ?? null,
+      audioUrl: insertMessage.audioUrl ?? null,
+      locationLat: insertMessage.locationLat ?? null,
+      locationLon: insertMessage.locationLon ?? null,
+      locationName: insertMessage.locationName ?? null,
+      replyToMessageId: insertMessage.replyToMessageId ?? null,
       timestamp: new Date(),
       isRead: false,
       isDelivered: true,
+      isEdited: false,
+      editedAt: null,
+      deletedAt: null,
     };
     this.messages.set(id, message);
     
@@ -827,6 +927,37 @@ export class MemStorage implements IStorage {
     const message = this.messages.get(messageId);
     if (message) {
       message.isDelivered = true;
+      this.messages.set(messageId, message);
+    }
+  }
+
+  async searchMessages(chatId: string, searchTerm: string): Promise<Message[]> {
+    return Array.from(this.messages.values())
+      .filter((message) => 
+        message.chatId === chatId && 
+        message.deletedAt === null &&
+        message.content && 
+        message.content.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
+  }
+
+  async updateMessage(messageId: string, content: string): Promise<Message | undefined> {
+    const message = this.messages.get(messageId);
+    if (message && message.deletedAt === null) {
+      message.content = content;
+      message.isEdited = true;
+      message.editedAt = new Date();
+      this.messages.set(messageId, message);
+      return message;
+    }
+    return undefined;
+  }
+
+  async deleteMessage(messageId: string): Promise<void> {
+    const message = this.messages.get(messageId);
+    if (message) {
+      message.deletedAt = new Date();
       this.messages.set(messageId, message);
     }
   }
