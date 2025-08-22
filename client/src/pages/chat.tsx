@@ -49,7 +49,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-[100dvh] max-w-7xl mx-auto bg-white dark:bg-gray-800 shadow-2xl pb-16 sm:pb-16">
+    <div className="flex h-[100dvh] w-full bg-white dark:bg-gray-800 pb-20">
       {/* Mobile overlay */}
       {isMobile && sidebarVisible && selectedChatId && (
         <div 

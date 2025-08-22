@@ -46,44 +46,44 @@ export default function Stores() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-      {/* Header */}
+      {/* Header - Mobile optimized */}
       <div className="bg-whatsapp-green text-white p-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Link href="/">
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-green-600"
+                className="text-white hover:bg-green-600 w-12 h-12 rounded-full"
                 data-testid="button-back"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-xl font-semibold">المتاجر</h1>
+            <h1 className="text-2xl font-bold">المتاجر</h1>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4">
-        {/* Location Banner */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
-            <MapPin className="w-4 h-4" />
-            <span className="text-sm">المتاجر في منطقة {currentUser?.location}</span>
+      <div className="px-4 py-3">
+        {/* Location Banner - Mobile optimized */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 mb-6">
+          <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400 mb-3">
+            <MapPin className="w-6 h-6" />
+            <span className="text-base font-semibold">المتاجر في منطقة {currentUser?.location}</span>
           </div>
-          <p className="text-sm text-gray-500">اكتشف المتاجر والخدمات المحلية في منطقتك</p>
+          <p className="text-base text-gray-500">اكتشف المتاجر والخدمات المحلية في منطقتك</p>
         </div>
 
-        {/* Search */}
+        {/* Search - Mobile optimized */}
         <div className="relative mb-6">
-          <Search className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+          <Search className="absolute right-4 top-4 w-6 h-6 text-gray-400" />
           <Input
             type="text"
             placeholder="ابحث عن متجر أو فئة..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-10"
+            className="pr-12 text-lg h-14 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm"
             data-testid="input-search-stores"
           />
         </div>
@@ -227,14 +227,14 @@ export default function Stores() {
         )}
       </div>
 
-      {/* Floating Action Button */}
-      <div className="fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-50">
+      {/* Floating Action Button - Mobile optimized */}
+      <div className="fixed bottom-20 left-4 z-50">
         <Link href="/my-store">
           <Button
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 shadow-lg transition-transform hover:scale-110 active:scale-95 touch-none"
+            className="w-16 h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 active:bg-[var(--whatsapp-primary)]/80 shadow-xl transition-transform active:scale-95 touch-none"
             data-testid="fab-my-store"
           >
-            <Store className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+            <Store className="h-6 w-6 text-white" />
           </Button>
         </Link>
       </div>

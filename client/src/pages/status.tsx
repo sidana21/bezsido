@@ -54,41 +54,33 @@ export default function Status() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 dark:bg-gray-900 pb-16 sm:pb-20">
-      {/* Header */}
-      <div className="bg-whatsapp-green text-white p-3 sm:p-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
+    <div className="min-h-[100dvh] bg-gray-50 dark:bg-gray-900 pb-20">
+      {/* Header - Mobile optimized */}
+      <div className="bg-whatsapp-green text-white p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Link href="/">
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-green-600"
+                className="text-white hover:bg-green-600 w-12 h-12 rounded-full"
                 data-testid="button-back"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-xl font-semibold">الحالات</h1>
+            <h1 className="text-2xl font-bold">الحالات</h1>
           </div>
-          <Button
-            onClick={() => setIsCreateModalOpen(true)}
-            size="icon"
-            className="bg-green-600 hover:bg-green-700 text-white"
-            data-testid="button-create-story"
-          >
-            <Plus className="w-5 h-5" />
-          </Button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto p-3 sm:p-4">
-        {/* Promote banner */}
-        <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+      {/* Content - Mobile optimized */}
+      <div className="px-4 py-3">
+        {/* Promote banner - Mobile optimized */}
+        <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-2xl p-5 mb-6">
           <div className="text-center">
-            <h2 className="text-lg font-bold mb-2">انشر منتجك 📱</h2>
-            <p className="text-sm opacity-90">استخدم الحالات لعرض منتجاتك وخدماتك للمستخدمين في منطقتك</p>
+            <h2 className="text-xl font-bold mb-3">انشر منتجك 📱</h2>
+            <p className="text-base opacity-90 leading-relaxed">استخدم الحالات لعرض منتجاتك وخدماتك للمستخدمين في منطقتك</p>
           </div>
         </div>
 
@@ -129,21 +121,21 @@ export default function Status() {
           </div>
         </div>
 
-        {/* Recent Updates */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-          <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-semibold">التحديثات الأخيرة</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+        {/* Recent Updates - Mobile optimized */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+          <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="text-xl font-bold">التحديثات الأخيرة</h3>
+            <p className="text-base text-gray-500 dark:text-gray-400 mt-1">
               من منطقة {currentUser?.location}
             </p>
           </div>
           
           {isLoading ? (
-            <div className="p-8 text-center text-gray-500">
-              جاري التحميل...
+            <div className="p-12 text-center text-gray-500">
+              <div className="text-lg">جاري التحميل...</div>
             </div>
           ) : stories.length > 0 ? (
-            <div className="p-3 sm:p-4">
+            <div className="p-5">
               <StoriesRing 
                 onStoryClick={(storyId) => {
                   const index = stories.findIndex(s => s.id === storyId);
@@ -153,9 +145,9 @@ export default function Status() {
               />
             </div>
           ) : (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-              <p className="mb-2">لا توجد حالات حديثة</p>
-              <p className="text-sm">كن أول من يشارك حالة في منطقتك!</p>
+            <div className="p-12 text-center text-gray-500 dark:text-gray-400">
+              <p className="mb-3 text-lg">لا توجد حالات حديثة</p>
+              <p className="text-base">كن أول من يشارك حالة في منطقتك!</p>
             </div>
           )}
         </div>
@@ -166,14 +158,14 @@ export default function Status() {
         onClose={() => setIsCreateModalOpen(false)}
       />
 
-      {/* Floating Action Button */}
-      <div className="fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-50">
+      {/* Floating Action Button - Mobile optimized */}
+      <div className="fixed bottom-20 left-4 z-50">
         <Button
           onClick={() => setIsCreateModalOpen(true)}
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 shadow-lg transition-transform hover:scale-110 active:scale-95 touch-none"
+          className="w-16 h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 active:bg-[var(--whatsapp-primary)]/80 shadow-xl transition-transform active:scale-95 touch-none"
           data-testid="fab-new-status"
         >
-          <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+          <Camera className="h-6 w-6 text-white" />
         </Button>
       </div>
     </div>
