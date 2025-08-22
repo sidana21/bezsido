@@ -1,20 +1,25 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { StoriesRing } from "@/components/stories-ring";
-import { StoryViewer } from "@/components/story-viewer";
-import { CreateStoryModal } from "@/components/create-story-modal";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Camera, Edit } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CreateStoryModal } from "@/components/create-story-modal";
+import { Heart, MessageCircle, Share, Plus, ArrowLeft, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Link } from "wouter";
-import { useIsMobile } from "@/hooks/use-mobile";
 import type { Story, User } from "@shared/schema";
 
-export default function Status() {
-  const [selectedStoryIndex, setSelectedStoryIndex] = useState<number | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const isMobile = useIsMobile();
+interface StoryWithUser extends Story {
+  user: User;
+}
 
-  const { data: stories = [], isLoading } = useQuery<(Story & { user: User })[]>({
+export default function Status() {
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { data: stories = [], isLoading } = useQuery<StoryWithUser[]>({
     queryKey: ["/api/stories"],
   });
 
@@ -22,152 +27,354 @@ export default function Status() {
     queryKey: ["/api/user/current"],
   });
 
-  const handleStorySelect = (index: number) => {
-    setSelectedStoryIndex(index);
-  };
+  // Sample stories for demo
+  const sampleStories: StoryWithUser[] = [
+    {
+      id: "1",
+      userId: "user1",
+      content: "أحدث منتجاتنا من الملابس الشتوية",
+      imageUrl: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=700&fit=crop",
+      videoUrl: "",
+      backgroundColor: "#075e54",
+      textColor: "#ffffff",
+      location: "الرياض",
+      timestamp: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      viewCount: "156",
+      viewers: [],
+      user: {
+        id: "user1",
+        name: "متجر الأناقة",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+        phoneNumber: "+966501234567",
+        location: "الرياض",
+        isOnline: true,
+        isVerified: true,
+        verifiedAt: new Date(),
+        lastSeen: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    },
+    {
+      id: "2", 
+      userId: "user2",
+      content: "طعام طازج وصحي - جربوا أطباقنا الجديدة",
+      imageUrl: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=700&fit=crop",
+      videoUrl: "",
+      backgroundColor: "#25D366",
+      textColor: "#ffffff",
+      location: "جدة",
+      timestamp: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      viewCount: "89",
+      viewers: [],
+      user: {
+        id: "user2",
+        name: "مطعم البركة",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        phoneNumber: "+966507654321",
+        location: "جدة",
+        isOnline: false,
+        isVerified: true,
+        verifiedAt: new Date(),
+        lastSeen: new Date(Date.now() - 5 * 60 * 1000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    },
+    {
+      id: "3",
+      userId: "user3", 
+      content: "عروض خاصة على الإلكترونيات - خصم 50%",
+      imageUrl: "https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=400&h=700&fit=crop",
+      videoUrl: "",
+      backgroundColor: "#34B7F1",
+      textColor: "#ffffff",
+      location: "الدمام",
+      timestamp: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      viewCount: "234",
+      viewers: [],
+      user: {
+        id: "user3",
+        name: "متجر التقنية",
+        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
+        phoneNumber: "+966502345678",
+        location: "الدمام",
+        isOnline: true,
+        isVerified: false,
+        verifiedAt: null,
+        lastSeen: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    },
+    {
+      id: "4",
+      userId: "user4",
+      content: "منتجات طبيعية للعناية بالبشرة",
+      imageUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=700&fit=crop",
+      videoUrl: "",
+      backgroundColor: "#FF6B6B",
+      textColor: "#ffffff", 
+      location: "مكة",
+      timestamp: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      viewCount: "67",
+      viewers: [],
+      user: {
+        id: "user4",
+        name: "منتجات طبيعية",
+        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+        phoneNumber: "+966509876543",
+        location: "مكة",
+        isOnline: true,
+        isVerified: true,
+        verifiedAt: new Date(),
+        lastSeen: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    }
+  ];
 
-  const handleCloseViewer = () => {
-    setSelectedStoryIndex(null);
-  };
+  // Use sample stories if no real stories
+  const displayStories = stories.length > 0 ? stories : sampleStories;
 
-  const handleNextStory = () => {
-    if (selectedStoryIndex !== null && selectedStoryIndex < stories.length - 1) {
-      setSelectedStoryIndex(selectedStoryIndex + 1);
-    } else {
-      handleCloseViewer();
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    
+    const container = containerRef.current;
+    const scrollTop = container.scrollTop;
+    const windowHeight = window.innerHeight;
+    const newIndex = Math.round(scrollTop / windowHeight);
+    
+    if (newIndex !== currentVideoIndex && newIndex >= 0 && newIndex < displayStories.length) {
+      setCurrentVideoIndex(newIndex);
     }
   };
 
-  const handlePrevStory = () => {
-    if (selectedStoryIndex !== null && selectedStoryIndex > 0) {
-      setSelectedStoryIndex(selectedStoryIndex - 1);
-    }
+  const scrollToVideo = (index: number) => {
+    if (!containerRef.current) return;
+    
+    const container = containerRef.current;
+    const windowHeight = window.innerHeight;
+    container.scrollTo({
+      top: index * windowHeight,
+      behavior: 'smooth'
+    });
   };
 
-  if (selectedStoryIndex !== null && stories[selectedStoryIndex]) {
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [currentVideoIndex]);
+
+  if (isLoading) {
     return (
-      <StoryViewer
-        storyId={stories[selectedStoryIndex].id}
-        onClose={handleCloseViewer}
-      />
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-lg">جاري التحميل...</div>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 dark:bg-gray-900 pb-20">
-      {/* Header - Mobile optimized */}
-      <div className="bg-whatsapp-green text-white p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-green-600 w-12 h-12 rounded-full"
-                data-testid="button-back"
-              >
-                <ArrowLeft className="w-6 h-6" />
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">الحالات</h1>
-          </div>
+    <div className="relative w-full h-screen bg-black overflow-hidden">
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/50 to-transparent">
+        <div className="flex items-center justify-between p-4 pt-12">
+          <Link href="/">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20 w-10 h-10 rounded-full"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <h1 className="text-white text-lg font-semibold">الحالات</h1>
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/20 w-10 h-10 rounded-full"
+            data-testid="button-add-status"
+          >
+            <Plus className="w-5 h-5" />
+          </Button>
         </div>
       </div>
 
-      {/* Content - Mobile optimized */}
-      <div className="px-4 py-3">
-        {/* Promote banner - Mobile optimized */}
-        <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-2xl p-5 mb-6">
-          <div className="text-center">
-            <h2 className="text-xl font-bold mb-3">انشر منتجك 📱</h2>
-            <p className="text-base opacity-90 leading-relaxed">استخدم الحالات لعرض منتجاتك وخدماتك للمستخدمين في منطقتك</p>
-          </div>
-        </div>
-
-        {/* My Status */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-4 sm:mb-6">
-          <div className="p-3 sm:p-4">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h3 className="text-lg font-semibold">حالتي</h3>
-              <Button
-                onClick={() => setIsCreateModalOpen(true)}
-                size="sm"
-                className="bg-whatsapp-green hover:bg-green-600"
-                data-testid="button-my-status"
+      {/* Video Feed */}
+      <div
+        ref={containerRef}
+        className="h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        data-testid="video-feed"
+      >
+        <style>{`
+          div::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        
+        {displayStories.map((story, index) => (
+          <div
+            key={story.id}
+            className="relative w-full h-screen snap-start snap-always flex items-center justify-center"
+            style={{ backgroundColor: story.backgroundColor || '#075e54' }}
+          >
+            {/* Background Content */}
+            {story.imageUrl ? (
+              <img
+                src={story.imageUrl}
+                alt={story.content || ''}
+                className="absolute inset-0 w-full h-full object-cover"
+                data-testid={`img-story-${index}`}
+              />
+            ) : (
+              <div 
+                className="absolute inset-0 w-full h-full flex items-center justify-center"
+                style={{ backgroundColor: story.backgroundColor || '#075e54' }}
               >
-                إضافة حالة
-              </Button>
-            </div>
-            
-            {currentUser && (
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <img
-                    src={currentUser.avatar || "/placeholder-avatar.png"}
-                    alt={currentUser.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                    data-testid="img-my-avatar"
-                  />
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-whatsapp-green rounded-full flex items-center justify-center">
-                    <Plus className="w-3 h-3 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <p className="font-medium">{currentUser.name}</p>
-                  <p className="text-sm text-green-600">انشر منتجك</p>
+                <div 
+                  className="text-center p-8 max-w-sm"
+                  style={{ color: story.textColor || '#ffffff' }}
+                >
+                  <p className="text-2xl font-bold leading-relaxed">
+                    {story.content}
+                  </p>
                 </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Recent Updates - Mobile optimized */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
-          <div className="p-5 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-xl font-bold">التحديثات الأخيرة</h3>
-            <p className="text-base text-gray-500 dark:text-gray-400 mt-1">
-              من منطقة {currentUser?.location}
-            </p>
+            {/* Dark overlay for better text visibility */}
+            <div className="absolute inset-0 bg-black/20" />
+
+            {/* Story content overlay */}
+            {story.imageUrl && story.content && (
+              <div className="absolute inset-0 flex items-end">
+                <div className="w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
+                  <p className="text-white text-lg font-medium leading-relaxed">
+                    {story.content}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* User Info */}
+            <div className="absolute bottom-20 left-4 flex items-center gap-3 z-10">
+              <Avatar className="w-12 h-12 border-2 border-white">
+                <AvatarImage src={story.user.avatar || undefined} />
+                <AvatarFallback className="bg-gray-600 text-white">
+                  {story.user.name[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-white font-semibold" data-testid={`text-username-${index}`}>
+                    {story.user.name}
+                  </p>
+                  {story.user.isVerified && (
+                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-white/80 text-sm">{story.location}</p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="absolute bottom-32 right-4 flex flex-col gap-6 z-10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
+                data-testid={`button-like-${index}`}
+              >
+                <Heart className="w-6 h-6" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
+                data-testid={`button-comment-${index}`}
+              >
+                <MessageCircle className="w-6 h-6" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
+                data-testid={`button-share-${index}`}
+              >
+                <Share className="w-6 h-6" />
+              </Button>
+            </div>
+
+            {/* Video Controls */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+              {index === currentVideoIndex && (
+                <Button
+                  onClick={togglePlayPause}
+                  variant="ghost"
+                  size="icon"
+                  className="w-16 h-16 rounded-full bg-black/20 text-white hover:bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
+                  data-testid={`button-play-pause-${index}`}
+                >
+                  {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
+                </Button>
+              )}
+            </div>
+
+            {/* View Count */}
+            <div className="absolute top-20 right-4 bg-black/40 rounded-full px-3 py-1">
+              <p className="text-white text-sm" data-testid={`text-views-${index}`}>
+                {story.viewCount} مشاهدة
+              </p>
+            </div>
           </div>
-          
-          {isLoading ? (
-            <div className="p-12 text-center text-gray-500">
-              <div className="text-lg">جاري التحميل...</div>
-            </div>
-          ) : stories.length > 0 ? (
-            <div className="p-5">
-              <StoriesRing 
-                onStoryClick={(storyId) => {
-                  const index = stories.findIndex(s => s.id === storyId);
-                  if (index !== -1) handleStorySelect(index);
-                }}
-                onCreateStory={() => setIsCreateModalOpen(true)}
-              />
-            </div>
-          ) : (
-            <div className="p-12 text-center text-gray-500 dark:text-gray-400">
-              <p className="mb-3 text-lg">لا توجد حالات حديثة</p>
-              <p className="text-base">كن أول من يشارك حالة في منطقتك!</p>
-            </div>
-          )}
-        </div>
+        ))}
+      </div>
+
+      {/* Story Progress Indicators */}
+      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 flex gap-1 z-20">
+        {displayStories.map((_, index) => (
+          <div
+            key={index}
+            className={`w-8 h-1 rounded-full transition-all duration-300 ${
+              index === currentVideoIndex ? 'bg-white' : 'bg-white/40'
+            }`}
+            data-testid={`progress-indicator-${index}`}
+          />
+        ))}
+      </div>
+
+      {/* Navigation Hints */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white/60 text-sm text-center">
+        <p>اسحب لأعلى أو لأسفل للتنقل</p>
       </div>
 
       <CreateStoryModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
-
-      {/* Floating Action Button - Mobile optimized */}
-      <div className="fixed bottom-20 left-4 z-50">
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="w-16 h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 active:bg-[var(--whatsapp-primary)]/80 shadow-xl transition-transform active:scale-95 touch-none"
-          data-testid="fab-new-status"
-        >
-          <Camera className="h-6 w-6 text-white" />
-        </Button>
-      </div>
     </div>
   );
 }
