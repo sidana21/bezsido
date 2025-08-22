@@ -32,6 +32,7 @@ export default function LoginPage() {
   const [lastGeneratedOtp, setLastGeneratedOtp] = useState("");
   const [currentOtp, setCurrentOtp] = useState("");
   const [needsProfile, setNeedsProfile] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -123,7 +124,8 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       if (error.message?.includes("Name and location are required")) {
-        // New user, need to set up profile
+        // OTP verified but new user needs profile setup
+        setOtpVerified(true);
         toast({
           title: "مستخدم جديد",
           description: "يرجى إكمال بياناتك الشخصية",
@@ -161,14 +163,22 @@ export default function LoginPage() {
       return;
     }
 
+    if (!otpVerified) {
+      toast({
+        title: "خطأ",
+        description: "يجب التحقق من رمز OTP أولاً",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await apiRequest("/api/auth/verify-otp", {
+      const response = await apiRequest("/api/auth/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           phoneNumber: fullPhoneNumber, 
-          code: otp,
           name: name.trim(),
           location
         }),

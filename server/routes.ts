@@ -112,6 +112,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create new user after OTP verification
+  app.post("/api/auth/create-user", async (req, res) => {
+    try {
+      const { phoneNumber, name, location } = req.body;
+      
+      if (!phoneNumber || !name || !location) {
+        return res.status(400).json({ message: "Phone number, name and location are required" });
+      }
+      
+      // Check if user already exists
+      let user = await storage.getUserByPhoneNumber(phoneNumber);
+      
+      if (user) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+      
+      // Create user
+      const userData = insertUserSchema.parse({
+        phoneNumber,
+        name,
+        location,
+        avatar: null,
+        isOnline: true,
+      });
+      
+      user = await storage.createUser(userData);
+      
+      // Create session
+      const token = randomUUID();
+      const sessionData = insertSessionSchema.parse({
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      });
+      
+      await storage.createSession(sessionData);
+      
+      res.json({ 
+        success: true, 
+        user, 
+        token,
+        message: "User created successfully" 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   // Development endpoint to get last OTP
   app.get("/api/dev/last-otp", (req, res) => {
     if (process.env.NODE_ENV !== 'development') {
