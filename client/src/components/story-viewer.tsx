@@ -29,7 +29,10 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
 
   const viewStoryMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("PATCH", `/api/stories/${storyId}/view`, {});
+      return apiRequest(`/api/stories/${storyId}/view`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stories'] });

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateStoryModalProps {
   isOpen: boolean;
@@ -30,20 +31,36 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
   const [activeTab, setActiveTab] = useState<'text' | 'image'>('text');
   
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const createStoryMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/stories", {
-        content: content.trim() || null,
-        imageUrl: imageUrl.trim() || null,
-        backgroundColor,
-        textColor,
+      return apiRequest("/api/stories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: content.trim() || null,
+          imageUrl: imageUrl.trim() || null,
+          backgroundColor,
+          textColor,
+        }),
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stories'] });
+      toast({
+        title: "تم النشر",
+        description: "تم نشر حالتك بنجاح",
+      });
       onClose();
       resetForm();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في نشر الحالة",
+        variant: "destructive",
+      });
     },
   });
 
