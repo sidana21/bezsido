@@ -1,12 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRoute } from "wouter";
 import { Sidebar } from "@/components/sidebar";
 import { ChatArea } from "@/components/chat-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Chat() {
-  const [selectedChatId, setSelectedChatId] = useState<string | null>("chat-sarah");
+  const [, params] = useRoute("/chat/:chatId");
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(
+    params?.chatId || "chat-sarah"
+  );
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const isMobile = useIsMobile();
+
+  // Update selected chat when URL changes
+  useEffect(() => {
+    if (params?.chatId) {
+      setSelectedChatId(params.chatId);
+      if (isMobile) {
+        setSidebarVisible(false);
+      }
+    }
+  }, [params?.chatId, isMobile]);
 
   const handleToggleSidebar = () => {
     setSidebarVisible(!sidebarVisible);

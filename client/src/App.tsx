@@ -33,6 +33,7 @@ function Router() {
     <>
       <Switch>
         <Route path="/" component={Chat} />
+        <Route path="/chat/:chatId" component={Chat} />
         <Route path="/status" component={Status} />
         <Route path="/stores" component={Stores} />
         <Route path="/affiliate" component={Affiliate} />
