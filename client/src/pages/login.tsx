@@ -96,13 +96,13 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
+      // First, just verify the OTP without name and location
       const response = await apiRequest("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           phoneNumber: fullPhoneNumber, 
-          code: otp,
-          ...(name && location && { name, location })
+          code: otp
         }),
       });
 
@@ -112,13 +112,17 @@ export default function LoginPage() {
           title: "مرحباً!",
           description: "تم تسجيل الدخول بنجاح",
         });
-      } else {
-        // New user, need to set up profile
-        setStep("profile");
       }
     } catch (error: any) {
       if (error.message?.includes("Name and location are required")) {
-        setStep("profile");
+        // New user, need to set up profile
+        toast({
+          title: "مستخدم جديد",
+          description: "يرجى إكمال بياناتك الشخصية",
+        });
+        setTimeout(() => {
+          setStep("profile");
+        }, 100);
       } else {
         toast({
           title: "خطأ",
