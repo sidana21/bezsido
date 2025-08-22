@@ -107,6 +107,7 @@ export class MemStorage implements IStorage {
       phoneNumber: "+213555567890",
       name: "مريم حسن",
       avatar: "https://images.unsplash.com/photo-1589156191108-c762ff4b96ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
+      location: "قسنطينة",
       isOnline: true,
       lastSeen: new Date(),
       createdAt: new Date(),
@@ -118,6 +119,7 @@ export class MemStorage implements IStorage {
       phoneNumber: "+213555678901",
       name: "يوسف إبراهيم",
       avatar: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
+      location: "عنابة",
       isOnline: false,
       lastSeen: new Date(Date.now() - 172800000), // 2 days ago
       createdAt: new Date(),
@@ -129,6 +131,7 @@ export class MemStorage implements IStorage {
       phoneNumber: "+213555789012",
       name: "عبدالله خالد",
       avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
+      location: "سطيف",
       isOnline: false,
       lastSeen: new Date(Date.now() - 259200000), // 3 days ago
       createdAt: new Date(),
@@ -140,6 +143,7 @@ export class MemStorage implements IStorage {
       phoneNumber: "+213555890123",
       name: "ليلى أحمد",
       avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
+      location: "باتنة",
       isOnline: false,
       lastSeen: new Date(Date.now() - 345600000), // 4 days ago
       createdAt: new Date(),
@@ -427,6 +431,7 @@ export class MemStorage implements IStorage {
       name: insertChat.name ?? null,
       avatar: insertChat.avatar ?? null,
       isGroup: insertChat.isGroup ?? false,
+      participants: [...insertChat.participants],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -518,6 +523,11 @@ export class MemStorage implements IStorage {
     const story: Story = {
       ...insertStory,
       id,
+      content: insertStory.content ?? null,
+      imageUrl: insertStory.imageUrl ?? null,
+      videoUrl: insertStory.videoUrl ?? null,
+      backgroundColor: insertStory.backgroundColor ?? null,
+      textColor: insertStory.textColor ?? null,
       timestamp: new Date(),
       viewCount: "0",
       viewers: (insertStory.viewers ?? []) as string[],
