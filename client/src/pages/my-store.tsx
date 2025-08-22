@@ -96,6 +96,7 @@ export default function MyStore() {
       form.reset();
     },
     onError: (error: any) => {
+      console.log("Create store error:", error);
       toast({
         title: "خطأ",
         description: error.message || "فشل في إنشاء المتجر",
@@ -162,6 +163,8 @@ export default function MyStore() {
   });
 
   const handleCreateStore = (data: StoreFormData) => {
+    console.log("Form data:", data);
+    console.log("Form errors:", form.formState.errors);
     createStoreMutation.mutate(data);
   };
 
