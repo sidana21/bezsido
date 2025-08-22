@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,12 +31,20 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [lastGeneratedOtp, setLastGeneratedOtp] = useState("");
   const [currentOtp, setCurrentOtp] = useState("");
+  const [needsProfile, setNeedsProfile] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
 
   const locations = [
     "تندوف", "الجزائر", "وهران", "قسنطينة", "عنابة", "سطيف", "باتنة", "تيزي وزو", "بجاية", "مستغانم"
   ];
+
+  useEffect(() => {
+    if (needsProfile) {
+      setStep("profile");
+      setNeedsProfile(false);
+    }
+  }, [needsProfile]);
 
   const handleSendOtp = async () => {
     if (!phoneNumber.trim()) {
@@ -120,9 +128,7 @@ export default function LoginPage() {
           title: "مستخدم جديد",
           description: "يرجى إكمال بياناتك الشخصية",
         });
-        setTimeout(() => {
-          setStep("profile");
-        }, 100);
+        setNeedsProfile(true);
       } else {
         toast({
           title: "خطأ",
