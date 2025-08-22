@@ -4,7 +4,7 @@ import { StoriesRing } from "@/components/stories-ring";
 import { StoryViewer } from "@/components/story-viewer";
 import { CreateStoryModal } from "@/components/create-story-modal";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft, Camera, Edit } from "lucide-react";
 import { Link } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Story, User } from "@shared/schema";
@@ -165,6 +165,17 @@ export default function Status() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
+
+      {/* Floating Action Button */}
+      <div className="fixed bottom-6 left-6 z-50">
+        <Button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="w-16 h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 shadow-lg transition-transform hover:scale-110"
+          data-testid="fab-new-status"
+        >
+          <Camera className="h-6 w-6 text-white" />
+        </Button>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useRoute } from "wouter";
 import { Sidebar } from "@/components/sidebar";
 import { ChatArea } from "@/components/chat-area";
+import { FloatingActionButton } from "@/components/floating-action-button";
+import { ContactsModal } from "@/components/contacts-modal";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Chat() {
@@ -10,6 +12,7 @@ export default function Chat() {
     params?.chatId || "chat-sarah"
   );
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [showContacts, setShowContacts] = useState(false);
   const isMobile = useIsMobile();
 
   // Update selected chat when URL changes
@@ -31,6 +34,18 @@ export default function Chat() {
     if (isMobile) {
       setSidebarVisible(false);
     }
+  };
+
+  const handleShowContacts = () => {
+    setShowContacts(true);
+  };
+
+  const handleNewChat = () => {
+    setSidebarVisible(true);
+  };
+
+  const handleNewMessage = () => {
+    setSidebarVisible(true);
   };
 
   return (
@@ -70,6 +85,25 @@ export default function Chat() {
           onToggleSidebar={handleToggleSidebar}
         />
       </div>
+
+      {/* Floating Action Button */}
+      {!sidebarVisible && (
+        <FloatingActionButton
+          onNewChat={handleNewChat}
+          onShowContacts={handleShowContacts}
+          onNewMessage={handleNewMessage}
+        />
+      )}
+
+      {/* Contacts Modal */}
+      <ContactsModal
+        isOpen={showContacts}
+        onClose={() => setShowContacts(false)}
+        onStartChat={(chatId) => {
+          handleChatSelect(chatId);
+          setShowContacts(false);
+        }}
+      />
     </div>
   );
 }

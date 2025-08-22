@@ -226,6 +226,18 @@ export default function Stores() {
           </div>
         )}
       </div>
+
+      {/* Floating Action Button */}
+      <div className="fixed bottom-6 left-6 z-50">
+        <Link href="/my-store">
+          <Button
+            className="w-16 h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 shadow-lg transition-transform hover:scale-110"
+            data-testid="fab-my-store"
+          >
+            <Store className="h-6 w-6 text-white" />
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }
