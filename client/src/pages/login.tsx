@@ -297,14 +297,14 @@ export default function LoginPage() {
                 </InputOTP>
               </div>
 
-              {process.env.NODE_ENV === 'development' && (
+              {process.env.NODE_ENV === 'development' && lastGeneratedOtp && (
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-2">
-                    الرمز الحالي من السجلات: <strong>436397</strong>
+                    الرمز الحالي من السجلات: <strong>{lastGeneratedOtp}</strong>
                   </p>
                   <Button 
                     variant="outline" 
-                    onClick={() => setOtp("436397")}
+                    onClick={() => setOtp(lastGeneratedOtp)}
                     className="text-sm"
                     data-testid="button-auto-fill"
                   >
