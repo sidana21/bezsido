@@ -228,13 +228,13 @@ export default function Stores() {
       </div>
 
       {/* Floating Action Button */}
-      <div className="fixed bottom-6 left-6 z-50">
+      <div className="fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-50">
         <Link href="/my-store">
           <Button
-            className="w-16 h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 shadow-lg transition-transform hover:scale-110"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-primary)]/90 shadow-lg transition-transform hover:scale-110 active:scale-95 touch-none"
             data-testid="fab-my-store"
           >
-            <Store className="h-6 w-6 text-white" />
+            <Store className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
           </Button>
         </Link>
       </div>
