@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertStoreSchema } from "@shared/schema";
+import { insertStoreSchema, insertProductSchema } from "@shared/schema";
 import { z } from "zod";
 import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings } from "lucide-react";
 
