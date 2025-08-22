@@ -1,7 +1,20 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertMessageSchema, insertStorySchema, insertOtpSchema, insertUserSchema, insertSessionSchema } from "@shared/schema";
+import { 
+  insertMessageSchema, 
+  insertStorySchema, 
+  insertOtpSchema, 
+  insertUserSchema, 
+  insertSessionSchema,
+  insertChatSchema,
+  insertProductSchema,
+  insertAffiliateLinkSchema,
+  insertCommissionSchema,
+  type Product,
+  type AffiliateLink,
+  type Commission
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // Middleware to check authentication
@@ -405,6 +418,195 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ ...story, user });
     } catch (error) {
       res.status(500).json({ message: "Failed to get story" });
+    }
+  });
+
+  // Products endpoints
+  app.get("/api/products", requireAuth, async (req: any, res) => {
+    try {
+      const { location, category } = req.query;
+      const products = await storage.getProducts(location, category);
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get products" });
+    }
+  });
+
+  app.get("/api/products/:productId", requireAuth, async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      const owner = await storage.getUser(product.userId);
+      res.json({ ...product, owner });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get product" });
+    }
+  });
+
+  app.get("/api/user/products", requireAuth, async (req: any, res) => {
+    try {
+      const products = await storage.getUserProducts(req.userId);
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user products" });
+    }
+  });
+
+  app.post("/api/products", requireAuth, async (req: any, res) => {
+    try {
+      const productData = insertProductSchema.parse({
+        ...req.body,
+        userId: req.userId,
+      });
+      
+      const product = await storage.createProduct(productData);
+      res.json(product);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  app.patch("/api/products/:productId", requireAuth, async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      
+      // Check if user owns this product
+      const product = await storage.getProduct(productId);
+      if (!product || product.userId !== req.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const updatedProduct = await storage.updateProduct(productId, req.body);
+      if (!updatedProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      res.json(updatedProduct);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
+  app.delete("/api/products/:productId", requireAuth, async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      
+      // Check if user owns this product
+      const product = await storage.getProduct(productId);
+      if (!product || product.userId !== req.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const deleted = await storage.deleteProduct(productId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // Affiliate marketing endpoints
+  app.post("/api/affiliate-links", requireAuth, async (req: any, res) => {
+    try {
+      const affiliateLinkData = insertAffiliateLinkSchema.parse({
+        ...req.body,
+        affiliateId: req.userId,
+      });
+      
+      // Check if product exists
+      const product = await storage.getProduct(affiliateLinkData.productId);
+      if (!product || !product.isActive) {
+        return res.status(404).json({ message: "Product not found or inactive" });
+      }
+      
+      const affiliateLink = await storage.createAffiliateLink(affiliateLinkData);
+      res.json(affiliateLink);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create affiliate link" });
+    }
+  });
+
+  app.get("/api/user/affiliate-links", requireAuth, async (req: any, res) => {
+    try {
+      const links = await storage.getUserAffiliateLinks(req.userId);
+      res.json(links);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get affiliate links" });
+    }
+  });
+
+  // Track affiliate link click (no auth required for tracking)
+  app.post("/api/affiliate/:uniqueCode/click", async (req: any, res) => {
+    try {
+      const { uniqueCode } = req.params;
+      const link = await storage.getAffiliateLink(uniqueCode);
+      
+      if (!link) {
+        return res.status(404).json({ message: "Affiliate link not found" });
+      }
+      
+      await storage.trackClick(uniqueCode);
+      const product = await storage.getProduct(link.productId);
+      
+      res.json({ 
+        success: true, 
+        product,
+        redirectUrl: `/product/${link.productId}` 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to track click" });
+    }
+  });
+
+  // Track conversion (when someone buys through affiliate link)
+  app.post("/api/affiliate/:uniqueCode/conversion", requireAuth, async (req: any, res) => {
+    try {
+      const { uniqueCode } = req.params;
+      const { amount } = req.body;
+      
+      if (!amount || parseFloat(amount) <= 0) {
+        return res.status(400).json({ message: "Valid amount is required" });
+      }
+      
+      const commission = await storage.trackConversion(uniqueCode, req.userId, amount);
+      res.json(commission);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to track conversion" });
+    }
+  });
+
+  // Commissions endpoints
+  app.get("/api/user/commissions", requireAuth, async (req: any, res) => {
+    try {
+      const commissions = await storage.getUserCommissions(req.userId);
+      res.json(commissions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get commissions" });
+    }
+  });
+
+  app.get("/api/user/commissions/total", requireAuth, async (req: any, res) => {
+    try {
+      const total = await storage.getTotalCommissions(req.userId);
+      res.json({ total });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get total commissions" });
+    }
+  });
+
+  app.get("/api/user/commissions/:status", requireAuth, async (req: any, res) => {
+    try {
+      const { status } = req.params;
+      const commissions = await storage.getCommissionsByStatus(req.userId, status);
+      res.json(commissions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get commissions by status" });
     }
   });
 

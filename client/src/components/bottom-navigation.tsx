@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { Link } from "wouter";
-import { MessageSquare, Users, Store } from "lucide-react";
+import { MessageSquare, Users, Store, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function BottomNavigation() {
@@ -14,7 +14,7 @@ export function BottomNavigation() {
       isActive: location === "/",
     },
     {
-      label: "الحالات",
+      label: "الحالات", 
       icon: Users,
       href: "/status",
       isActive: location === "/status",
@@ -24,6 +24,12 @@ export function BottomNavigation() {
       icon: Store,
       href: "/stores",
       isActive: location === "/stores",
+    },
+    {
+      label: "التسويق",
+      icon: TrendingUp,
+      href: "/affiliate",
+      isActive: location === "/affiliate",
     },
   ];
 

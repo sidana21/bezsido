@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, jsonb, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -105,6 +105,67 @@ export const insertStorySchema = createInsertSchema(stories).omit({
   viewCount: true,
 });
 
+// Products for affiliate marketing
+export const products = pgTable("products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // Product owner
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: decimal("price").notNull(),
+  imageUrl: text("image_url"),
+  category: text("category").notNull(),
+  location: text("location").notNull(), // Where product is available
+  isActive: boolean("is_active").default(true),
+  commissionRate: decimal("commission_rate").notNull().default("0.05"), // 5% default commission
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Affiliate links for commission tracking
+export const affiliateLinks = pgTable("affiliate_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  affiliateId: varchar("affiliate_id").notNull().references(() => users.id), // Person sharing the link
+  uniqueCode: varchar("unique_code").notNull().unique(), // Unique tracking code
+  clicks: text("clicks").default("0"), // Number of clicks
+  conversions: text("conversions").default("0"), // Number of purchases
+  totalCommission: decimal("total_commission").default("0"), // Total commission earned
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Commission tracking
+export const commissions = pgTable("commissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  affiliateLinkId: varchar("affiliate_link_id").notNull().references(() => affiliateLinks.id),
+  buyerId: varchar("buyer_id").notNull().references(() => users.id), // Person who bought
+  amount: decimal("amount").notNull(), // Commission amount
+  status: text("status").notNull().default("pending"), // pending, paid, cancelled
+  transactionId: varchar("transaction_id"), // Optional transaction reference
+  createdAt: timestamp("created_at").defaultNow(),
+  paidAt: timestamp("paid_at"),
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAffiliateLinkSchema = createInsertSchema(affiliateLinks).omit({
+  id: true,
+  uniqueCode: true,
+  clicks: true,
+  conversions: true,
+  totalCommission: true,
+  createdAt: true,
+});
+
+export const insertCommissionSchema = createInsertSchema(commissions).omit({
+  id: true,
+  createdAt: true,
+  paidAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChat = z.infer<typeof insertChatSchema>;
@@ -117,3 +178,9 @@ export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessions.$inferSelect;
 export type InsertOtp = z.infer<typeof insertOtpSchema>;
 export type OtpCode = typeof otpCodes.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;
+export type InsertAffiliateLink = z.infer<typeof insertAffiliateLinkSchema>;
+export type AffiliateLink = typeof affiliateLinks.$inferSelect;
+export type InsertCommission = z.infer<typeof insertCommissionSchema>;
+export type Commission = typeof commissions.$inferSelect;

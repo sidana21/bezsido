@@ -9,6 +9,8 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import Chat from "@/pages/chat";
 import Status from "@/pages/status";
 import Stores from "@/pages/stores";
+import Affiliate from "@/pages/affiliate";
+import AffiliateRedirect from "@/pages/affiliate-redirect";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
@@ -33,6 +35,8 @@ function Router() {
         <Route path="/" component={Chat} />
         <Route path="/status" component={Status} />
         <Route path="/stores" component={Stores} />
+        <Route path="/affiliate" component={Affiliate} />
+        <Route path="/affiliate/:uniqueCode" component={AffiliateRedirect} />
         <Route component={NotFound} />
       </Switch>
       <BottomNavigation />
