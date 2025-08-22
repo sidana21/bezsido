@@ -181,6 +181,46 @@ export const contacts = pgTable("contacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Shopping cart items
+export const cartItems = pgTable("cart_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // Cart owner
+  productId: varchar("product_id").notNull().references(() => products.id),
+  quantity: text("quantity").notNull().default("1"), // Quantity as text to handle large numbers
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+// Orders
+export const orders = pgTable("orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  buyerId: varchar("buyer_id").notNull().references(() => users.id), // Customer
+  sellerId: varchar("seller_id").notNull().references(() => users.id), // Store owner
+  storeId: varchar("store_id").references(() => stores.id), // Optional store reference
+  totalAmount: decimal("total_amount").notNull(), // Total order value
+  status: text("status").notNull().default("pending"), // pending, confirmed, prepared, delivered, cancelled
+  paymentMethod: text("payment_method").notNull().default("cash_on_delivery"), // cash_on_delivery, bank_transfer, etc.
+  deliveryAddress: text("delivery_address").notNull(), // Customer delivery address
+  customerPhone: text("customer_phone").notNull(), // Customer contact
+  customerName: text("customer_name").notNull(), // Customer name
+  notes: text("notes"), // Order notes/comments
+  orderDate: timestamp("order_date").defaultNow(),
+  confirmedAt: timestamp("confirmed_at"),
+  deliveredAt: timestamp("delivered_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  cancellationReason: text("cancellation_reason"),
+});
+
+// Order items (products in an order)
+export const orderItems = pgTable("order_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  productName: text("product_name").notNull(), // Store product name at time of order
+  productPrice: decimal("product_price").notNull(), // Store product price at time of order
+  quantity: text("quantity").notNull(), // Quantity ordered
+  subtotal: decimal("subtotal").notNull(), // price * quantity
+});
+
 export const insertStoreSchema = createInsertSchema(stores).omit({
   id: true,
   createdAt: true,
@@ -213,6 +253,23 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   createdAt: true,
 });
 
+export const insertCartItemSchema = createInsertSchema(cartItems).omit({
+  id: true,
+  addedAt: true,
+});
+
+export const insertOrderSchema = createInsertSchema(orders).omit({
+  id: true,
+  orderDate: true,
+  confirmedAt: true,
+  deliveredAt: true,
+  cancelledAt: true,
+});
+
+export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChat = z.infer<typeof insertChatSchema>;
@@ -235,3 +292,9 @@ export type InsertCommission = z.infer<typeof insertCommissionSchema>;
 export type Commission = typeof commissions.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
+export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
+export type CartItem = typeof cartItems.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+export type Order = typeof orders.$inferSelect;
+export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
+export type OrderItem = typeof orderItems.$inferSelect;

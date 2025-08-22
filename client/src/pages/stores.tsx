@@ -3,10 +3,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plus, Package, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { User, Store as StoreType } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import type { User, Store as StoreType, Product } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface StoreWithOwner extends StoreType {
   owner: User;
@@ -14,7 +17,9 @@ interface StoreWithOwner extends StoreType {
 
 export default function Stores() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStore, setSelectedStore] = useState<StoreWithOwner | null>(null);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const { data: currentUser } = useQuery<User>({
     queryKey: ["/api/user/current"],
@@ -24,6 +29,16 @@ export default function Stores() {
     queryKey: ["/api/stores", currentUser?.location],
     queryFn: () => apiRequest(`/api/stores?location=${encodeURIComponent(currentUser?.location || '')}`),
     enabled: !!currentUser,
+  });
+
+  const { data: storeProducts = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: ["/api/products", selectedStore?.id],
+    queryFn: () => apiRequest(`/api/products/store/${selectedStore?.id}`),
+    enabled: !!selectedStore,
+  });
+
+  const { data: cartItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/cart"],
   });
 
   const startChatMutation = useMutation({
@@ -36,6 +51,30 @@ export default function Stores() {
     },
     onSuccess: (data: any) => {
       setLocation(`/chat/${data.chatId}`);
+    },
+  });
+
+  const addToCartMutation = useMutation({
+    mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
+      return apiRequest("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity: quantity.toString() }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      toast({
+        title: "تم الإضافة للسلة",
+        description: "تم إضافة المنتج إلى السلة بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في إضافة المنتج للسلة",
+        variant: "destructive",
+      });
     },
   });
 
@@ -62,6 +101,21 @@ export default function Stores() {
             </Link>
             <h1 className="text-2xl font-bold">المتاجر</h1>
           </div>
+          <Link href="/cart">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-green-600 w-12 h-12 rounded-full relative"
+              data-testid="button-cart"
+            >
+              <ShoppingCart className="w-6 h-6" />
+              {cartItems.length > 0 && (
+                <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {cartItems.length}
+                </Badge>
+              )}
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -190,20 +244,101 @@ export default function Stores() {
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
-                        className="bg-whatsapp-green hover:bg-green-600"
+                        className="bg-whatsapp-green hover:bg-green-600 flex items-center gap-1"
                         onClick={() => startChatMutation.mutate(store.userId)}
                         disabled={startChatMutation.isPending}
                         data-testid={`button-contact-${store.id}`}
                       >
+                        <MessageCircle className="w-3 h-3" />
                         تواصل
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        data-testid={`button-view-${store.id}`}
-                      >
-                        عرض المنتجات
-                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setSelectedStore(store)}
+                            data-testid={`button-view-${store.id}`}
+                          >
+                            <Package className="w-3 h-3 mr-1" />
+                            عرض المنتجات
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl">
+                              منتجات {selectedStore?.name}
+                            </DialogTitle>
+                          </DialogHeader>
+                          
+                          <div className="flex-1 overflow-y-auto">
+                            {isLoadingProducts ? (
+                              <div className="text-center py-8">جاري التحميل...</div>
+                            ) : storeProducts.length === 0 ? (
+                              <div className="text-center py-8">
+                                <Package className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                                <p className="text-gray-500">لا توجد منتجات في هذا المتجر حالياً</p>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {storeProducts.map((product) => (
+                                  <Card key={product.id} className="overflow-hidden" data-testid={`product-card-${product.id}`}>
+                                    <CardHeader className="p-0">
+                                      {product.imageUrl && (
+                                        <img
+                                          src={product.imageUrl}
+                                          alt={product.name}
+                                          className="w-full h-32 object-cover"
+                                        />
+                                      )}
+                                      {!product.imageUrl && (
+                                        <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                          <Package className="w-8 h-8 text-gray-400" />
+                                        </div>
+                                      )}
+                                    </CardHeader>
+                                    <CardContent className="p-4">
+                                      <div className="space-y-3">
+                                        <div>
+                                          <h3 className="font-semibold text-lg">{product.name}</h3>
+                                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                                            {product.description}
+                                          </p>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-center">
+                                          <Badge variant="outline" className="text-xs">
+                                            {product.category}
+                                          </Badge>
+                                          <div className="text-lg font-bold text-whatsapp-green">
+                                            {parseInt(product.price).toLocaleString()} دج
+                                          </div>
+                                        </div>
+                                        
+                                        {product.isActive ? (
+                                          <Button 
+                                            className="w-full bg-whatsapp-green hover:bg-green-600"
+                                            onClick={() => addToCartMutation.mutate({ productId: product.id })}
+                                            disabled={addToCartMutation.isPending}
+                                            data-testid={`button-add-cart-${product.id}`}
+                                          >
+                                            <Plus className="w-4 h-4 ml-1" />
+                                            إضافة للسلة
+                                          </Button>
+                                        ) : (
+                                          <Button variant="secondary" disabled className="w-full">
+                                            غير متوفر حالياً
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
                 </div>

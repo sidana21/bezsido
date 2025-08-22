@@ -15,10 +15,15 @@ import {
   insertAffiliateLinkSchema,
   insertCommissionSchema,
   insertContactSchema,
+  insertCartItemSchema,
+  insertOrderSchema,
+  insertOrderItemSchema,
   type Store,
   type Product,
   type AffiliateLink,
-  type Commission
+  type Commission,
+  type CartItem,
+  type Order
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -725,6 +730,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/products/store/:storeId", async (req: any, res) => {
+    try {
+      const { storeId } = req.params;
+      const products = await storage.getStoreProducts(storeId);
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get store products" });
+    }
+  });
+
   app.post("/api/products", requireAuth, async (req: any, res) => {
     try {
       const productData = insertProductSchema.parse({
@@ -916,6 +931,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ user: user || null, hasApp: !!user });
     } catch (error) {
       res.status(500).json({ message: "Failed to search user" });
+    }
+  });
+
+  // Shopping Cart endpoints
+  app.get("/api/cart", requireAuth, async (req: any, res) => {
+    try {
+      const cartItems = await storage.getCartItems(req.userId);
+      res.json(cartItems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get cart items" });
+    }
+  });
+
+  app.post("/api/cart", requireAuth, async (req: any, res) => {
+    try {
+      const cartItemData = insertCartItemSchema.parse({
+        ...req.body,
+        userId: req.userId,
+      });
+      
+      const cartItem = await storage.addToCart(cartItemData);
+      res.json(cartItem);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to add item to cart" });
+    }
+  });
+
+  app.put("/api/cart/:productId", requireAuth, async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      const { quantity } = req.body;
+      
+      if (!quantity || parseInt(quantity) <= 0) {
+        return res.status(400).json({ message: "Valid quantity is required" });
+      }
+      
+      await storage.updateCartItemQuantity(req.userId, productId, quantity);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update cart item" });
+    }
+  });
+
+  app.delete("/api/cart/:productId", requireAuth, async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      await storage.removeFromCart(req.userId, productId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to remove item from cart" });
+    }
+  });
+
+  app.delete("/api/cart", requireAuth, async (req: any, res) => {
+    try {
+      await storage.clearCart(req.userId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to clear cart" });
+    }
+  });
+
+  // Orders endpoints
+  app.post("/api/orders", requireAuth, async (req: any, res) => {
+    try {
+      const { order, items } = req.body;
+      
+      const orderData = insertOrderSchema.parse({
+        ...order,
+        buyerId: req.userId,
+      });
+
+      const orderItems = items.map((item: any) => insertOrderItemSchema.parse(item));
+      
+      const createdOrder = await storage.createOrder(orderData, orderItems);
+      
+      // Clear cart after successful order
+      await storage.clearCart(req.userId);
+      
+      res.json(createdOrder);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create order" });
+    }
+  });
+
+  app.get("/api/orders/user", requireAuth, async (req: any, res) => {
+    try {
+      const orders = await storage.getUserOrders(req.userId);
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user orders" });
+    }
+  });
+
+  app.get("/api/orders/seller", requireAuth, async (req: any, res) => {
+    try {
+      const orders = await storage.getSellerOrders(req.userId);
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get seller orders" });
+    }
+  });
+
+  app.get("/api/orders/:orderId", requireAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const order = await storage.getOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Check if user is buyer or seller
+      if (order.buyerId !== req.userId && order.sellerId !== req.userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get order" });
+    }
+  });
+
+  app.put("/api/orders/:orderId/status", requireAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const { status } = req.body;
+      
+      const allowedStatuses = ["pending", "confirmed", "prepared", "delivered", "cancelled"];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const updatedOrder = await storage.updateOrderStatus(orderId, status, req.userId);
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  app.put("/api/orders/:orderId/cancel", requireAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const { reason } = req.body;
+      
+      if (!reason) {
+        return res.status(400).json({ message: "Cancellation reason is required" });
+      }
+      
+      const cancelledOrder = await storage.cancelOrder(orderId, reason);
+      
+      if (!cancelledOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(cancelledOrder);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to cancel order" });
     }
   });
 

@@ -15,6 +15,8 @@ import Profile from "@/pages/profile";
 import AffiliateRedirect from "@/pages/affiliate-redirect";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
+import Cart from "@/pages/cart";
+import Orders from "@/pages/orders";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -39,6 +41,8 @@ function Router() {
         <Route path="/status" component={Status} />
         <Route path="/stores" component={Stores} />
         <Route path="/my-store" component={MyStore} />
+        <Route path="/cart" component={Cart} />
+        <Route path="/orders" component={Orders} />
         <Route path="/affiliate" component={Affiliate} />
         <Route path="/affiliate/:uniqueCode" component={AffiliateRedirect} />
         <Route path="/profile" component={Profile} />

@@ -32,6 +32,7 @@ type StoreFormData = z.infer<typeof storeFormSchema>;
 export default function MyStore() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: currentUser } = useQuery<User>({
@@ -56,6 +57,24 @@ export default function MyStore() {
       phoneNumber: "",
       imageUrl: "",
       isOpen: true,
+    },
+  });
+
+  const productForm = useForm({
+    resolver: zodResolver(insertProductSchema.extend({
+      name: z.string().min(1, "اسم المنتج مطلوب"),
+      description: z.string().min(1, "وصف المنتج مطلوب"),
+      price: z.string().min(1, "السعر مطلوب"),
+      category: z.string().min(1, "فئة المنتج مطلوبة"),
+    })),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: "",
+      category: "",
+      imageUrl: "",
+      location: currentUser?.location || "",
+      isActive: true,
     },
   });
 
@@ -111,12 +130,47 @@ export default function MyStore() {
     },
   });
 
+  const addProductMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!userStore) throw new Error("No store found");
+      return apiRequest("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          userId: currentUser?.id,
+          storeId: userStore.id,
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
+      toast({
+        title: "تم إضافة المنتج",
+        description: "تم إضافة المنتج بنجاح!",
+      });
+      setIsAddProductDialogOpen(false);
+      productForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في إضافة المنتج",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateStore = (data: StoreFormData) => {
     createStoreMutation.mutate(data);
   };
 
   const handleUpdateStore = (data: StoreFormData) => {
     updateStoreMutation.mutate(data);
+  };
+
+  const handleAddProduct = (data: any) => {
+    addProductMutation.mutate(data);
   };
 
   const openEditDialog = () => {
@@ -306,21 +360,116 @@ export default function MyStore() {
             {/* Store Products */}
             <Card>
               <CardHeader>
-                <CardTitle>منتجات المتجر ({storeProducts.length})</CardTitle>
+                <CardTitle className="flex justify-between items-center">
+                  <span>منتجات المتجر ({storeProducts.length})</span>
+                  <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" data-testid="button-add-product">
+                        <Plus className="w-4 h-4 ml-2" />
+                        إضافة منتج
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md" data-testid="add-product-modal">
+                      <DialogHeader>
+                        <DialogTitle>إضافة منتج جديد</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={productForm.handleSubmit(handleAddProduct)} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="productName">اسم المنتج *</Label>
+                          <Input
+                            id="productName"
+                            {...productForm.register("name")}
+                            placeholder="سماعة بلوتوث"
+                            data-testid="input-product-name"
+                          />
+                          {productForm.formState.errors.name && (
+                            <p className="text-sm text-red-500">{productForm.formState.errors.name.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="productDescription">وصف المنتج *</Label>
+                          <Textarea
+                            id="productDescription"
+                            {...productForm.register("description")}
+                            placeholder="وصف تفصيلي للمنتج..."
+                            data-testid="input-product-description"
+                          />
+                          {productForm.formState.errors.description && (
+                            <p className="text-sm text-red-500">{productForm.formState.errors.description.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="productPrice">السعر (دج) *</Label>
+                          <Input
+                            id="productPrice"
+                            {...productForm.register("price")}
+                            placeholder="5000"
+                            type="number"
+                            data-testid="input-product-price"
+                          />
+                          {productForm.formState.errors.price && (
+                            <p className="text-sm text-red-500">{productForm.formState.errors.price.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="productCategory">فئة المنتج *</Label>
+                          <Input
+                            id="productCategory"
+                            {...productForm.register("category")}
+                            placeholder="إلكترونيات، ملابس، طعام..."
+                            data-testid="input-product-category"
+                          />
+                          {productForm.formState.errors.category && (
+                            <p className="text-sm text-red-500">{productForm.formState.errors.category.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="productImageUrl">رابط الصورة</Label>
+                          <Input
+                            id="productImageUrl"
+                            {...productForm.register("imageUrl")}
+                            placeholder="https://example.com/image.jpg"
+                            data-testid="input-product-image"
+                          />
+                        </div>
+
+                        <div className="flex justify-end space-x-2 space-x-reverse">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsAddProductDialogOpen(false)}
+                            data-testid="button-cancel-product"
+                          >
+                            إلغاء
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={addProductMutation.isPending}
+                            className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]"
+                            data-testid="button-submit-product"
+                          >
+                            {addProductMutation.isPending ? "جاري الإضافة..." : "إضافة المنتج"}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {storeProducts.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-gray-600 dark:text-gray-400 mb-4">لا توجد منتجات في متجرك حتى الآن</p>
-                    <Button variant="outline" data-testid="button-add-first-product">
-                      <Plus className="w-4 h-4 ml-2" />
-                      إضافة منتج جديد
-                    </Button>
+                    <p className="text-sm text-gray-500 mb-4">ابدأ بإضافة منتجاتك لزيادة المبيعات</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {storeProducts.map((product) => (
-                      <Card key={product.id} className="overflow-hidden">
+                      <Card key={product.id} className="overflow-hidden" data-testid={`product-card-${product.id}`}>
                         {product.imageUrl && (
                           <div className="h-48 bg-gray-200 dark:bg-gray-700">
                             <img
@@ -335,13 +484,27 @@ export default function MyStore() {
                           <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 line-clamp-2">
                             {product.description}
                           </p>
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-between items-center mb-3">
                             <span className="text-lg font-bold text-[var(--whatsapp-primary)]">
                               {parseInt(product.price).toLocaleString()} دج
                             </span>
                             <Badge variant={product.isActive ? "default" : "secondary"}>
                               {product.isActive ? "نشط" : "متوقف"}
                             </Badge>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="flex-1" data-testid={`button-edit-product-${product.id}`}>
+                              <Edit className="w-3 h-3 ml-1" />
+                              تعديل
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={product.isActive ? "secondary" : "default"}
+                              className="flex-1"
+                              data-testid={`button-toggle-product-${product.id}`}
+                            >
+                              {product.isActive ? "إيقاف" : "تفعيل"}
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>

@@ -20,7 +20,13 @@ import {
   type Commission,
   type InsertCommission,
   type Contact,
-  type InsertContact
+  type InsertContact,
+  type CartItem,
+  type InsertCartItem,
+  type Order,
+  type InsertOrder,
+  type OrderItem,
+  type InsertOrderItem
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -95,6 +101,21 @@ export interface IStorage {
   addContact(contact: InsertContact): Promise<Contact>;
   searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
   updateContactAppUser(contactId: string, contactUserId: string): Promise<void>;
+
+  // Shopping Cart
+  getCartItems(userId: string): Promise<(CartItem & { product: Product & { owner: User } })[]>;
+  addToCart(cartItem: InsertCartItem): Promise<CartItem>;
+  updateCartItemQuantity(userId: string, productId: string, quantity: string): Promise<void>;
+  removeFromCart(userId: string, productId: string): Promise<void>;
+  clearCart(userId: string): Promise<void>;
+  
+  // Orders
+  createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
+  getUserOrders(userId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], seller: User })[]>;
+  getSellerOrders(sellerId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], buyer: User })[]>;
+  getOrder(orderId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], seller: User, buyer: User }) | undefined>;
+  updateOrderStatus(orderId: string, status: string, updatedBy: string): Promise<Order | undefined>;
+  cancelOrder(orderId: string, reason: string): Promise<Order | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -109,6 +130,9 @@ export class MemStorage implements IStorage {
   private affiliateLinks: Map<string, AffiliateLink>;
   private commissions: Map<string, Commission>;
   private contacts: Map<string, Contact>;
+  private cartItems: Map<string, CartItem>;
+  private orders: Map<string, Order>;
+  private orderItems: Map<string, OrderItem>;
 
   constructor() {
     this.users = new Map();
@@ -122,6 +146,9 @@ export class MemStorage implements IStorage {
     this.affiliateLinks = new Map();
     this.commissions = new Map();
     this.contacts = new Map();
+    this.cartItems = new Map();
+    this.orders = new Map();
+    this.orderItems = new Map();
     this.initializeMockData();
   }
 
@@ -1405,6 +1432,235 @@ export class MemStorage implements IStorage {
       contact.isAppUser = true;
       this.contacts.set(contactId, contact);
     }
+  }
+
+  // Shopping Cart methods
+  async getCartItems(userId: string): Promise<(CartItem & { product: Product & { owner: User } })[]> {
+    const userCartItems = Array.from(this.cartItems.values())
+      .filter(item => item.userId === userId);
+
+    const itemsWithProducts = await Promise.all(
+      userCartItems.map(async (item) => {
+        const product = await this.getProduct(item.productId);
+        const owner = await this.getUser(product!.userId);
+        return {
+          ...item,
+          product: {
+            ...product!,
+            owner: owner!,
+          },
+        };
+      })
+    );
+
+    return itemsWithProducts.sort((a, b) => (b.addedAt?.getTime() ?? 0) - (a.addedAt?.getTime() ?? 0));
+  }
+
+  async addToCart(insertCartItem: InsertCartItem): Promise<CartItem> {
+    // Check if item already exists in cart
+    const existingItem = Array.from(this.cartItems.values())
+      .find(item => item.userId === insertCartItem.userId && item.productId === insertCartItem.productId);
+
+    if (existingItem) {
+      // Update quantity if item exists
+      const newQuantity = parseInt(existingItem.quantity) + parseInt(insertCartItem.quantity);
+      existingItem.quantity = newQuantity.toString();
+      this.cartItems.set(existingItem.id, existingItem);
+      return existingItem;
+    }
+
+    // Add new item
+    const id = randomUUID();
+    const cartItem: CartItem = {
+      ...insertCartItem,
+      id,
+      addedAt: new Date(),
+    };
+    this.cartItems.set(id, cartItem);
+    return cartItem;
+  }
+
+  async updateCartItemQuantity(userId: string, productId: string, quantity: string): Promise<void> {
+    const item = Array.from(this.cartItems.values())
+      .find(item => item.userId === userId && item.productId === productId);
+    
+    if (item) {
+      item.quantity = quantity;
+      this.cartItems.set(item.id, item);
+    }
+  }
+
+  async removeFromCart(userId: string, productId: string): Promise<void> {
+    const item = Array.from(this.cartItems.values())
+      .find(item => item.userId === userId && item.productId === productId);
+    
+    if (item) {
+      this.cartItems.delete(item.id);
+    }
+  }
+
+  async clearCart(userId: string): Promise<void> {
+    const userCartItems = Array.from(this.cartItems.entries())
+      .filter(([_, item]) => item.userId === userId);
+    
+    userCartItems.forEach(([id, _]) => {
+      this.cartItems.delete(id);
+    });
+  }
+
+  // Orders methods
+  async createOrder(insertOrder: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
+    const orderId = randomUUID();
+    const order: Order = {
+      ...insertOrder,
+      id: orderId,
+      orderDate: new Date(),
+      confirmedAt: null,
+      deliveredAt: null,
+      cancelledAt: null,
+    };
+    this.orders.set(orderId, order);
+
+    // Create order items
+    items.forEach(insertItem => {
+      const itemId = randomUUID();
+      const orderItem: OrderItem = {
+        ...insertItem,
+        id: itemId,
+        orderId,
+      };
+      this.orderItems.set(itemId, orderItem);
+    });
+
+    return order;
+  }
+
+  async getUserOrders(userId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], seller: User })[]> {
+    const userOrders = Array.from(this.orders.values())
+      .filter(order => order.buyerId === userId);
+
+    const ordersWithDetails = await Promise.all(
+      userOrders.map(async (order) => {
+        const items = Array.from(this.orderItems.values())
+          .filter(item => item.orderId === order.id);
+        
+        const itemsWithProducts = await Promise.all(
+          items.map(async (item) => {
+            const product = await this.getProduct(item.productId);
+            return {
+              ...item,
+              product: product!,
+            };
+          })
+        );
+
+        const seller = await this.getUser(order.sellerId);
+        
+        return {
+          ...order,
+          items: itemsWithProducts,
+          seller: seller!,
+        };
+      })
+    );
+
+    return ordersWithDetails.sort((a, b) => (b.orderDate?.getTime() ?? 0) - (a.orderDate?.getTime() ?? 0));
+  }
+
+  async getSellerOrders(sellerId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], buyer: User })[]> {
+    const sellerOrders = Array.from(this.orders.values())
+      .filter(order => order.sellerId === sellerId);
+
+    const ordersWithDetails = await Promise.all(
+      sellerOrders.map(async (order) => {
+        const items = Array.from(this.orderItems.values())
+          .filter(item => item.orderId === order.id);
+        
+        const itemsWithProducts = await Promise.all(
+          items.map(async (item) => {
+            const product = await this.getProduct(item.productId);
+            return {
+              ...item,
+              product: product!,
+            };
+          })
+        );
+
+        const buyer = await this.getUser(order.buyerId);
+        
+        return {
+          ...order,
+          items: itemsWithProducts,
+          buyer: buyer!,
+        };
+      })
+    );
+
+    return ordersWithDetails.sort((a, b) => (b.orderDate?.getTime() ?? 0) - (a.orderDate?.getTime() ?? 0));
+  }
+
+  async getOrder(orderId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], seller: User, buyer: User }) | undefined> {
+    const order = this.orders.get(orderId);
+    if (!order) return undefined;
+
+    const items = Array.from(this.orderItems.values())
+      .filter(item => item.orderId === orderId);
+    
+    const itemsWithProducts = await Promise.all(
+      items.map(async (item) => {
+        const product = await this.getProduct(item.productId);
+        return {
+          ...item,
+          product: product!,
+        };
+      })
+    );
+
+    const seller = await this.getUser(order.sellerId);
+    const buyer = await this.getUser(order.buyerId);
+    
+    return {
+      ...order,
+      items: itemsWithProducts,
+      seller: seller!,
+      buyer: buyer!,
+    };
+  }
+
+  async updateOrderStatus(orderId: string, status: string, updatedBy: string): Promise<Order | undefined> {
+    const order = this.orders.get(orderId);
+    if (!order) return undefined;
+
+    order.status = status;
+    
+    // Update timestamps based on status
+    const now = new Date();
+    switch (status) {
+      case "confirmed":
+        order.confirmedAt = now;
+        break;
+      case "delivered":
+        order.deliveredAt = now;
+        break;
+      case "cancelled":
+        order.cancelledAt = now;
+        break;
+    }
+
+    this.orders.set(orderId, order);
+    return order;
+  }
+
+  async cancelOrder(orderId: string, reason: string): Promise<Order | undefined> {
+    const order = this.orders.get(orderId);
+    if (!order) return undefined;
+
+    order.status = "cancelled";
+    order.cancelledAt = new Date();
+    order.cancellationReason = reason;
+
+    this.orders.set(orderId, order);
+    return order;
   }
 }
 
