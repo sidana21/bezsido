@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save } from "lucide-react";
+import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,7 +112,7 @@ export default function Profile() {
     updateProfileMutation.mutate({
       name: name.trim(),
       location: location.trim(),
-      avatarUrl,
+      avatar: avatarUrl,
     });
   };
 
@@ -171,7 +171,7 @@ export default function Profile() {
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <Avatar className="w-32 h-32">
-              <AvatarImage src={avatar || currentUser?.avatar} alt={name || currentUser?.name} />
+              <AvatarImage src={avatarUrl || currentUser?.avatar || undefined} alt={name || currentUser?.name} />
               <AvatarFallback className="text-2xl">
                 {(name || currentUser?.name)?.charAt(0)?.toUpperCase() || "U"}
               </AvatarFallback>
@@ -212,6 +212,11 @@ export default function Profile() {
             <Label htmlFor="name" className="flex items-center gap-2 text-lg">
               <UserIcon className="w-5 h-5" />
               الاسم
+              {currentUser?.isVerified && (
+                <div title="حساب موثق">
+                  <ShieldCheck className="w-4 h-4 text-blue-500" data-testid="badge-verified-user" />
+                </div>
+              )}
             </Label>
             {isEditing ? (
               <Input

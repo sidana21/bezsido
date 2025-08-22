@@ -161,6 +161,8 @@ export class MemStorage implements IStorage {
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
       location: "تندوف",
       isOnline: true,
+      isVerified: true,
+      verifiedAt: new Date(),
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -173,6 +175,8 @@ export class MemStorage implements IStorage {
       avatar: "https://pixabay.com/get/g5ede2eab7ebacb14e91863d35be3f093549755f13131724e5e19c6a49a45921c44adc3a540b01f28abed2c4568cf8e907881a83c9d0679b2c22c054985afc7d2_1280.jpg",
       location: "تندوف",
       isOnline: true,
+      isVerified: false,
+      verifiedAt: null,
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -185,6 +189,8 @@ export class MemStorage implements IStorage {
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
       location: "وهران",
       isOnline: false,
+      isVerified: true,
+      verifiedAt: new Date(Date.now() - 86400000),
       lastSeen: new Date(Date.now() - 86400000), // 1 day ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -197,6 +203,8 @@ export class MemStorage implements IStorage {
       avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
       location: "تندوف",
       isOnline: true,
+      isVerified: false,
+      verifiedAt: null,
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -209,6 +217,8 @@ export class MemStorage implements IStorage {
       avatar: "https://images.unsplash.com/photo-1589156191108-c762ff4b96ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
       location: "قسنطينة",
       isOnline: true,
+      isVerified: true,
+      verifiedAt: new Date(Date.now() - 172800000),
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -221,6 +231,8 @@ export class MemStorage implements IStorage {
       avatar: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
       location: "عنابة",
       isOnline: false,
+      isVerified: false,
+      verifiedAt: null,
       lastSeen: new Date(Date.now() - 172800000), // 2 days ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -233,6 +245,8 @@ export class MemStorage implements IStorage {
       avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
       location: "سطيف",
       isOnline: false,
+      isVerified: false,
+      verifiedAt: null,
       lastSeen: new Date(Date.now() - 259200000), // 3 days ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -245,6 +259,8 @@ export class MemStorage implements IStorage {
       avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
       location: "باتنة",
       isOnline: false,
+      isVerified: false,
+      verifiedAt: null,
       lastSeen: new Date(Date.now() - 345600000), // 4 days ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -258,6 +274,8 @@ export class MemStorage implements IStorage {
       avatar: "https://i.pravatar.cc/150?img=11",
       location: "تندوف",
       isOnline: true,
+      isVerified: true,
+      verifiedAt: new Date(Date.now() - 604800000), // 7 days ago
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -270,6 +288,8 @@ export class MemStorage implements IStorage {
       avatar: "https://i.pravatar.cc/150?img=12",
       location: "تندوف",
       isOnline: false,
+      isVerified: false,
+      verifiedAt: null,
       lastSeen: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -282,6 +302,8 @@ export class MemStorage implements IStorage {
       avatar: "https://i.pravatar.cc/150?img=13",
       location: "تندوف",
       isOnline: false,
+      isVerified: true,
+      verifiedAt: new Date(Date.now() - 1209600000), // 14 days ago
       lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -832,6 +854,8 @@ export class MemStorage implements IStorage {
       id,
       avatar: insertUser.avatar ?? null,
       isOnline: insertUser.isOnline ?? false,
+      isVerified: false, // New users start unverified
+      verifiedAt: null,  // No verification date until verified
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -1150,6 +1174,8 @@ export class MemStorage implements IStorage {
       phoneNumber: insertStore.phoneNumber ?? null,
       isOpen: insertStore.isOpen ?? true,
       isActive: insertStore.isActive ?? true,
+      isVerified: false, // New stores start unverified
+      verifiedAt: null,  // No verification date until verified
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -1463,7 +1489,7 @@ export class MemStorage implements IStorage {
 
     if (existingItem) {
       // Update quantity if item exists
-      const newQuantity = parseInt(existingItem.quantity) + parseInt(insertCartItem.quantity);
+      const newQuantity = parseInt(existingItem.quantity) + parseInt(insertCartItem.quantity || '1');
       existingItem.quantity = newQuantity.toString();
       this.cartItems.set(existingItem.id, existingItem);
       return existingItem;
@@ -1474,6 +1500,7 @@ export class MemStorage implements IStorage {
     const cartItem: CartItem = {
       ...insertCartItem,
       id,
+      quantity: insertCartItem.quantity || '1',
       addedAt: new Date(),
     };
     this.cartItems.set(id, cartItem);
@@ -1514,6 +1541,11 @@ export class MemStorage implements IStorage {
     const order: Order = {
       ...insertOrder,
       id: orderId,
+      status: insertOrder.status || 'pending',
+      storeId: insertOrder.storeId || null,
+      paymentMethod: insertOrder.paymentMethod || 'cash_on_delivery',
+      notes: insertOrder.notes || null,
+      cancellationReason: insertOrder.cancellationReason || null,
       orderDate: new Date(),
       confirmedAt: null,
       deliveredAt: null,

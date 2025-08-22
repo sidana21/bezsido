@@ -10,6 +10,8 @@ export const users = pgTable("users", {
   avatar: text("avatar"),
   location: text("location").notNull(), // المنطقة الجغرافية
   isOnline: boolean("is_online").default(false),
+  isVerified: boolean("is_verified").default(false), // Account verification status
+  verifiedAt: timestamp("verified_at"), // When account was verified
   lastSeen: timestamp("last_seen").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -66,6 +68,8 @@ export const messages = pgTable("messages", {
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  isVerified: true,
+  verifiedAt: true,
   lastSeen: true,
   createdAt: true,
   updatedAt: true,
@@ -125,6 +129,8 @@ export const stores = pgTable("stores", {
   phoneNumber: text("phone_number"),
   isOpen: boolean("is_open").default(true),
   isActive: boolean("is_active").default(true),
+  isVerified: boolean("is_verified").default(false), // Store verification status
+  verifiedAt: timestamp("verified_at"), // When store was verified
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -223,6 +229,8 @@ export const orderItems = pgTable("order_items", {
 
 export const insertStoreSchema = createInsertSchema(stores).omit({
   id: true,
+  isVerified: true,
+  verifiedAt: true,
   createdAt: true,
   updatedAt: true,
 });

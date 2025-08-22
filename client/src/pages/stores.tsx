@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plus, Package, MessageCircle } from "lucide-react";
+import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plus, Package, MessageCircle, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { User, Store as StoreType, Product } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -207,11 +207,25 @@ export default function Stores() {
                   <div className="flex-1 p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="font-semibold text-lg">{store.name}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-lg">{store.name}</h3>
+                          {store.isVerified && (
+                            <div title="متجر موثق">
+                              <ShieldCheck className="w-4 h-4 text-blue-500" data-testid={`badge-verified-store-${store.id}`} />
+                            </div>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{store.description}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                          بواسطة {store.owner.name}
-                        </p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            بواسطة {store.owner.name}
+                          </p>
+                          {store.owner.isVerified && (
+                            <div title="حساب موثق">
+                              <ShieldCheck className="w-3 h-3 text-blue-500" data-testid={`badge-verified-owner-${store.id}`} />
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <Badge
                         variant={store.isOpen ? "default" : "secondary"}
