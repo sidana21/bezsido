@@ -150,7 +150,44 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
 
-    [currentUser, sarahUser, ahmedUser, fatimaUser, mariamUser, yousefUser, abdullahUser, lailaUser].forEach(user => {
+    // Store owners for messaging functionality
+    const storeOwner1: User = {
+      id: "user-store-1",
+      phoneNumber: "+213555123456",
+      name: "صاحب متجر الإلكترونيات",
+      avatar: "https://i.pravatar.cc/150?img=11",
+      location: "تندوف",
+      isOnline: true,
+      lastSeen: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const storeOwner2: User = {
+      id: "user-store-2",
+      phoneNumber: "+213555789123",
+      name: "صاحب بقالة العائلة",
+      avatar: "https://i.pravatar.cc/150?img=12",
+      location: "تندوف",
+      isOnline: false,
+      lastSeen: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const storeOwner3: User = {
+      id: "user-store-3",
+      phoneNumber: "+213555456789",
+      name: "صاحب مخبز الأصالة",
+      avatar: "https://i.pravatar.cc/150?img=13",
+      location: "تندوف",
+      isOnline: false,
+      lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    [currentUser, sarahUser, ahmedUser, fatimaUser, mariamUser, yousefUser, abdullahUser, lailaUser, storeOwner1, storeOwner2, storeOwner3].forEach(user => {
       this.users.set(user.id, user);
     });
 

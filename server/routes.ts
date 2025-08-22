@@ -237,6 +237,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create or get existing chat with another user
+  app.post("/api/chats/start", requireAuth, async (req: any, res) => {
+    try {
+      const { otherUserId } = req.body;
+      
+      if (!otherUserId) {
+        return res.status(400).json({ message: "Other user ID is required" });
+      }
+      
+      if (otherUserId === req.userId) {
+        return res.status(400).json({ message: "Cannot start chat with yourself" });
+      }
+      
+      // Check if other user exists
+      const otherUser = await storage.getUser(otherUserId);
+      if (!otherUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Find existing chat between these two users
+      const allChats = await storage.getUserChats(req.userId);
+      const existingChat = allChats.find(chat => 
+        !chat.isGroup && 
+        chat.participants.length === 2 && 
+        chat.participants.includes(otherUserId)
+      );
+      
+      if (existingChat) {
+        return res.json({ chatId: existingChat.id, isNew: false });
+      }
+      
+      // Create new chat
+      const chatData = insertChatSchema.parse({
+        name: null,
+        isGroup: false,
+        avatar: null,
+        participants: [req.userId, otherUserId],
+      });
+      
+      const newChat = await storage.createChat(chatData);
+      res.json({ chatId: newChat.id, isNew: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to start chat" });
+    }
+  });
+
   // Get chat messages
   app.get("/api/chats/:chatId/messages", requireAuth, async (req: any, res) => {
     try {

@@ -1,28 +1,44 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, Store, MapPin, Phone, Clock } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import type { User } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Stores() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
 
   const { data: currentUser } = useQuery<User>({
     queryKey: ["/api/user/current"],
+  });
+
+  const startChatMutation = useMutation({
+    mutationFn: async (otherUserId: string) => {
+      return apiRequest("/api/chats/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId }),
+      });
+    },
+    onSuccess: (data: any) => {
+      setLocation(`/chat/${data.chatId}`);
+    },
   });
 
   // Mock stores data - في التطبيق الحقيقي، ستأتي من API
   const stores = [
     {
       id: "store-1",
+      ownerId: "user-store-1", // Mock user ID for store owner
       name: "متجر الإلكترونيات الذكية",
       description: "أجهزة هواتف وحاسوب وإكسسوارات",
       location: "تندوف",
       phone: "+213555123456",
-      image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
+      image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxواG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
       category: "إلكترونيات",
       isOpen: true,
       rating: 4.5,
@@ -30,6 +46,7 @@ export default function Stores() {
     },
     {
       id: "store-2", 
+      ownerId: "user-store-2", // Mock user ID for store owner
       name: "بقالة العائلة",
       description: "مواد غذائية ومنظفات ومستلزمات يومية",
       location: "تندوف",
@@ -42,6 +59,7 @@ export default function Stores() {
     },
     {
       id: "store-3",
+      ownerId: "user-store-3", // Mock user ID for store owner
       name: "مخبز الأصالة",
       description: "خبز طازج وحلويات تقليدية",
       location: "تندوف", 
@@ -183,6 +201,8 @@ export default function Stores() {
                     <Button 
                       size="sm" 
                       className="bg-whatsapp-green hover:bg-green-600"
+                      onClick={() => startChatMutation.mutate(store.ownerId)}
+                      disabled={startChatMutation.isPending}
                       data-testid={`button-contact-${store.id}`}
                     >
                       تواصل

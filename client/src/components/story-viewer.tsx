@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { X, Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Story, User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 interface StoryViewerProps {
   storyId: string;
@@ -21,10 +22,15 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: story, isLoading } = useQuery<StoryWithUser>({
     queryKey: ['/api/stories', storyId],
     enabled: !!storyId,
+  });
+
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ['/api/user/current'],
   });
 
   const viewStoryMutation = useMutation({
@@ -36,6 +42,19 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stories'] });
+    },
+  });
+
+  const startChatMutation = useMutation({
+    mutationFn: async (otherUserId: string) => {
+      return apiRequest("/api/chats/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId }),
+      });
+    },
+    onSuccess: (data: any) => {
+      setLocation(`/chat/${data.chatId}`);
     },
   });
 
@@ -134,6 +153,18 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
           </div>
           
           <div className="flex items-center space-x-2 space-x-reverse">
+            {currentUser?.id !== story.userId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => startChatMutation.mutate(story.userId)}
+                disabled={startChatMutation.isPending}
+                className="text-white hover:bg-white hover:bg-opacity-20"
+                data-testid="button-message-story-owner"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
