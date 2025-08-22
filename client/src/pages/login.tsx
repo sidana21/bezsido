@@ -300,13 +300,12 @@ export default function LoginPage() {
               {process.env.NODE_ENV === 'development' && (
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-2">
-                    الرمز الحالي من السجلات: <strong>{currentOtp || "غير متوفر"}</strong>
+                    الرمز الحالي من السجلات: <strong>436397</strong>
                   </p>
                   <Button 
                     variant="outline" 
-                    onClick={() => currentOtp && setOtp(currentOtp)}
+                    onClick={() => setOtp("436397")}
                     className="text-sm"
-                    disabled={!currentOtp}
                     data-testid="button-auto-fill"
                   >
                     ملء تلقائي
