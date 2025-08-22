@@ -192,11 +192,11 @@ export default function Profile() {
             <Button
               onClick={() => setIsEditing(true)}
               variant="ghost"
-              size="icon"
-              className="text-white hover:bg-green-600 w-12 h-12 rounded-full"
+              className="text-white hover:bg-green-600 px-4 py-2 rounded-xl"
               data-testid="button-edit"
             >
-              <Edit3 className="w-6 h-6" />
+              <Edit3 className="w-5 h-5 ml-2" />
+              تعديل
             </Button>
           )}
         </div>
