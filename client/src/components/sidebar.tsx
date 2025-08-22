@@ -74,6 +74,9 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
 
   const { data: chats = [], isLoading } = useQuery<Chat[]>({
     queryKey: ['/api/chats'],
+    refetchInterval: 5000, // تحديث قائمة المحادثات كل 5 ثواني
+    refetchIntervalInBackground: false, // لا تحدث في الخلفية
+    refetchOnWindowFocus: true, // تحديث عند العودة للنافذة
   });
 
   // Delete chat mutation

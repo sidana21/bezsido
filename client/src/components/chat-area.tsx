@@ -35,6 +35,9 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const { data: messages = [], isLoading } = useQuery<ChatMessage[]>({
     queryKey: ['/api/chats', chatId, 'messages'],
     enabled: !!chatId,
+    refetchInterval: 3000, // تحديث الرسائل كل 3 ثواني
+    refetchIntervalInBackground: false, // لا تحدث في الخلفية لتوفير الموارد
+    refetchOnWindowFocus: true, // تحديث عند العودة للنافذة
   });
 
   const { data: chats = [] } = useQuery<any[]>({
@@ -165,7 +168,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   };
 
   const handleEdit = (message: Message) => {
-    const newContent = prompt("تحرير الرسالة:", message.content);
+    const newContent = prompt("تحرير الرسالة:", message.content || "");
     if (newContent && newContent.trim() !== message.content) {
       editMessageMutation.mutate({ messageId: message.id, content: newContent.trim() });
     }
@@ -435,7 +438,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
                         {message.content}
                       </div>
                       <div className="text-xs text-gray-500 mt-1 text-right">
-                        {new Date(message.createdAt).toLocaleString('ar-SA')}
+                        {message.timestamp ? new Date(message.timestamp).toLocaleString('ar-SA') : ''}
                       </div>
                     </div>
                   ))}
