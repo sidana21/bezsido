@@ -18,7 +18,9 @@ import {
   type AffiliateLink,
   type InsertAffiliateLink,
   type Commission,
-  type InsertCommission
+  type InsertCommission,
+  type Contact,
+  type InsertContact
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -83,6 +85,12 @@ export interface IStorage {
   getUserCommissions(userId: string): Promise<(Commission & { affiliateLink: AffiliateLink & { product: Product } })[]>;
   getTotalCommissions(userId: string): Promise<string>;
   getCommissionsByStatus(userId: string, status: string): Promise<Commission[]>;
+  
+  // Contacts
+  getUserContacts(userId: string): Promise<(Contact & { user?: User })[]>;
+  addContact(contact: InsertContact): Promise<Contact>;
+  searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+  updateContactAppUser(contactId: string, contactUserId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -96,6 +104,7 @@ export class MemStorage implements IStorage {
   private products: Map<string, Product>;
   private affiliateLinks: Map<string, AffiliateLink>;
   private commissions: Map<string, Commission>;
+  private contacts: Map<string, Contact>;
 
   constructor() {
     this.users = new Map();
@@ -108,6 +117,7 @@ export class MemStorage implements IStorage {
     this.products = new Map();
     this.affiliateLinks = new Map();
     this.commissions = new Map();
+    this.contacts = new Map();
     this.initializeMockData();
   }
 
@@ -621,6 +631,68 @@ export class MemStorage implements IStorage {
 
     mockCommissions.forEach(commission => {
       this.commissions.set(commission.id, commission);
+    });
+
+    // Create mock contacts
+    const mockContacts: Contact[] = [
+      {
+        id: "contact-1",
+        userId: "current-user",
+        contactUserId: "sarah-user",
+        phoneNumber: "+213555234567",
+        name: "سارة أحمد",
+        isAppUser: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "contact-2", 
+        userId: "current-user",
+        contactUserId: "ahmed-user",
+        phoneNumber: "+213555345678",
+        name: "أحمد محمد",
+        isAppUser: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "contact-3",
+        userId: "current-user",
+        contactUserId: "fatima-user",
+        phoneNumber: "+213555456789",
+        name: "فاطمة علي",
+        isAppUser: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "contact-4",
+        userId: "current-user",
+        contactUserId: null,
+        phoneNumber: "+213555123999",
+        name: "خالد حسن",
+        isAppUser: false,
+        createdAt: new Date(),
+      },
+      {
+        id: "contact-5",
+        userId: "current-user", 
+        contactUserId: null,
+        phoneNumber: "+213555887766",
+        name: "نور الدين",
+        isAppUser: false,
+        createdAt: new Date(),
+      },
+      {
+        id: "contact-6",
+        userId: "current-user",
+        contactUserId: "mariam-user",
+        phoneNumber: "+213555567890",
+        name: "مريم حسن",
+        isAppUser: true,
+        createdAt: new Date(),
+      }
+    ];
+
+    mockContacts.forEach(contact => {
+      this.contacts.set(contact.id, contact);
     });
   }
 
@@ -1137,6 +1209,57 @@ export class MemStorage implements IStorage {
         createdAt: c.createdAt,
         paidAt: c.paidAt,
       }));
+  }
+
+  // Contacts methods
+  async getUserContacts(userId: string): Promise<(Contact & { user?: User })[]> {
+    const userContacts = Array.from(this.contacts.values())
+      .filter(contact => contact.userId === userId);
+
+    const contactsWithUsers = await Promise.all(
+      userContacts.map(async (contact) => {
+        let user = undefined;
+        if (contact.contactUserId) {
+          user = await this.getUser(contact.contactUserId);
+        }
+        return {
+          ...contact,
+          user,
+        };
+      })
+    );
+
+    return contactsWithUsers.sort((a, b) => (a.name.localeCompare(b.name)));
+  }
+
+  async addContact(insertContact: InsertContact): Promise<Contact> {
+    const id = randomUUID();
+    
+    // Check if the phone number belongs to an existing user
+    const existingUser = await this.getUserByPhoneNumber(insertContact.phoneNumber);
+    
+    const contact: Contact = {
+      ...insertContact,
+      id,
+      contactUserId: existingUser?.id || null,
+      isAppUser: !!existingUser,
+      createdAt: new Date(),
+    };
+    this.contacts.set(id, contact);
+    return contact;
+  }
+
+  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+    return this.getUserByPhoneNumber(phoneNumber);
+  }
+
+  async updateContactAppUser(contactId: string, contactUserId: string): Promise<void> {
+    const contact = this.contacts.get(contactId);
+    if (contact) {
+      contact.contactUserId = contactUserId;
+      contact.isAppUser = true;
+      this.contacts.set(contactId, contact);
+    }
   }
 }
 

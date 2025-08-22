@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search, MessageCircle, MoreVertical, Moon, Sun, Trash2 } from "lucide-react";
+import { Search, MessageCircle, MoreVertical, Moon, Sun, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +16,7 @@ import { useTheme } from "@/components/theme-provider";
 import { StoriesRing } from "./stories-ring";
 import { StoryViewer } from "./story-viewer";
 import { CreateStoryModal } from "./create-story-modal";
+import { ContactsModal } from "./contacts-modal";
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -55,6 +56,7 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
   const [searchTerm, setSearchTerm] = useState("");
   const [viewingStoryId, setViewingStoryId] = useState<string | null>(null);
   const [showCreateStory, setShowCreateStory] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<Chat | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -201,6 +203,15 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => setShowContacts(true)}
+            className="text-white hover:text-gray-200 hover:bg-white/10"
+            data-testid="button-contacts"
+          >
+            <Users className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             className="text-white hover:text-gray-200 hover:bg-white/10"
             data-testid="button-new-chat"
           >
@@ -330,6 +341,16 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
       <CreateStoryModal
         isOpen={showCreateStory}
         onClose={() => setShowCreateStory(false)}
+      />
+
+      {/* Contacts Modal */}
+      <ContactsModal
+        isOpen={showContacts}
+        onClose={() => setShowContacts(false)}
+        onStartChat={(chatId) => {
+          onChatSelect(chatId);
+          setShowContacts(false);
+        }}
       />
 
       {/* Delete Chat Dialog */}

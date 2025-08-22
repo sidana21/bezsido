@@ -162,6 +162,17 @@ export const commissions = pgTable("commissions", {
   paidAt: timestamp("paid_at"),
 });
 
+// Contacts table for user friendships
+export const contacts = pgTable("contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // User who added the contact
+  contactUserId: varchar("contact_user_id").references(() => users.id), // Contact's user ID (if they have app)
+  phoneNumber: varchar("phone_number").notNull(), // Contact's phone number
+  name: text("name").notNull(), // Contact's name (user-defined)
+  isAppUser: boolean("is_app_user").default(false), // Whether contact has the app
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertStoreSchema = createInsertSchema(stores).omit({
   id: true,
   createdAt: true,
@@ -189,6 +200,11 @@ export const insertCommissionSchema = createInsertSchema(commissions).omit({
   paidAt: true,
 });
 
+export const insertContactSchema = createInsertSchema(contacts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChat = z.infer<typeof insertChatSchema>;
@@ -209,3 +225,5 @@ export type InsertAffiliateLink = z.infer<typeof insertAffiliateLinkSchema>;
 export type AffiliateLink = typeof affiliateLinks.$inferSelect;
 export type InsertCommission = z.infer<typeof insertCommissionSchema>;
 export type Commission = typeof commissions.$inferSelect;
+export type InsertContact = z.infer<typeof insertContactSchema>;
+export type Contact = typeof contacts.$inferSelect;

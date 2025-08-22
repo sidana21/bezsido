@@ -14,6 +14,7 @@ import {
   insertProductSchema,
   insertAffiliateLinkSchema,
   insertCommissionSchema,
+  insertContactSchema,
   type Store,
   type Product,
   type AffiliateLink,
@@ -778,6 +779,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(commissions);
     } catch (error) {
       res.status(500).json({ message: "Failed to get commissions by status" });
+    }
+  });
+
+  // Contacts endpoints
+  app.get("/api/contacts", requireAuth, async (req: any, res) => {
+    try {
+      const contacts = await storage.getUserContacts(req.userId);
+      res.json(contacts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get contacts" });
+    }
+  });
+
+  app.post("/api/contacts", requireAuth, async (req: any, res) => {
+    try {
+      const contactData = insertContactSchema.parse({
+        ...req.body,
+        userId: req.userId,
+      });
+      
+      const contact = await storage.addContact(contactData);
+      res.json(contact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to add contact" });
+    }
+  });
+
+  app.post("/api/contacts/search", requireAuth, async (req: any, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      
+      const user = await storage.searchUserByPhoneNumber(phoneNumber);
+      res.json({ user: user || null, hasApp: !!user });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to search user" });
     }
   });
 
