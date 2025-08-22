@@ -78,6 +78,42 @@ export default function Stores() {
     },
   });
 
+  const buyNowMutation = useMutation({
+    mutationFn: async ({ product, sellerId }: { product: Product; sellerId: string }) => {
+      // Start chat with seller
+      const chatResponse = await apiRequest("/api/chats/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId: sellerId }),
+      });
+
+      // Send product message
+      const productMessage = `مرحباً، أريد شراء هذا المنتج:\n\n📦 ${product.name}\n💰 السعر: ${parseInt(product.price).toLocaleString()} دج\n📝 ${product.description}\n\nهل هذا المنتج متوفر؟`;
+      
+      await apiRequest(`/api/chats/${chatResponse.chatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: productMessage,
+          messageType: "text",
+          replyToId: null,
+        }),
+      });
+
+      return chatResponse;
+    },
+    onSuccess: (data: any) => {
+      setLocation(`/chat/${data.chatId}`);
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في بدء المحادثة مع البائع",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredStores = stores.filter(store =>
     store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     store.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -330,15 +366,29 @@ export default function Stores() {
                                         </div>
                                         
                                         {product.isActive ? (
-                                          <Button 
-                                            className="w-full bg-whatsapp-green hover:bg-green-600"
-                                            onClick={() => addToCartMutation.mutate({ productId: product.id })}
-                                            disabled={addToCartMutation.isPending}
-                                            data-testid={`button-add-cart-${product.id}`}
-                                          >
-                                            <Plus className="w-4 h-4 ml-1" />
-                                            إضافة للسلة
-                                          </Button>
+                                          <div className="flex gap-2">
+                                            <Button 
+                                              className="flex-1 bg-blue-500 hover:bg-blue-600"
+                                              onClick={() => buyNowMutation.mutate({ 
+                                                product, 
+                                                sellerId: selectedStore?.userId || '' 
+                                              })}
+                                              disabled={buyNowMutation.isPending}
+                                              data-testid={`button-buy-now-${product.id}`}
+                                            >
+                                              <MessageCircle className="w-4 h-4 ml-1" />
+                                              {buyNowMutation.isPending ? "جاري..." : "اشتري الآن"}
+                                            </Button>
+                                            <Button 
+                                              className="flex-1 bg-whatsapp-green hover:bg-green-600"
+                                              onClick={() => addToCartMutation.mutate({ productId: product.id })}
+                                              disabled={addToCartMutation.isPending}
+                                              data-testid={`button-add-cart-${product.id}`}
+                                            >
+                                              <Plus className="w-4 h-4 ml-1" />
+                                              إضافة للسلة
+                                            </Button>
+                                          </div>
                                         ) : (
                                           <Button variant="secondary" disabled className="w-full">
                                             غير متوفر حالياً
