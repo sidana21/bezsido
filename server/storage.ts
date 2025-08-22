@@ -26,7 +26,9 @@ import {
   type Order,
   type InsertOrder,
   type OrderItem,
-  type InsertOrderItem
+  type InsertOrderItem,
+  type VerificationRequest,
+  type InsertVerificationRequest
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -116,6 +118,12 @@ export interface IStorage {
   getOrder(orderId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], seller: User, buyer: User }) | undefined>;
   updateOrderStatus(orderId: string, status: string, updatedBy: string): Promise<Order | undefined>;
   cancelOrder(orderId: string, reason: string): Promise<Order | undefined>;
+  
+  // Verification Requests
+  createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest>;
+  getUserVerificationRequests(userId: string): Promise<VerificationRequest[]>;
+  getVerificationRequest(id: string): Promise<VerificationRequest | undefined>;
+  updateVerificationRequestStatus(id: string, status: string, adminNote?: string, reviewedBy?: string): Promise<VerificationRequest | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -133,6 +141,7 @@ export class MemStorage implements IStorage {
   private cartItems: Map<string, CartItem>;
   private orders: Map<string, Order>;
   private orderItems: Map<string, OrderItem>;
+  private verificationRequests: Map<string, VerificationRequest>;
 
   constructor() {
     this.users = new Map();
@@ -149,6 +158,7 @@ export class MemStorage implements IStorage {
     this.cartItems = new Map();
     this.orders = new Map();
     this.orderItems = new Map();
+    this.verificationRequests = new Map();
     this.initializeMockData();
     this.initializeTestSession();
   }
@@ -1915,6 +1925,49 @@ export class MemStorage implements IStorage {
 
     this.orders.set(orderId, order);
     return order;
+  }
+
+  // Verification Requests
+  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> {
+    const id = randomUUID();
+    const verificationRequest: VerificationRequest = {
+      ...request,
+      id,
+      documents: (request.documents as string[]) || [],
+      submittedAt: new Date(),
+      reviewedAt: null,
+      reviewedBy: null,
+    };
+    this.verificationRequests.set(id, verificationRequest);
+    return verificationRequest;
+  }
+
+  async getUserVerificationRequests(userId: string): Promise<VerificationRequest[]> {
+    return Array.from(this.verificationRequests.values())
+      .filter(request => request.userId === userId)
+      .sort((a, b) => (b.submittedAt?.getTime() ?? 0) - (a.submittedAt?.getTime() ?? 0));
+  }
+
+  async getVerificationRequest(id: string): Promise<VerificationRequest | undefined> {
+    return this.verificationRequests.get(id);
+  }
+
+  async updateVerificationRequestStatus(
+    id: string, 
+    status: string, 
+    adminNote?: string, 
+    reviewedBy?: string
+  ): Promise<VerificationRequest | undefined> {
+    const request = this.verificationRequests.get(id);
+    if (!request) return undefined;
+
+    request.status = status;
+    request.adminNote = adminNote || null;
+    request.reviewedBy = reviewedBy || null;
+    request.reviewedAt = new Date();
+
+    this.verificationRequests.set(id, request);
+    return request;
   }
 }
 

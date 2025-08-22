@@ -1,26 +1,37 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck, Star, AlertCircle, Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { User } from "@shared/schema";
+import type { User, VerificationRequest } from "@shared/schema";
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [verificationReason, setVerificationReason] = useState("");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: currentUser, isLoading } = useQuery<User>({
     queryKey: ["/api/user/current"],
+  });
+
+  const { data: verificationRequests = [] } = useQuery<VerificationRequest[]>({
+    queryKey: ["/api/user/verification-requests"],
+    enabled: !!currentUser,
   });
 
   // Update form fields when user data changes
@@ -87,6 +98,32 @@ export default function Profile() {
       toast({
         title: "خطأ",
         description: error.message || "فشل في رفع الصورة",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const submitVerificationMutation = useMutation({
+    mutationFn: async (requestData: { requestType: string; reason: string }) => {
+      return apiRequest("/api/verification-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/verification-requests"] });
+      setShowVerificationDialog(false);
+      setVerificationReason("");
+      toast({
+        title: "تم إرسال الطلب",
+        description: "تم إرسال طلب التوثيق بنجاح، سيتم مراجعته قريباً",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في إرسال طلب التوثيق",
         variant: "destructive",
       });
     },
@@ -267,6 +304,136 @@ export default function Profile() {
             )}
           </div>
         </div>
+
+        {/* Verification Section */}
+        {!isEditing && (
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                <Star className="w-5 h-5" />
+                توثيق الحساب
+              </CardTitle>
+              <CardDescription>
+                احصل على العلامة الزرقاء واستمتع بالمزايا الحصرية
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {currentUser?.isVerified ? (
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                  <ShieldCheck className="w-5 h-5" />
+                  <span className="font-medium">حسابك موثق ✨</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Benefits List */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">مزايا التوثيق:</h4>
+                    <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                      <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-green-500" />
+                        <span>النجمة الزرقاء بجانب اسمك</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-green-500" />
+                        <span>أولوية في نتائج البحث</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-green-500" />
+                        <span>زيادة الثقة مع العملاء</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-green-500" />
+                        <span>دعم فني مخصص</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Current Request Status */}
+                  {verificationRequests.length > 0 && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                      <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
+                        {verificationRequests[0].status === "pending" && (
+                          <>
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm">طلبك قيد المراجعة...</span>
+                          </>
+                        )}
+                        {verificationRequests[0].status === "approved" && (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span className="text-sm">تم قبول طلبك!</span>
+                          </>
+                        )}
+                        {verificationRequests[0].status === "rejected" && (
+                          <>
+                            <AlertCircle className="w-4 h-4" />
+                            <span className="text-sm">تم رفض الطلب</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Request Button */}
+                  {verificationRequests.filter(r => r.status === "pending").length === 0 && (
+                    <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          className="w-full bg-blue-500 hover:bg-blue-600"
+                          data-testid="button-request-verification"
+                        >
+                          <Star className="w-4 h-4 ml-2" />
+                          طلب توثيق الحساب
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>طلب توثيق الحساب</DialogTitle>
+                          <DialogDescription>
+                            أخبرنا لماذا تستحق التوثيق واحصل على العلامة الزرقاء
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="verification-reason">سبب طلب التوثيق:</Label>
+                            <Textarea
+                              id="verification-reason"
+                              placeholder="مثال: أنا صاحب متجر معروف في المنطقة أو لدي خبرة في التجارة..."
+                              value={verificationReason}
+                              onChange={(e) => setVerificationReason(e.target.value)}
+                              className="mt-2"
+                              data-testid="textarea-verification-reason"
+                            />
+                          </div>
+                          <div className="flex gap-3">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setShowVerificationDialog(false)}
+                              className="flex-1"
+                            >
+                              إلغاء
+                            </Button>
+                            <Button 
+                              onClick={() => submitVerificationMutation.mutate({ 
+                                requestType: "user", 
+                                reason: verificationReason 
+                              })}
+                              disabled={!verificationReason.trim() || submitVerificationMutation.isPending}
+                              className="flex-1 bg-blue-500 hover:bg-blue-600"
+                              data-testid="button-submit-verification"
+                            >
+                              {submitVerificationMutation.isPending ? "جاري الإرسال..." : "إرسال الطلب"}
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Action Buttons */}
         {isEditing && (

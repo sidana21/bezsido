@@ -1101,6 +1101,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Verification Requests routes
+  app.post("/api/verification-requests", requireAuth, async (req: any, res) => {
+    try {
+      const { requestType, reason, documents, storeId } = req.body;
+      
+      const verificationRequestData = {
+        userId: req.userId,
+        requestType: requestType,
+        reason: reason || null,
+        documents: documents || [],
+        storeId: storeId || null,
+        status: "pending",
+        adminNote: null,
+        reviewedBy: null,
+      };
+      
+      const verificationRequest = await storage.createVerificationRequest(verificationRequestData);
+      res.json(verificationRequest);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create verification request" });
+    }
+  });
+
+  app.get("/api/user/verification-requests", requireAuth, async (req: any, res) => {
+    try {
+      const requests = await storage.getUserVerificationRequests(req.userId);
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get verification requests" });
+    }
+  });
+
+  app.get("/api/verification-requests/:requestId", requireAuth, async (req: any, res) => {
+    try {
+      const { requestId } = req.params;
+      const request = await storage.getVerificationRequest(requestId);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Verification request not found" });
+      }
+      
+      res.json(request);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get verification request" });
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;

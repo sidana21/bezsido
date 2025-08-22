@@ -278,6 +278,27 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
   id: true,
 });
 
+// Verification requests table
+export const verificationRequests = pgTable("verification_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // User requesting verification
+  storeId: varchar("store_id").references(() => stores.id), // Optional: for store verification requests
+  requestType: text("request_type").notNull(), // "user" or "store"
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  documents: jsonb("documents").$type<string[]>().default([]), // Document URLs submitted
+  reason: text("reason"), // User's reason for requesting verification
+  adminNote: text("admin_note"), // Admin's note (for approval/rejection)
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id), // Admin who reviewed the request
+});
+
+export const insertVerificationRequestSchema = createInsertSchema(verificationRequests).omit({
+  id: true,
+  submittedAt: true,
+  reviewedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChat = z.infer<typeof insertChatSchema>;
@@ -306,3 +327,5 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type OrderItem = typeof orderItems.$inferSelect;
+export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
+export type VerificationRequest = typeof verificationRequests.$inferSelect;
