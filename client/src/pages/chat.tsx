@@ -86,8 +86,8 @@ export default function Chat() {
         />
       </div>
 
-      {/* Floating Action Button */}
-      {!sidebarVisible && (
+      {/* Floating Action Button - يظهر فقط عندما تكون قائمة المحادثات مرئية */}
+      {sidebarVisible && (
         <FloatingActionButton
           onNewChat={handleNewChat}
           onShowContacts={handleShowContacts}

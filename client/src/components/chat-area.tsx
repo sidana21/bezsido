@@ -37,20 +37,33 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!chatId) throw new Error("No chat selected");
-      return apiRequest(`/api/chats/${chatId}/messages`, {
+      if (!chatId) {
+        console.error("لا يوجد محادثة محددة لإرسال الرسالة");
+        throw new Error("No chat selected");
+      }
+      
+      console.log("إرسال رسالة إلى:", chatId, "المحتوى:", content);
+      
+      const result = await apiRequest(`/api/chats/${chatId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content,
+          content: content.trim(),
           messageType: "text",
         }),
       });
+      
+      console.log("تم إرسال الرسالة بنجاح:", result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("تحديث قائمة الرسائل...");
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
       setMessageText("");
+    },
+    onError: (error) => {
+      console.error("خطأ في إرسال الرسالة:", error);
     },
   });
 
@@ -63,12 +76,24 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   }, [messages]);
 
   const handleSendMessage = () => {
-    if (!messageText.trim()) return;
-    sendMessageMutation.mutate(messageText);
+    const trimmedText = messageText.trim();
+    if (!trimmedText) {
+      console.log("الرسالة فارغة، لا يمكن الإرسال");
+      return;
+    }
+    
+    if (!chatId) {
+      console.error("لا يوجد معرف محادثة");
+      return;
+    }
+    
+    console.log("بدء إرسال الرسالة:", trimmedText);
+    sendMessageMutation.mutate(trimmedText);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       handleSendMessage();
     }
   };
