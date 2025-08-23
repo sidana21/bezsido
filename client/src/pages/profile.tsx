@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck, Star, AlertCircle, Check, Clock } from "lucide-react";
+import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck, Star, AlertCircle, Check, Clock, Upload, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -248,7 +248,7 @@ export default function Profile() {
                   {uploadAvatarMutation.isPending ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   ) : (
-                    <Camera className="w-5 h-5 text-white" />
+                    <Upload className="w-5 h-5 text-white" />
                   )}
                 </div>
               </label>
@@ -256,7 +256,6 @@ export default function Profile() {
                 id="avatar-upload"
                 type="file"
                 accept="image/*,image/jpeg,image/png,image/gif,image/webp"
-                capture="environment"
                 onChange={handleAvatarChange}
                 className="hidden"
                 data-testid="input-avatar-upload"
@@ -264,10 +263,14 @@ export default function Profile() {
             </div>
           </div>
           
-          {uploadAvatarMutation.isPending && (
+          {uploadAvatarMutation.isPending ? (
             <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
               <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
               جاري رفع الصورة...
+            </div>
+          ) : (
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              اضغط لتحميل صورة من هاتفك
             </div>
           )}
         </div>
