@@ -83,19 +83,27 @@ export default function ProductDetail() {
     mutationFn: async (sellerId: string) => {
       console.log("Sending request with sellerId:", sellerId);
       
-      const requestBody = { 
-        otherUserId: sellerId,
-        // Include product context in the initial message
-        initialMessage: `مرحباً 👋\n\nأنا مهتم بهذا المنتج:\n🛍️ ${product?.name}\n💰 ${formatCurrency(product?.price || '0')}\n📍 ${product?.location}\n\nهل يمكنك تزويدي بمزيد من التفاصيل؟\nشكراً لك 🙏`
-      };
-      
-      console.log("Request body:", requestBody);
-      
-      const response = await apiRequest(`/api/chats/start`, {
+      // Start chat with seller
+      const chatResponse = await apiRequest("/api/chats/start", {
         method: "POST",
-        body: JSON.stringify(requestBody),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId: sellerId }),
       });
-      return response.json();
+
+      // Send product message
+      const productMessage = `مرحباً 👋\n\nأنا مهتم بهذا المنتج:\n🛍️ ${product?.name}\n💰 ${formatCurrency(product?.price || '0')}\n📍 ${product?.location}\n\nهل يمكنك تزويدي بمزيد من التفاصيل؟\nشكراً لك 🙏`;
+      
+      await apiRequest(`/api/chats/${chatResponse.chatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: productMessage,
+          messageType: "text",
+          replyToId: null,
+        }),
+      });
+
+      return chatResponse;
     },
     onSuccess: (data) => {
       navigate(`/chat/${data.chatId}`);
@@ -103,7 +111,7 @@ export default function ProductDetail() {
     onError: () => {
       toast({
         title: "خطأ",
-        description: "فشل في بدء المحادثة",
+        description: "فشل في بدء المحادثة مع البائع",
         variant: "destructive",
       });
     },
