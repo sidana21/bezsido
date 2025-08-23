@@ -13,7 +13,7 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
 
   useEffect(() => {
     const checkAdminAuth = () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       
       if (!token || !token.startsWith('admin-')) {
         setLocation('/admin/login');

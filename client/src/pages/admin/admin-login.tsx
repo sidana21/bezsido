@@ -27,7 +27,7 @@ export function AdminLogin() {
 
   // Check if already logged in as admin
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     if (token && token.startsWith('admin-')) {
       setLocation('/admin');
     }
@@ -50,7 +50,7 @@ export function AdminLogin() {
       body: JSON.stringify(data),
     }),
     onSuccess: (data: any) => {
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('auth_token', data.token);
       toast({
         title: 'مرحباً بك في لوحة الإدارة',
         description: 'تم تسجيل الدخول بنجاح',

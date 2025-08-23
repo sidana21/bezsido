@@ -1475,10 +1475,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
-      // Get admin user (already exists in storage)
-      const adminUser = await storage.getUser("current-user"); // current-user is the admin
+      // Get or create admin user
+      let adminUser = await storage.getUser("current-user");
       if (!adminUser) {
-        return res.status(500).json({ message: "خطأ في النظام: لم يتم العثور على المدير" });
+        // Create admin user if doesn't exist
+        adminUser = await storage.createUser({
+          id: "current-user",
+          name: "المدير العام",
+          phoneNumber: "+213123456789",
+          location: "الجزائر",
+          isAdmin: true,
+          isVerified: true,
+          avatar: null,
+          isOnline: true,
+        });
+      } else if (!adminUser.isAdmin) {
+        // Make sure user is admin
+        adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
+      }
+      
+      // Add sample data if no users exist (first login)
+      const allUsers = await storage.getAllUsers();
+      if (allUsers.length <= 1) { // Only admin exists
+        // Create sample users
+        await storage.createUser({
+          name: "أحمد محمد",
+          phoneNumber: "+213555123456",
+          location: "تندوف",
+          isVerified: true,
+          avatar: null,
+          isOnline: true,
+        });
+        await storage.createUser({
+          name: "فاطمة بن علي",
+          phoneNumber: "+213555234567",
+          location: "الجزائر",
+          isVerified: false,
+          avatar: null,
+          isOnline: false,
+        });
+        await storage.createUser({
+          name: "يوسف الزهراني",
+          phoneNumber: "+213555345678",
+          location: "وهران",
+          isVerified: true,
+          avatar: null,
+          isOnline: true,
+        });
       }
       
       // Create session

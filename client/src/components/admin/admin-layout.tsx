@@ -56,7 +56,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
     window.location.href = '/admin/login';
   };
 
