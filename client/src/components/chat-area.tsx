@@ -193,18 +193,16 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
         formData.append('replyToId', replyingTo.id);
       }
 
-      const response = await fetch(`/api/chats/${chatId}/messages/audio`, {
+      // استخدام apiRequest مع المصادقة الصحيحة
+      const response = await apiRequest(`/api/chats/${chatId}/messages/audio`, {
         method: 'POST',
         body: formData,
+        // لا نحتاج لتعيين Content-Type هنا لأن FormData سيعينه تلقائياً
       });
 
-      if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
-        setReplyingTo(null);
-      } else {
-        throw new Error('Failed to send audio message');
-      }
+      queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      setReplyingTo(null);
     } catch (error) {
       console.error('Error sending audio message:', error);
       alert('فشل في إرسال الرسالة الصوتية');
@@ -487,28 +485,6 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <Paperclip className="h-5 w-5" />
           </Button>
           
-          {/* Voice Message Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
-            className={`mobile-touch-target ${
-              isRecording
-                ? "bg-red-500 text-white hover:bg-red-600"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            }`}
-            data-testid="button-voice"
-          >
-            {isRecording ? (
-              <Square className="h-5 w-5" />
-            ) : (
-              <Mic className="h-5 w-5" />
-            )}
-          </Button>
-          
           <div className="flex-1 relative">
             {isRecording && (
               <div className="absolute -top-12 left-0 right-0 bg-red-500 text-white p-2 rounded-lg text-center">
@@ -530,15 +506,40 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             />
           </div>
           
-          <Button
-            onClick={handleSendMessage}
-            disabled={!messageText.trim() || sendMessageMutation.isPending || isRecording}
-            className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-2 sm:p-3 rounded-full shadow-lg mobile-touch-target"
-            size="icon"
-            data-testid="button-send"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
+          {/* مجموعة أزرار الإرسال والصوت مدمجة */}
+          <div className="flex items-center space-x-1 space-x-reverse">
+            {/* Voice Message Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+              onTouchStart={startRecording}
+              onTouchEnd={stopRecording}
+              className={`mobile-touch-target rounded-l-full ${
+                isRecording
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-600"
+              }`}
+              data-testid="button-voice"
+            >
+              {isRecording ? (
+                <Square className="h-5 w-5" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </Button>
+            
+            <Button
+              onClick={handleSendMessage}
+              disabled={!messageText.trim() || sendMessageMutation.isPending || isRecording}
+              className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-2 sm:p-3 rounded-r-full shadow-lg mobile-touch-target"
+              size="icon"
+              data-testid="button-send"
+            >
+              <Send className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
 
