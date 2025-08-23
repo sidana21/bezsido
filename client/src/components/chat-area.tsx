@@ -27,11 +27,13 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [isDraggedForCancel, setIsDraggedForCancel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
+  const startPositionRef = useRef<{ x: number; y: number } | null>(null);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
@@ -140,8 +142,13 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     }
   }, [chatId, messages, currentUser]);
 
-  const startRecording = async () => {
+  const startRecording = async (event: React.MouseEvent | React.TouchEvent) => {
     try {
+      // حفظ موقع البداية
+      const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+      const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+      startPositionRef.current = { x: clientX, y: clientY };
+      
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
@@ -151,14 +158,18 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        sendAudioMessage(audioBlob);
+        if (!isDraggedForCancel) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+          sendAudioMessage(audioBlob);
+        }
         stream.getTracks().forEach(track => track.stop());
+        setIsDraggedForCancel(false);
       };
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
       setRecordingTime(0);
+      setIsDraggedForCancel(false);
 
       recordingTimerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
@@ -171,6 +182,32 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setRecordingTime(0);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    }
+  };
+
+  const handleDragMove = (event: React.MouseEvent | React.TouchEvent) => {
+    if (!isRecording || !startPositionRef.current) return;
+
+    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+    const deltaX = startPositionRef.current.x - clientX;
+
+    // إذا سحب المستخدم لليمين أكثر من 100 بكسل، اعتبره إلغاء
+    if (deltaX > 100) {
+      setIsDraggedForCancel(true);
+    } else {
+      setIsDraggedForCancel(false);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      setIsDraggedForCancel(true);
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setRecordingTime(0);
@@ -222,6 +259,47 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // إضافة event listeners للسحب على مستوى النافذة
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (isRecording) {
+        handleDragMove(event as any);
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (isRecording) {
+        handleDragMove(event as any);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isRecording) {
+        stopRecording();
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (isRecording) {
+        stopRecording();
+      }
+    };
+
+    if (isRecording) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchend', handleTouchEnd);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isRecording]);
 
   const handleSendMessage = () => {
     const trimmedText = messageText.trim();
@@ -487,10 +565,14 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           
           <div className="flex-1 relative">
             {isRecording && (
-              <div className="absolute -top-12 left-0 right-0 bg-red-500 text-white p-2 rounded-lg text-center">
+              <div className={`absolute -top-12 left-0 right-0 p-2 rounded-lg text-center transition-colors duration-200 ${
+                isDraggedForCancel ? 'bg-gray-500' : 'bg-red-500'
+              } text-white`}>
                 <div className="flex items-center justify-center space-x-2">
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  <span className="text-sm">تسجيل... {formatRecordingTime(recordingTime)}</span>
+                  <span className="text-sm">
+                    {isDraggedForCancel ? 'اسحب لليمين للإلغاء' : `تسجيل... ${formatRecordingTime(recordingTime)}`}
+                  </span>
                 </div>
               </div>
             )}
@@ -514,17 +596,25 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
               size="icon"
               onMouseDown={startRecording}
               onMouseUp={stopRecording}
+              onMouseMove={handleDragMove}
               onTouchStart={startRecording}
               onTouchEnd={stopRecording}
-              className={`mobile-touch-target rounded-l-full ${
+              onTouchMove={handleDragMove}
+              className={`mobile-touch-target rounded-l-full transition-colors duration-200 ${
                 isRecording
-                  ? "bg-red-500 text-white hover:bg-red-600"
+                  ? isDraggedForCancel
+                    ? "bg-gray-500 text-white hover:bg-gray-600"
+                    : "bg-red-500 text-white hover:bg-red-600"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-600"
               }`}
               data-testid="button-voice"
             >
               {isRecording ? (
-                <Square className="h-5 w-5" />
+                isDraggedForCancel ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Square className="h-5 w-5" />
+                )
               ) : (
                 <Mic className="h-5 w-5" />
               )}
