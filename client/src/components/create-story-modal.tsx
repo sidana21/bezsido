@@ -26,6 +26,7 @@ const textColors = [
 export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
   const [backgroundColor, setBackgroundColor] = useState("#075e54");
   const [textColor, setTextColor] = useState("#ffffff");
   const [activeTab, setActiveTab] = useState<'text' | 'image'>('text');
@@ -56,7 +57,13 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
       return response.json();
     },
     onSuccess: (data) => {
-      setImageUrl(data.mediaUrl);
+      if (data.fileType === 'video') {
+        setVideoUrl(data.mediaUrl);
+        setImageUrl("");
+      } else {
+        setImageUrl(data.mediaUrl);
+        setVideoUrl("");
+      }
       setSelectedFile(null);
       setIsUploading(false);
       toast({
@@ -82,6 +89,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
         body: JSON.stringify({
           content: content.trim() || null,
           imageUrl: imageUrl.trim() || null,
+          videoUrl: videoUrl.trim() || null,
           backgroundColor,
           textColor,
         }),
@@ -123,6 +131,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
   const resetForm = () => {
     setContent("");
     setImageUrl("");
+    setVideoUrl("");
     setSelectedFile(null);
     setIsUploading(false);
     setBackgroundColor("#075e54");
@@ -134,7 +143,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
   };
 
   const handleSubmit = () => {
-    if (!content.trim() && !imageUrl.trim()) {
+    if (!content.trim() && !imageUrl.trim() && !videoUrl.trim()) {
       return;
     }
     createStoryMutation.mutate();
@@ -301,14 +310,23 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
 
                 {/* Image URL */}
                 <div className="space-y-2">
-                  <Label htmlFor="imageUrl">رابط الصورة أو الفيديو</Label>
+                  <Label htmlFor="mediaUrl">رابط الصورة أو الفيديو</Label>
                   <Input
-                    id="imageUrl"
+                    id="mediaUrl"
                     placeholder="https://example.com/media.jpg"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
+                    value={imageUrl || videoUrl}
+                    onChange={(e) => {
+                      const url = e.target.value;
+                      if (url.includes('.mp4') || url.includes('.mov') || url.includes('.webm') || url.includes('video')) {
+                        setVideoUrl(url);
+                        setImageUrl("");
+                      } else {
+                        setImageUrl(url);
+                        setVideoUrl("");
+                      }
+                    }}
                     disabled={isUploading}
-                    data-testid="input-image-url"
+                    data-testid="input-media-url"
                   />
                 </div>
 
@@ -324,19 +342,32 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
                   />
                 </div>
 
-                {/* Image Preview */}
-                {imageUrl && (
+                {/* Media Preview */}
+                {(imageUrl || videoUrl) && (
                   <div className="space-y-2">
-                    <Label>معاينة الصورة</Label>
+                    <Label>{videoUrl ? 'معاينة الفيديو' : 'معاينة الصورة'}</Label>
                     <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-                      <img 
-                        src={imageUrl} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
+                      {videoUrl ? (
+                        <video
+                          src={videoUrl}
+                          className="w-full h-full object-cover"
+                          controls
+                          muted
+                          playsInline
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <img 
+                          src={imageUrl} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
                 )}
@@ -351,7 +382,7 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={(!content.trim() && !imageUrl.trim()) || createStoryMutation.isPending || isUploading}
+              disabled={(!content.trim() && !imageUrl.trim() && !videoUrl.trim()) || createStoryMutation.isPending || isUploading}
               className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]"
               data-testid="button-create"
             >

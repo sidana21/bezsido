@@ -57,6 +57,33 @@ export default function Status() {
       }
     },
     {
+      id: "1.5",
+      userId: "user1.5",
+      content: "فيديو تعريفي بمنتجاتنا الجديدة",
+      imageUrl: "",
+      videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      backgroundColor: "#25D366",
+      textColor: "#ffffff",
+      location: "الرياض",
+      timestamp: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      viewCount: "89",
+      viewers: [],
+      user: {
+        id: "user1.5",
+        name: "استديو الإبداع",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        phoneNumber: "+966507654321",
+        location: "الرياض",
+        isOnline: true,
+        isVerified: true,
+        verifiedAt: new Date(),
+        lastSeen: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    },
+    {
       id: "2", 
       userId: "user2",
       content: "طعام طازج وصحي - جربوا أطباقنا الجديدة",
@@ -238,7 +265,18 @@ export default function Status() {
             style={{ backgroundColor: story.backgroundColor || '#075e54' }}
           >
             {/* Background Content */}
-            {story.imageUrl ? (
+            {story.videoUrl ? (
+              <video
+                src={story.videoUrl}
+                className="absolute inset-0 w-full h-full object-cover"
+                autoPlay={index === currentVideoIndex && isPlaying}
+                loop
+                muted={isMuted}
+                playsInline
+                controls={false}
+                data-testid={`video-story-${index}`}
+              />
+            ) : story.imageUrl ? (
               <img
                 src={story.imageUrl}
                 alt={story.content || ''}
@@ -265,7 +303,7 @@ export default function Status() {
             <div className="absolute inset-0 bg-black/20" />
 
             {/* Story content overlay */}
-            {story.imageUrl && story.content && (
+            {(story.imageUrl || story.videoUrl) && story.content && (
               <div className="absolute inset-0 flex items-end">
                 <div className="w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
                   <p className="text-white text-lg font-medium leading-relaxed">
@@ -326,6 +364,19 @@ export default function Status() {
               >
                 <Share className="w-6 h-6" />
               </Button>
+
+              {/* Sound control for videos */}
+              {story.videoUrl && (
+                <Button
+                  onClick={toggleMute}
+                  variant="ghost"
+                  size="icon"
+                  className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
+                  data-testid={`button-sound-${index}`}
+                >
+                  {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                </Button>
+              )}
             </div>
 
             {/* Video Controls */}
