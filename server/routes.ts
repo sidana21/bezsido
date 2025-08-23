@@ -1633,13 +1633,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/stores/:storeId/status", requireAdmin, async (req: any, res) => {
     try {
       const { storeId } = req.params;
-      const { status } = req.body;
+      const { status, rejectionReason } = req.body;
       
-      if (!['approved', 'rejected'].includes(status)) {
-        return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
+      if (!['approved', 'rejected', 'suspended'].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'approved', 'rejected', or 'suspended'" });
       }
       
-      const updatedStore = await storage.updateStoreStatus(storeId, status);
+      const updatedStore = await storage.updateStoreStatus(storeId, status, req.userId, rejectionReason);
       
       if (!updatedStore) {
         return res.status(404).json({ message: "Store not found" });

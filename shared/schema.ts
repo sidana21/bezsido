@@ -130,9 +130,13 @@ export const stores = pgTable("stores", {
   location: text("location").notNull(), // Store location
   phoneNumber: text("phone_number"),
   isOpen: boolean("is_open").default(true),
-  isActive: boolean("is_active").default(true),
+  isActive: boolean("is_active").default(false), // Default to false until approved
+  status: text("status").notNull().default("pending"), // pending, approved, rejected, suspended
   isVerified: boolean("is_verified").default(false), // Store verification status
   verifiedAt: timestamp("verified_at"), // When store was verified
+  approvedAt: timestamp("approved_at"), // When store was approved
+  approvedBy: varchar("approved_by").references(() => users.id), // Admin who approved
+  rejectionReason: text("rejection_reason"), // Reason for rejection
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -231,8 +235,12 @@ export const orderItems = pgTable("order_items", {
 
 export const insertStoreSchema = createInsertSchema(stores).omit({
   id: true,
+  status: true,
   isVerified: true,
   verifiedAt: true,
+  approvedAt: true,
+  approvedBy: true,
+  rejectionReason: true,
   createdAt: true,
   updatedAt: true,
 });

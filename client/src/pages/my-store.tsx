@@ -93,8 +93,8 @@ export default function MyStore() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/store"] });
       toast({
-        title: "تم إنشاء المتجر",
-        description: "تم إنشاء متجرك بنجاح!",
+        title: "تم تقديم طلب إنشاء المتجر",
+        description: "تم تقديم طلبك بنجاح! سيتم مراجعته من قبل الإدارة وستتلقى إشعارًا عند الموافقة.",
       });
       setIsCreateDialogOpen(false);
       form.reset();
@@ -345,13 +345,36 @@ export default function MyStore() {
             {/* Store Info Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
+                <CardTitle className="flex items-center flex-wrap gap-2">
                   <StoreIcon className="w-5 h-5 ml-2" />
                   {userStore.name}
-                  <Badge className={`mr-2 ${userStore.isOpen ? 'bg-green-500' : 'bg-red-500'}`}>
-                    {userStore.isOpen ? 'مفتوح' : 'مغلق'}
-                  </Badge>
+                  <div className="flex gap-2">
+                    <Badge className={`${userStore.isOpen ? 'bg-green-500' : 'bg-red-500'}`}>
+                      {userStore.isOpen ? 'مفتوح' : 'مغلق'}
+                    </Badge>
+                    <Badge className={`${
+                      userStore.status === 'approved' ? 'bg-green-500' :
+                      userStore.status === 'pending' ? 'bg-yellow-500' :
+                      userStore.status === 'rejected' ? 'bg-red-500' :
+                      'bg-gray-500'
+                    }`}>
+                      {userStore.status === 'approved' ? 'معتمد' :
+                       userStore.status === 'pending' ? 'قيد المراجعة' :
+                       userStore.status === 'rejected' ? 'مرفوض' :
+                       userStore.status === 'suspended' ? 'معلق' : 'غير محدد'}
+                    </Badge>
+                  </div>
                 </CardTitle>
+                {userStore.status === 'rejected' && userStore.rejectionReason && (
+                  <div className="text-sm text-red-600 dark:text-red-400 mt-2">
+                    <strong>سبب الرفض:</strong> {userStore.rejectionReason}
+                  </div>
+                )}
+                {userStore.status === 'pending' && (
+                  <div className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                    متجرك قيد المراجعة من قبل الإدارة. سيتم إشعارك عند الموافقة عليه.
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -385,7 +408,11 @@ export default function MyStore() {
                   <span>منتجات المتجر ({storeProducts.length})</span>
                   <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" data-testid="button-add-product">
+                      <Button 
+                        className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" 
+                        data-testid="button-add-product"
+                        disabled={userStore.status !== 'approved'}
+                      >
                         <Plus className="w-4 h-4 ml-2" />
                         إضافة منتج
                       </Button>

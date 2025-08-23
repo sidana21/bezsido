@@ -1003,8 +1003,12 @@ export class MemStorage implements IStorage {
         phoneNumber: "+213555123456",
         isOpen: true,
         isActive: true,
+        status: "approved",
         isVerified: true,
         verifiedAt: new Date(Date.now() - 604800000),
+        approvedAt: new Date(Date.now() - 604800000),
+        approvedBy: "admin-user",
+        rejectionReason: null,
         createdAt: new Date(Date.now() - 2592000000),
         updatedAt: new Date(),
       },
@@ -1018,9 +1022,13 @@ export class MemStorage implements IStorage {
         location: "تندوف",
         phoneNumber: "+213555789123",
         isOpen: true,
-        isActive: true,
+        isActive: false,
+        status: "pending",
         isVerified: false,
         verifiedAt: null,
+        approvedAt: null,
+        approvedBy: null,
+        rejectionReason: null,
         createdAt: new Date(Date.now() - 1296000000),
         updatedAt: new Date(),
       },
@@ -1035,8 +1043,12 @@ export class MemStorage implements IStorage {
         phoneNumber: "+213555456789",
         isOpen: true,
         isActive: true,
+        status: "approved",
         isVerified: true,
         verifiedAt: new Date(Date.now() - 1209600000),
+        approvedAt: new Date(Date.now() - 1209600000),
+        approvedBy: "admin-user",
+        rejectionReason: null,
         createdAt: new Date(Date.now() - 1728000000),
         updatedAt: new Date(),
       },
@@ -1051,8 +1063,12 @@ export class MemStorage implements IStorage {
         phoneNumber: "+213555111222",
         isOpen: true,
         isActive: true,
+        status: "approved",
         isVerified: true,
         verifiedAt: new Date(Date.now() - 345600000),
+        approvedAt: new Date(Date.now() - 345600000),
+        approvedBy: "admin-user",
+        rejectionReason: null,
         createdAt: new Date(Date.now() - 864000000),
         updatedAt: new Date(),
       },
@@ -1067,8 +1083,12 @@ export class MemStorage implements IStorage {
         phoneNumber: "+213555555666",
         isOpen: false,
         isActive: true,
+        status: "approved",
         isVerified: true,
         verifiedAt: new Date(Date.now() - 604800000),
+        approvedAt: new Date(Date.now() - 604800000),
+        approvedBy: "admin-user",
+        rejectionReason: null,
         createdAt: new Date(Date.now() - 1555200000),
         updatedAt: new Date(),
       },
@@ -1082,9 +1102,13 @@ export class MemStorage implements IStorage {
         location: "قسنطينة",
         phoneNumber: "+213555777888",
         isOpen: true,
-        isActive: true,
+        isActive: false,
+        status: "pending",
         isVerified: false,
         verifiedAt: null,
+        approvedAt: null,
+        approvedBy: null,
+        rejectionReason: null,
         createdAt: new Date(Date.now() - 2160000000),
         updatedAt: new Date(),
       },
@@ -1114,9 +1138,13 @@ export class MemStorage implements IStorage {
         location: "وهران",
         phoneNumber: "+213555333444",
         isOpen: true,
-        isActive: true,
+        isActive: false,
+        status: "pending",
         isVerified: false,
         verifiedAt: null,
+        approvedAt: null,
+        approvedBy: null,
+        rejectionReason: null,
         createdAt: new Date(Date.now() - 1296000000),
         updatedAt: new Date(),
       }
@@ -1472,7 +1500,7 @@ export class MemStorage implements IStorage {
   // Products methods
   // Store methods
   async getStores(location?: string, category?: string): Promise<(Store & { owner: User })[]> {
-    let stores = Array.from(this.stores.values()).filter(s => s.isActive);
+    let stores = Array.from(this.stores.values()).filter(s => s.isActive && s.status === "approved");
     
     if (location) {
       stores = stores.filter(s => s.location === location);
@@ -1511,9 +1539,13 @@ export class MemStorage implements IStorage {
       imageUrl: insertStore.imageUrl ?? null,
       phoneNumber: insertStore.phoneNumber ?? null,
       isOpen: insertStore.isOpen ?? true,
-      isActive: insertStore.isActive ?? true,
+      isActive: false, // Start inactive until approved
+      status: "pending", // Default status is pending approval
       isVerified: false, // New stores start unverified
       verifiedAt: null,  // No verification date until verified
+      approvedAt: null, // No approval date until approved
+      approvedBy: null, // No approver until approved
+      rejectionReason: null, // No rejection reason initially
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -2145,13 +2177,22 @@ export class MemStorage implements IStorage {
     return Array.from(this.stores.values());
   }
 
-  async updateStoreStatus(storeId: string, status: string): Promise<Store | undefined> {
+  async updateStoreStatus(storeId: string, status: string, adminId?: string, rejectionReason?: string): Promise<Store | undefined> {
     const store = this.stores.get(storeId);
     if (!store) return undefined;
 
-    store.status = status as any;
-    this.stores.set(storeId, store);
-    return store;
+    const updatedStore: Store = {
+      ...store,
+      status: status as "pending" | "approved" | "rejected" | "suspended",
+      isActive: status === "approved", // Only active if approved
+      approvedAt: status === "approved" ? new Date() : store.approvedAt,
+      approvedBy: status === "approved" && adminId ? adminId : store.approvedBy,
+      rejectionReason: status === "rejected" ? rejectionReason || null : null,
+      updatedAt: new Date(),
+    };
+    
+    this.stores.set(storeId, updatedStore);
+    return updatedStore;
   }
 
   async getAllOrders(): Promise<Order[]> {
