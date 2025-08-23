@@ -1991,8 +1991,8 @@ export class MemStorage implements IStorage {
   async updateVerificationRequestStatus(
     id: string, 
     status: string, 
-    adminNote?: string, 
-    reviewedBy?: string
+    reviewedBy?: string,
+    adminNote?: string
   ): Promise<VerificationRequest | undefined> {
     const request = this.verificationRequests.get(id);
     if (!request) return undefined;
@@ -2003,7 +2003,7 @@ export class MemStorage implements IStorage {
     request.reviewedAt = new Date();
 
     // If approved, also update user verification status
-    if (status === 'approved' && request.requestType === 'account') {
+    if (status === 'approved' && request.requestType === 'user') {
       const user = this.users.get(request.userId);
       if (user) {
         user.isVerified = true;
