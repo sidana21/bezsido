@@ -309,7 +309,7 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
             variant="ghost"
             size="icon"
             onClick={() => onNext()}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:bg-white hover:bg-opacity-20"
+            className="absolute right-4 top-16 text-white hover:bg-white hover:bg-opacity-20"
             data-testid="button-next-story"
           >
             <ChevronRight className="h-6 w-6" />
