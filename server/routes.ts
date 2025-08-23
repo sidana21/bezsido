@@ -59,9 +59,19 @@ const audioUpload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit for audio files
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('audio/') || file.mimetype === 'audio/wav' || file.mimetype === 'audio/webm') {
+    console.log('Audio file upload - MIME type:', file.mimetype);
+    if (file.mimetype.startsWith('audio/') || 
+        file.mimetype === 'audio/wav' || 
+        file.mimetype === 'audio/webm' ||
+        file.mimetype === 'audio/mp4' ||
+        file.mimetype === 'audio/mpeg' ||
+        file.originalname.endsWith('.webm') ||
+        file.originalname.endsWith('.wav') ||
+        file.originalname.endsWith('.mp3') ||
+        file.originalname.endsWith('.mp4')) {
       cb(null, true);
     } else {
+      console.log('Rejected file type:', file.mimetype, file.originalname);
       cb(new Error('Only audio files are allowed'));
     }
   }

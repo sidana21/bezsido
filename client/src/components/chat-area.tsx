@@ -143,30 +143,70 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   }, [chatId, messages, currentUser]);
 
   const startRecording = async (event: React.MouseEvent | React.TouchEvent) => {
+    console.log('Starting recording...');
+    
     try {
+      // التحقق من دعم MediaRecorder
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('MediaRecorder not supported');
+      }
+
       // حفظ موقع البداية
       const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
       const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
       startPositionRef.current = { x: clientX, y: clientY };
       
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      console.log('Requesting microphone access...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        } 
+      });
+      
+      console.log('Microphone access granted, creating MediaRecorder...');
+      
+      // تجربة أنواع مختلفة من MIME
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'audio/mp4';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = ''; // استخدم النوع الافتراضي
+          }
+        }
+      }
+      
+      console.log('Using MIME type:', mimeType);
+      
+      mediaRecorderRef.current = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       audioChunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        console.log('Data available:', event.data.size, 'bytes');
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
       mediaRecorderRef.current.onstop = () => {
-        if (!isDraggedForCancel) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        console.log('Recording stopped. Chunks:', audioChunksRef.current.length);
+        if (!isDraggedForCancel && audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+          console.log('Audio blob created:', audioBlob.size, 'bytes');
           sendAudioMessage(audioBlob);
         }
         stream.getTracks().forEach(track => track.stop());
         setIsDraggedForCancel(false);
       };
 
-      mediaRecorderRef.current.start();
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+      };
+
+      mediaRecorderRef.current.start(1000); // جمع البيانات كل ثانية
       setIsRecording(true);
       setRecordingTime(0);
       setIsDraggedForCancel(false);
@@ -174,9 +214,20 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       recordingTimerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
+      
+      console.log('Recording started successfully');
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('خطأ في الوصول للميكروفون. تأكد من السماح بالوصول للميكروفون.');
+      setIsRecording(false);
+      
+      const err = error as any;
+      if (err.name === 'NotAllowedError') {
+        alert('يرجى السماح بالوصول للميكروفون في إعدادات المتصفح.');
+      } else if (err.name === 'NotFoundError') {
+        alert('لم يتم العثور على ميكروفون. تأكد من توصيل ميكروفون بالجهاز.');
+      } else {
+        alert('خطأ في بدء التسجيل: ' + (err.message || 'خطأ غير معروف'));
+      }
     }
   };
 
@@ -219,16 +270,29 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
   const sendAudioMessage = async (audioBlob: Blob) => {
     if (!chatId) return;
+    
+    console.log('Sending audio message...', audioBlob.size, 'bytes');
 
     try {
       // إنشاء FormData لرفع الملف الصوتي
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'voice-message.wav');
+      
+      // تحديد امتداد الملف بناءً على النوع
+      let filename = 'voice-message.webm';
+      if (audioBlob.type.includes('mp4')) {
+        filename = 'voice-message.mp4';
+      } else if (audioBlob.type.includes('wav')) {
+        filename = 'voice-message.wav';
+      }
+      
+      formData.append('audio', audioBlob, filename);
       formData.append('messageType', 'audio');
       formData.append('chatId', chatId);
       if (replyingTo?.id) {
         formData.append('replyToId', replyingTo.id);
       }
+
+      console.log('Sending FormData with file:', filename);
 
       // استخدام apiRequest مع المصادقة الصحيحة
       const response = await apiRequest(`/api/chats/${chatId}/messages/audio`, {
@@ -237,12 +301,14 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
         // لا نحتاج لتعيين Content-Type هنا لأن FormData سيعينه تلقائياً
       });
 
+      console.log('Audio message sent successfully');
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
       setReplyingTo(null);
     } catch (error) {
       console.error('Error sending audio message:', error);
-      alert('فشل في إرسال الرسالة الصوتية');
+      const err = error as any;
+      alert('فشل في إرسال الرسالة الصوتية: ' + (err.message || 'خطأ غير معروف'));
     }
   };
 
@@ -588,19 +654,30 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             />
           </div>
           
-          {/* مجموعة أزرار الإرسال والصوت مدمجة */}
-          <div className="flex items-center space-x-1 space-x-reverse">
-            {/* Voice Message Button */}
+          {/* زر ديناميكي واحد مثل WhatsApp */}
+          {messageText.trim() ? (
+            <Button
+              onClick={handleSendMessage}
+              disabled={sendMessageMutation.isPending}
+              className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-2 sm:p-3 rounded-full shadow-lg mobile-touch-target transition-all duration-200"
+              size="icon"
+              data-testid="button-send"
+            >
+              <Send className="h-5 w-5" />
+            </Button>
+          ) : (
             <Button
               variant="ghost"
               size="icon"
-              onMouseDown={startRecording}
-              onMouseUp={stopRecording}
-              onMouseMove={handleDragMove}
-              onTouchStart={startRecording}
-              onTouchEnd={stopRecording}
-              onTouchMove={handleDragMove}
-              className={`mobile-touch-target rounded-l-full transition-colors duration-200 ${
+              onMouseDown={(e) => {
+                e.preventDefault();
+                startRecording(e);
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                startRecording(e);
+              }}
+              className={`mobile-touch-target rounded-full transition-all duration-200 ${
                 isRecording
                   ? isDraggedForCancel
                     ? "bg-gray-500 text-white hover:bg-gray-600"
@@ -619,17 +696,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
                 <Mic className="h-5 w-5" />
               )}
             </Button>
-            
-            <Button
-              onClick={handleSendMessage}
-              disabled={!messageText.trim() || sendMessageMutation.isPending || isRecording}
-              className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-2 sm:p-3 rounded-r-full shadow-lg mobile-touch-target"
-              size="icon"
-              data-testid="button-send"
-            >
-              <Send className="h-5 w-5" />
-            </Button>
-          </div>
+          )}
         </div>
       </div>
 
