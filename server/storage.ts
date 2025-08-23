@@ -124,6 +124,26 @@ export interface IStorage {
   getUserVerificationRequests(userId: string): Promise<VerificationRequest[]>;
   getVerificationRequest(id: string): Promise<VerificationRequest | undefined>;
   updateVerificationRequestStatus(id: string, status: string, adminNote?: string, reviewedBy?: string): Promise<VerificationRequest | undefined>;
+
+  // Admin Functions
+  getUserById(id: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  getAllVerificationRequests(status?: string): Promise<VerificationRequest[]>;
+  updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined>;
+  updateUserVerificationStatus(userId: string, isVerified: boolean): Promise<User | undefined>;
+  getAllStores(): Promise<Store[]>;
+  updateStoreStatus(storeId: string, status: string): Promise<Store | undefined>;
+  getAllOrders(): Promise<Order[]>;
+  getAdminDashboardStats(): Promise<{
+    totalUsers: number;
+    totalStores: number;
+    totalOrders: number;
+    pendingVerifications: number;
+    recentOrders: number;
+    totalRevenue: string;
+    activeUsers: number;
+    verifiedUsers: number;
+  }>;
 }
 
 export class MemStorage implements IStorage {
@@ -186,6 +206,7 @@ export class MemStorage implements IStorage {
       isOnline: true,
       isVerified: true,
       verifiedAt: new Date(),
+      isAdmin: true, // Make current user admin
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -200,6 +221,7 @@ export class MemStorage implements IStorage {
       isOnline: true,
       isVerified: true, // Made verified for testing
       verifiedAt: new Date(Date.now() - 43200000), // 12 hours ago
+      isAdmin: false,
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -214,6 +236,7 @@ export class MemStorage implements IStorage {
       isOnline: false,
       isVerified: true,
       verifiedAt: new Date(Date.now() - 86400000),
+      isAdmin: false,
       lastSeen: new Date(Date.now() - 86400000), // 1 day ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -228,6 +251,7 @@ export class MemStorage implements IStorage {
       isOnline: true,
       isVerified: false,
       verifiedAt: null,
+      isAdmin: false,
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -242,6 +266,7 @@ export class MemStorage implements IStorage {
       isOnline: true,
       isVerified: true,
       verifiedAt: new Date(Date.now() - 172800000),
+      isAdmin: false,
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -256,6 +281,7 @@ export class MemStorage implements IStorage {
       isOnline: false,
       isVerified: false,
       verifiedAt: null,
+      isAdmin: false,
       lastSeen: new Date(Date.now() - 172800000), // 2 days ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -270,6 +296,7 @@ export class MemStorage implements IStorage {
       isOnline: false,
       isVerified: false,
       verifiedAt: null,
+      isAdmin: false,
       lastSeen: new Date(Date.now() - 259200000), // 3 days ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -284,6 +311,7 @@ export class MemStorage implements IStorage {
       isOnline: false,
       isVerified: false,
       verifiedAt: null,
+      isAdmin: false,
       lastSeen: new Date(Date.now() - 345600000), // 4 days ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -299,6 +327,7 @@ export class MemStorage implements IStorage {
       isOnline: true,
       isVerified: true,
       verifiedAt: new Date(Date.now() - 604800000), // 7 days ago
+      isAdmin: false,
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -313,6 +342,7 @@ export class MemStorage implements IStorage {
       isOnline: false,
       isVerified: false,
       verifiedAt: null,
+      isAdmin: false,
       lastSeen: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -327,6 +357,7 @@ export class MemStorage implements IStorage {
       isOnline: false,
       isVerified: true,
       verifiedAt: new Date(Date.now() - 1209600000), // 14 days ago
+      isAdmin: false,
       lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -1971,8 +2002,124 @@ export class MemStorage implements IStorage {
     request.reviewedBy = reviewedBy || null;
     request.reviewedAt = new Date();
 
+    // If approved, also update user verification status
+    if (status === 'approved' && request.requestType === 'account') {
+      const user = this.users.get(request.userId);
+      if (user) {
+        user.isVerified = true;
+        user.verifiedAt = new Date();
+        this.users.set(request.userId, user);
+      }
+    }
+
     this.verificationRequests.set(id, request);
     return request;
+  }
+
+  // ======================
+  // ADMIN FUNCTIONS
+  // ======================
+
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async getAllVerificationRequests(status?: string): Promise<VerificationRequest[]> {
+    let requests = Array.from(this.verificationRequests.values());
+    
+    if (status) {
+      requests = requests.filter(request => request.status === status);
+    }
+    
+    return requests.sort((a, b) => (b.submittedAt?.getTime() ?? 0) - (a.submittedAt?.getTime() ?? 0));
+  }
+
+  async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    user.isAdmin = isAdmin;
+    this.users.set(userId, user);
+    return user;
+  }
+
+  async updateUserVerificationStatus(userId: string, isVerified: boolean): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    user.isVerified = isVerified;
+    user.verifiedAt = isVerified ? new Date() : null;
+    this.users.set(userId, user);
+    return user;
+  }
+
+  async getAllStores(): Promise<Store[]> {
+    return Array.from(this.stores.values());
+  }
+
+  async updateStoreStatus(storeId: string, status: string): Promise<Store | undefined> {
+    const store = this.stores.get(storeId);
+    if (!store) return undefined;
+
+    store.status = status as any;
+    this.stores.set(storeId, store);
+    return store;
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return Array.from(this.orders.values());
+  }
+
+  async getAdminDashboardStats(): Promise<{
+    totalUsers: number;
+    totalStores: number;
+    totalOrders: number;
+    pendingVerifications: number;
+    recentOrders: number;
+    totalRevenue: string;
+    activeUsers: number;
+    verifiedUsers: number;
+  }> {
+    const users = Array.from(this.users.values());
+    const stores = Array.from(this.stores.values());
+    const orders = Array.from(this.orders.values());
+    const verificationRequests = Array.from(this.verificationRequests.values());
+
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    const totalRevenue = orders
+      .filter(order => order.status === 'delivered')
+      .reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
+
+    const recentOrders = orders.filter(order => 
+      order.createdAt && order.createdAt >= last24Hours
+    ).length;
+
+    const activeUsers = users.filter(user => 
+      user.lastSeen && user.lastSeen >= last24Hours
+    ).length;
+
+    const verifiedUsers = users.filter(user => user.isVerified).length;
+
+    const pendingVerifications = verificationRequests.filter(request => 
+      request.status === 'pending'
+    ).length;
+
+    return {
+      totalUsers: users.length,
+      totalStores: stores.length,
+      totalOrders: orders.length,
+      pendingVerifications,
+      recentOrders,
+      totalRevenue: totalRevenue.toFixed(2),
+      activeUsers,
+      verifiedUsers,
+    };
   }
 }
 

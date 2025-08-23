@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,9 +17,16 @@ import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import Cart from "@/pages/cart";
 import Orders from "@/pages/orders";
+// Admin Pages
+import { AdminLogin } from "@/pages/admin/admin-login";
+import { AdminDashboard } from "@/pages/admin/admin-dashboard";
+import { VerificationRequests } from "@/pages/admin/verification-requests";
+import { UsersManagement } from "@/pages/admin/users-management";
+import { StoresManagement } from "@/pages/admin/stores-management";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -29,26 +36,43 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
   return (
     <>
       <Switch>
-        <Route path="/" component={Chat} />
-        <Route path="/chat/:chatId" component={Chat} />
-        <Route path="/status" component={Status} />
-        <Route path="/stores" component={Stores} />
-        <Route path="/my-store" component={MyStore} />
-        <Route path="/cart" component={Cart} />
-        <Route path="/orders" component={Orders} />
-        <Route path="/affiliate" component={Affiliate} />
-        <Route path="/affiliate/:uniqueCode" component={AffiliateRedirect} />
-        <Route path="/profile" component={Profile} />
+        {/* Admin Routes - Public Admin Login */}
+        <Route path="/admin/login" component={AdminLogin} />
+        
+        {/* Admin Routes - Protected */}
+        <Route path="/admin/verification-requests" component={VerificationRequests} />
+        <Route path="/admin/users" component={UsersManagement} />
+        <Route path="/admin/stores" component={StoresManagement} />
+        <Route path="/admin" component={AdminDashboard} />
+        
+        {/* Regular App Routes */}
+        {!isAuthenticated ? (
+          <Route component={Login} />
+        ) : (
+          <>
+            <Route path="/" component={Chat} />
+            <Route path="/chat/:chatId" component={Chat} />
+            <Route path="/status" component={Status} />
+            <Route path="/stores" component={Stores} />
+            <Route path="/my-store" component={MyStore} />
+            <Route path="/cart" component={Cart} />
+            <Route path="/orders" component={Orders} />
+            <Route path="/affiliate" component={Affiliate} />
+            <Route path="/affiliate/:uniqueCode" component={AffiliateRedirect} />
+            <Route path="/profile" component={Profile} />
+          </>
+        )}
+        
         <Route component={NotFound} />
       </Switch>
-      <BottomNavigation />
+      
+      {/* Only show bottom navigation for regular app routes */}
+      {isAuthenticated && !location.startsWith('/admin') && (
+        <BottomNavigation />
+      )}
     </>
   );
 }

@@ -95,6 +95,30 @@ const requireAuth = async (req: any, res: any, next: any) => {
   next();
 };
 
+// Admin authentication middleware
+const requireAdmin = async (req: any, res: any, next: any) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ message: "Token required" });
+  }
+  
+  const session = await storage.getSessionByToken(token);
+  if (!session) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+
+  const user = await storage.getUserById(session.userId);
+  
+  if (!user || !user.isAdmin) {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+
+  req.userId = session.userId;
+  req.isAdmin = true;
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files statically
   app.use('/uploads', express.static('uploads'));
@@ -1221,6 +1245,378 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(request);
     } catch (error) {
       res.status(500).json({ message: "Failed to get verification request" });
+    }
+  });
+
+  // ======================
+  // ADMIN ROUTES
+  // ======================
+
+  // Admin Dashboard Statistics
+  app.get("/api/admin/dashboard-stats", requireAdmin, async (req: any, res) => {
+    try {
+      const stats = await storage.getAdminDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get dashboard stats" });
+    }
+  });
+
+  // Admin Verification Management
+  app.get("/api/admin/verification-requests", requireAdmin, async (req: any, res) => {
+    try {
+      const { status, page = 1, limit = 10 } = req.query;
+      const requests = await storage.getAllVerificationRequests(status as string);
+      
+      // Simple pagination
+      const startIndex = (Number(page) - 1) * Number(limit);
+      const endIndex = startIndex + Number(limit);
+      const paginatedRequests = requests.slice(startIndex, endIndex);
+      
+      res.json({
+        requests: paginatedRequests,
+        total: requests.length,
+        page: Number(page),
+        totalPages: Math.ceil(requests.length / Number(limit))
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get verification requests" });
+    }
+  });
+
+  // Approve/Reject Verification Request
+  app.put("/api/admin/verification-requests/:requestId", requireAdmin, async (req: any, res) => {
+    try {
+      const { requestId } = req.params;
+      const { status, adminNote } = req.body;
+      
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
+      }
+      
+      const updatedRequest = await storage.updateVerificationRequestStatus(
+        requestId, 
+        status, 
+        req.userId, 
+        adminNote
+      );
+      
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Verification request not found" });
+      }
+      
+      res.json(updatedRequest);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update verification request" });
+    }
+  });
+
+  // Admin User Management
+  app.get("/api/admin/users", requireAdmin, async (req: any, res) => {
+    try {
+      const { page = 1, limit = 20, search, isVerified, isAdmin } = req.query;
+      const users = await storage.getAllUsers();
+      
+      // Filter users
+      let filteredUsers = users;
+      
+      if (search) {
+        const searchTerm = search.toString().toLowerCase();
+        filteredUsers = users.filter(user => 
+          user.name.toLowerCase().includes(searchTerm) || 
+          user.phoneNumber.includes(searchTerm)
+        );
+      }
+      
+      if (isVerified !== undefined) {
+        filteredUsers = filteredUsers.filter(user => 
+          user.isVerified === (isVerified === 'true')
+        );
+      }
+      
+      if (isAdmin !== undefined) {
+        filteredUsers = filteredUsers.filter(user => 
+          user.isAdmin === (isAdmin === 'true')
+        );
+      }
+      
+      // Simple pagination
+      const startIndex = (Number(page) - 1) * Number(limit);
+      const endIndex = startIndex + Number(limit);
+      const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+      
+      res.json({
+        users: paginatedUsers,
+        total: filteredUsers.length,
+        page: Number(page),
+        totalPages: Math.ceil(filteredUsers.length / Number(limit))
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  // Toggle User Admin Status
+  app.put("/api/admin/users/:userId/admin", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { isAdmin } = req.body;
+      
+      const updatedUser = await storage.updateUserAdminStatus(userId, isAdmin);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user admin status" });
+    }
+  });
+
+  // Toggle User Verification Status
+  app.put("/api/admin/users/:userId/verify", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { isVerified } = req.body;
+      
+      const updatedUser = await storage.updateUserVerificationStatus(userId, isVerified);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user verification status" });
+    }
+  });
+
+  // Admin Store Management
+  app.get("/api/admin/stores", requireAdmin, async (req: any, res) => {
+    try {
+      const { status, page = 1, limit = 20 } = req.query;
+      const stores = await storage.getAllStores();
+      
+      // Filter by status
+      let filteredStores = stores;
+      if (status) {
+        filteredStores = stores.filter(store => store.status === status);
+      }
+      
+      // Simple pagination
+      const startIndex = (Number(page) - 1) * Number(limit);
+      const endIndex = startIndex + Number(limit);
+      const paginatedStores = filteredStores.slice(startIndex, endIndex);
+      
+      res.json({
+        stores: paginatedStores,
+        total: filteredStores.length,
+        page: Number(page),
+        totalPages: Math.ceil(filteredStores.length / Number(limit))
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get stores" });
+    }
+  });
+
+  // Approve/Reject Store
+  app.put("/api/admin/stores/:storeId/status", requireAdmin, async (req: any, res) => {
+    try {
+      const { storeId } = req.params;
+      const { status } = req.body;
+      
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
+      }
+      
+      const updatedStore = await storage.updateStoreStatus(storeId, status);
+      
+      if (!updatedStore) {
+        return res.status(404).json({ message: "Store not found" });
+      }
+      
+      res.json(updatedStore);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update store status" });
+    }
+  });
+
+  // Admin Orders Management
+  app.get("/api/admin/orders", requireAdmin, async (req: any, res) => {
+    try {
+      const { status, page = 1, limit = 20 } = req.query;
+      const orders = await storage.getAllOrders();
+      
+      // Filter by status
+      let filteredOrders = orders;
+      if (status) {
+        filteredOrders = orders.filter(order => order.status === status);
+      }
+      
+      // Simple pagination
+      const startIndex = (Number(page) - 1) * Number(limit);
+      const endIndex = startIndex + Number(limit);
+      const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+      
+      res.json({
+        orders: paginatedOrders,
+        total: filteredOrders.length,
+        page: Number(page),
+        totalPages: Math.ceil(filteredOrders.length / Number(limit))
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get orders" });
+    }
+  });
+
+  // ===========================
+  // Additional Admin API Routes
+  // ===========================
+
+  // Admin Dashboard Stats
+  app.get("/api/admin/dashboard-stats", requireAdmin, async (req: any, res) => {
+    try {
+      const stats = await storage.getAdminDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get dashboard stats" });
+    }
+  });
+
+  // Admin Users Management
+  app.get("/api/admin/users", requireAdmin, async (req: any, res) => {
+    try {
+      const { search, isVerified, isAdmin, page = 1, limit = 50 } = req.query;
+      let users = await storage.getAllUsers();
+      
+      // Filter by search term
+      if (search) {
+        const searchTerm = search.toString().toLowerCase();
+        users = users.filter(user => 
+          user.name.toLowerCase().includes(searchTerm) ||
+          user.phoneNumber.includes(searchTerm)
+        );
+      }
+      
+      // Filter by verification status
+      if (isVerified !== undefined) {
+        const isVerifiedBool = isVerified === 'true';
+        users = users.filter(user => user.isVerified === isVerifiedBool);
+      }
+      
+      // Filter by admin status
+      if (isAdmin !== undefined) {
+        const isAdminBool = isAdmin === 'true';
+        users = users.filter(user => user.isAdmin === isAdminBool);
+      }
+      
+      // Simple pagination
+      const startIndex = (Number(page) - 1) * Number(limit);
+      const endIndex = startIndex + Number(limit);
+      const paginatedUsers = users.slice(startIndex, endIndex);
+      
+      res.json({
+        users: paginatedUsers,
+        total: users.length,
+        page: Number(page),
+        totalPages: Math.ceil(users.length / Number(limit))
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  // Toggle User Admin Status
+  app.put("/api/admin/users/:userId/admin", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { isAdmin } = req.body;
+      
+      if (typeof isAdmin !== 'boolean') {
+        return res.status(400).json({ message: "isAdmin must be a boolean" });
+      }
+      
+      const updatedUser = await storage.updateUserAdminStatus(userId, isAdmin);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user admin status" });
+    }
+  });
+
+  // Toggle User Verification Status
+  app.put("/api/admin/users/:userId/verify", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { isVerified } = req.body;
+      
+      if (typeof isVerified !== 'boolean') {
+        return res.status(400).json({ message: "isVerified must be a boolean" });
+      }
+      
+      const updatedUser = await storage.updateUserVerificationStatus(userId, isVerified);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user verification status" });
+    }
+  });
+
+  // Admin Verification Requests Management
+  app.get("/api/admin/verification-requests", requireAdmin, async (req: any, res) => {
+    try {
+      const { status, page = 1, limit = 50 } = req.query;
+      let requests = await storage.getAllVerificationRequests(status ? status.toString() : undefined);
+      
+      // Simple pagination
+      const startIndex = (Number(page) - 1) * Number(limit);
+      const endIndex = startIndex + Number(limit);
+      const paginatedRequests = requests.slice(startIndex, endIndex);
+      
+      res.json({
+        requests: paginatedRequests,
+        total: requests.length,
+        page: Number(page),
+        totalPages: Math.ceil(requests.length / Number(limit))
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get verification requests" });
+    }
+  });
+
+  // Update Verification Request Status
+  app.put("/api/admin/verification-requests/:requestId", requireAdmin, async (req: any, res) => {
+    try {
+      const { requestId } = req.params;
+      const { status, adminNote } = req.body;
+      
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
+      }
+      
+      const updatedRequest = await storage.updateVerificationRequestStatus(
+        requestId, 
+        status, 
+        adminNote, 
+        req.userId
+      );
+      
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Verification request not found" });
+      }
+      
+      res.json(updatedRequest);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update verification request" });
     }
   });
 

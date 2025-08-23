@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   isOnline: boolean("is_online").default(false),
   isVerified: boolean("is_verified").default(false), // Account verification status
   verifiedAt: timestamp("verified_at"), // When account was verified
+  isAdmin: boolean("is_admin").default(false), // Admin privileges
   lastSeen: timestamp("last_seen").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -70,6 +71,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   isVerified: true,
   verifiedAt: true,
+  isAdmin: true,
   lastSeen: true,
   createdAt: true,
   updatedAt: true,
