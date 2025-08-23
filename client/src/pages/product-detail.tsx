@@ -82,7 +82,7 @@ export default function ProductDetail() {
       const response = await apiRequest(`/api/chats/start`, {
         method: "POST",
         body: JSON.stringify({ 
-          participantId: sellerId,
+          otherUserId: sellerId,
           // Include product context in the initial message
           initialMessage: `مرحباً 👋\n\nأنا مهتم بهذا المنتج:\n🛍️ ${product?.name}\n💰 ${formatCurrency(product?.price || '0')}\n📍 ${product?.location}\n\nهل يمكنك تزويدي بمزيد من التفاصيل؟\nشكراً لك 🙏`
         }),
