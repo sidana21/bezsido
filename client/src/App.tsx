@@ -24,6 +24,7 @@ import { AdminDashboard } from "@/pages/admin/admin-dashboard";
 import { VerificationRequests } from "@/pages/admin/verification-requests";
 import { UsersManagement } from "@/pages/admin/users-management";
 import { StoresManagement } from "@/pages/admin/stores-management";
+import { OrdersManagement } from "@/pages/admin/orders-management";
 import { AdminProtectedRoute } from "@/components/admin/admin-protected-route";
 
 function Router() {
@@ -58,6 +59,11 @@ function Router() {
         <Route path="/admin/stores">
           <AdminProtectedRoute>
             <StoresManagement />
+          </AdminProtectedRoute>
+        </Route>
+        <Route path="/admin/orders">
+          <AdminProtectedRoute>
+            <OrdersManagement />
           </AdminProtectedRoute>
         </Route>
         <Route path="/admin">

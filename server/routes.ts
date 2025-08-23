@@ -1522,6 +1522,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           avatar: null,
           isOnline: true,
         });
+        
+        // Create sample orders if none exist
+        const allOrders = await storage.getAllOrders();
+        if (allOrders.length === 0) {
+          const users = await storage.getAllUsers();
+          const customerUser = users.find(u => u.name === "أحمد محمد");
+          const sellerUser = users.find(u => u.name === "يوسف الزهراني");
+          
+          if (customerUser && sellerUser) {
+            await storage.createOrder({
+              buyerId: customerUser.id,
+              sellerId: sellerUser.id,
+              storeId: null,
+              totalAmount: "2500.00",
+              paymentMethod: "cash",
+              deliveryAddress: "تندوف، الحي الجديد، الشارع الأول",
+              customerPhone: customerUser.phoneNumber,
+              customerName: customerUser.name,
+              notes: "تسليم سريع من فضلك",
+              status: "pending"
+            }, []);
+            
+            await storage.createOrder({
+              buyerId: customerUser.id,
+              sellerId: sellerUser.id,
+              storeId: null,
+              totalAmount: "1800.50",
+              paymentMethod: "card",
+              deliveryAddress: "تندوف، المركز التجاري",
+              customerPhone: customerUser.phoneNumber,
+              customerName: customerUser.name,
+              status: "confirmed"
+            }, []);
+            
+            await storage.createOrder({
+              buyerId: customerUser.id,
+              sellerId: sellerUser.id,
+              storeId: null,
+              totalAmount: "3200.00",
+              paymentMethod: "cash",
+              deliveryAddress: "تندوف، الحي القديم",
+              customerPhone: customerUser.phoneNumber,
+              customerName: customerUser.name,
+              status: "delivered"
+            }, []);
+          }
+        }
       }
       
       // Create session
@@ -1572,6 +1619,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to get verification requests" });
+    }
+  });
+
+  // Admin Orders Management
+  app.get("/api/admin/orders", requireAdmin, async (req: any, res) => {
+    try {
+      const { status, search, page = 1, limit = 50 } = req.query;
+      const orders = await storage.getAllOrders();
+      
+      // Filter orders
+      let filteredOrders = orders;
+      if (status && status !== 'all') {
+        filteredOrders = filteredOrders.filter(order => order.status === status);
+      }
+      if (search) {
+        filteredOrders = filteredOrders.filter(order => 
+          order.id.includes(search as string) ||
+          order.customerName.toLowerCase().includes((search as string).toLowerCase()) ||
+          order.customerPhone.includes(search as string)
+        );
+      }
+      
+      // Simple pagination
+      const startIndex = (Number(page) - 1) * Number(limit);
+      const endIndex = startIndex + Number(limit);
+      const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+      
+      res.json({
+        orders: paginatedOrders,
+        total: filteredOrders.length,
+        page: Number(page),
+        totalPages: Math.ceil(filteredOrders.length / Number(limit))
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get orders" });
+    }
+  });
+
+  app.put("/api/admin/orders/:orderId/status", requireAdmin, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const { status } = req.body;
+      
+      const allowedStatuses = ["pending", "confirmed", "prepared", "delivered", "cancelled"];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const updatedOrder = await storage.updateOrderStatus(orderId, status, req.userId);
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update order status" });
     }
   });
 
