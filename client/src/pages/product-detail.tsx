@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,9 @@ export default function ProductDetail() {
   const queryClient = useQueryClient();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   // Product details query
   const { data: product, isLoading } = useQuery<Product>({
@@ -81,7 +84,7 @@ export default function ProductDetail() {
         body: JSON.stringify({ 
           participantId: sellerId,
           // Include product context in the initial message
-          initialMessage: `مرحباً، أنا مهتم بهذا المنتج: ${product?.name}\nالسعر: ${product?.price} دج\n\nيرجى تزويدي بمزيد من التفاصيل.`
+          initialMessage: `مرحباً 👋\n\nأنا مهتم بهذا المنتج:\n🛍️ ${product?.name}\n💰 ${formatCurrency(product?.price || '0')}\n📍 ${product?.location}\n\nهل يمكنك تزويدي بمزيد من التفاصيل؟\nشكراً لك 🙏`
         }),
       });
       return response.json();
@@ -181,6 +184,31 @@ export default function ProductDetail() {
     setCurrentImageIndex((prev) => (prev - 1 + productImages.length) % productImages.length);
   };
 
+  // Touch handlers for swipe functionality
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && productImages.length > 1) {
+      nextImage();
+    }
+    if (isRightSwipe && productImages.length > 1) {
+      prevImage();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -253,13 +281,19 @@ export default function ProductDetail() {
       </div>
 
       {/* Product Images Carousel */}
-      <div className="relative aspect-square max-h-[400px] overflow-hidden">
+      <div 
+        ref={imageContainerRef}
+        className="relative aspect-square max-h-[400px] overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {productImages.length > 0 ? (
           <>
             <img
               src={productImages[currentImageIndex]}
               alt={product.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-300"
               data-testid="product-main-image"
             />
             
@@ -285,11 +319,17 @@ export default function ProductDetail() {
                   <ChevronRight className="w-6 h-6" />
                 </Button>
                 
+                {/* Swipe hint */}
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-xs">
+                  اسحب يميناً أو يساراً
+                </div>
+                
                 {/* Image indicators */}
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
                   {productImages.map((_, index) => (
-                    <div
+                    <button
                       key={index}
+                      onClick={() => setCurrentImageIndex(index)}
                       className={`w-2 h-2 rounded-full transition-all ${
                         index === currentImageIndex ? 'bg-white' : 'bg-white/50'
                       }`}
@@ -389,6 +429,17 @@ export default function ProductDetail() {
                       <span>{product.owner.phoneNumber}</span>
                     </div>
                   </div>
+                  
+                  {/* Quick chat button */}
+                  <Button
+                    onClick={handleContactSeller}
+                    disabled={startChatMutation.isPending}
+                    className="w-full mt-3 bg-whatsapp-green hover:bg-green-600"
+                    data-testid="button-quick-chat"
+                  >
+                    <MessageCircle className="w-4 h-4 ml-2" />
+                    💬 دردشة سريعة
+                  </Button>
                 </div>
               </div>
 
@@ -423,13 +474,16 @@ export default function ProductDetail() {
             </Button>
             
             <Button
-              className="flex-1 bg-whatsapp-green hover:bg-green-600"
+              className="flex-1 bg-whatsapp-green hover:bg-green-600 relative"
               onClick={handleContactSeller}
               disabled={startChatMutation.isPending}
               data-testid="button-contact-seller"
             >
-              <MessageCircle className="w-4 h-4 ml-2" />
-              {startChatMutation.isPending ? "جاري الاتصال..." : "تواصل مع البائع"}
+              <MessageCircle className="w-5 h-5 ml-2" />
+              {startChatMutation.isPending ? "جاري الاتصال..." : "💬 دردشة مع البائع"}
+              
+              {/* Chat indicator */}
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
             </Button>
           </div>
         </div>
