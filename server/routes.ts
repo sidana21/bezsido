@@ -30,7 +30,15 @@ import { randomUUID } from "crypto";
 
 // Configure multer for file uploads (images and videos)
 const upload = multer({
-  dest: 'uploads/',
+  storage: multer.diskStorage({
+    destination: 'uploads/',
+    filename: (req, file, cb) => {
+      // Keep original extension for better file handling
+      const fileExtension = path.extname(file.originalname);
+      const fileName = `${randomUUID()}${fileExtension}`;
+      cb(null, fileName);
+    }
+  }),
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB limit for videos
   },
@@ -72,15 +80,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No media file provided" });
       }
       
-      // Generate a unique filename
-      const fileExtension = path.extname(req.file.originalname);
-      const fileName = `${randomUUID()}${fileExtension}`;
-      const filePath = path.join('uploads', fileName);
-      
       // Determine file type
       const fileType = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
       
-      // For this demo, we'll return a URL that points to the uploaded file
+      // The file is already saved by multer, just return the URL
       const mediaUrl = `/uploads/${req.file.filename}`;
       
       res.json({ 

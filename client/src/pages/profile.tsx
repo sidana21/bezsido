@@ -132,8 +132,31 @@ export default function Profile() {
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check file size (max 10MB for images)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "خطأ",
+          description: "حجم الصورة كبير جداً. يرجى اختيار صورة أصغر من 10 ميجابايت",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if it's actually an image
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "خطأ",
+          description: "يرجى اختيار ملف صورة صحيح",
+          variant: "destructive",
+        });
+        return;
+      }
+
       uploadAvatarMutation.mutate(file);
     }
+    
+    // Reset the input to allow re-selecting the same file
+    event.target.value = '';
   };
 
   const handleSave = () => {
@@ -216,29 +239,33 @@ export default function Profile() {
             
             {isEditing && (
               <div className="absolute bottom-0 right-0">
-                <label htmlFor="avatar-upload">
-                  <Button
-                    size="sm"
-                    className="w-10 h-10 rounded-full bg-whatsapp-green hover:bg-green-600"
-                    disabled={uploadAvatarMutation.isPending}
-                    data-testid="button-avatar-upload"
-                  >
-                    <Camera className="w-5 h-5" />
-                  </Button>
+                <label htmlFor="avatar-upload" className="cursor-pointer">
+                  <div className="w-10 h-10 rounded-full bg-whatsapp-green hover:bg-green-600 flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105">
+                    {uploadAvatarMutation.isPending ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <Camera className="w-5 h-5 text-white" />
+                    )}
+                  </div>
                 </label>
                 <input
                   id="avatar-upload"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,image/jpeg,image/png,image/gif,image/webp"
+                  capture="environment"
                   onChange={handleAvatarChange}
                   className="hidden"
+                  data-testid="input-avatar-upload"
                 />
               </div>
             )}
           </div>
           
           {uploadAvatarMutation.isPending && (
-            <div className="text-sm text-gray-600">جاري رفع الصورة...</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              جاري رفع الصورة...
+            </div>
           )}
         </div>
 
