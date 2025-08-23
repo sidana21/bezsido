@@ -129,6 +129,7 @@ export default function Profile() {
     },
   });
 
+
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -467,6 +468,7 @@ export default function Profile() {
             </CardContent>
           </Card>
         )}
+
 
         {/* Action Buttons */}
         {isEditing && (

@@ -1098,6 +1098,53 @@ export class MemStorage implements IStorage {
     mockStores.forEach(store => {
       this.stores.set(store.id, store);
     });
+
+    // Create sample verification requests
+    const mockVerificationRequests: VerificationRequest[] = [
+      {
+        id: randomUUID(),
+        userId: "fatima-user",
+        storeId: null,
+        requestType: "user",
+        status: "pending",
+        documents: [],
+        reason: "أريد توثيق حسابي لأنني تاجرة معروفة في المنطقة وأبيع المنتجات اليدوية",
+        adminNote: null,
+        submittedAt: new Date(Date.now() - 3600000), // 1 hour ago
+        reviewedAt: null,
+        reviewedBy: null,
+      },
+      {
+        id: randomUUID(),
+        userId: "yousef-user",
+        storeId: null,
+        requestType: "user", 
+        status: "pending",
+        documents: [],
+        reason: "لدي خبرة طويلة في التجارة وأريد الحصول على توثيق لزيادة ثقة العملاء",
+        adminNote: null,
+        submittedAt: new Date(Date.now() - 7200000), // 2 hours ago
+        reviewedAt: null,
+        reviewedBy: null,
+      },
+      {
+        id: randomUUID(),
+        userId: "abdullah-user",
+        storeId: null,
+        requestType: "user",
+        status: "pending",
+        documents: [],
+        reason: "أعمل في مجال الإلكترونيات منذ 5 سنوات وأحتاج التوثيق للمصداقية",
+        adminNote: null,
+        submittedAt: new Date(Date.now() - 10800000), // 3 hours ago
+        reviewedAt: null,
+        reviewedBy: null,
+      }
+    ];
+
+    mockVerificationRequests.forEach(request => {
+      this.verificationRequests.set(request.id, request);
+    });
   }
 
   async getUser(id: string): Promise<User | undefined> {

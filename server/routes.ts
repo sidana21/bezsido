@@ -209,6 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           location,
           avatar: null,
           isOnline: true,
+          isAdmin: process.env.NODE_ENV === 'development', // Make users admin in development
         });
         
         user = await storage.createUser(userData);
@@ -261,6 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location,
         avatar: null,
         isOnline: true,
+        isAdmin: process.env.NODE_ENV === 'development', // Make users admin in development
       });
       
       user = await storage.createUser(userData);
@@ -296,6 +298,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ code: lastOtp.code, phoneNumber: lastOtp.phoneNumber });
     } else {
       res.json({ code: null });
+    }
+  });
+
+  // Development endpoint to promote current user to admin
+  app.post("/api/dev/make-admin", requireAuth, async (req: any, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    try {
+      const updatedUser = await storage.updateUserAdminStatus(req.userId, true);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ success: true, user: updatedUser, message: "User promoted to admin" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to promote user to admin" });
     }
   });
   
