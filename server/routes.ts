@@ -20,6 +20,8 @@ import {
   insertCartItemSchema,
   insertOrderSchema,
   insertOrderItemSchema,
+  insertStoryLikeSchema,
+  insertStoryCommentSchema,
   type Store,
   type Product,
   type AffiliateLink,
@@ -732,6 +734,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ ...story, user });
     } catch (error) {
       res.status(500).json({ message: "Failed to get story" });
+    }
+  });
+
+  // Story Likes endpoints
+  app.post("/api/stories/:storyId/like", requireAuth, async (req: any, res) => {
+    try {
+      const { storyId } = req.params;
+      const { reactionType } = req.body;
+      
+      // Check if story exists
+      const story = await storage.getStory(storyId);
+      if (!story) {
+        return res.status(404).json({ message: "Story not found" });
+      }
+      
+      const like = await storage.likeStory(storyId, req.userId, reactionType);
+      res.json(like);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to like story" });
+    }
+  });
+
+  app.delete("/api/stories/:storyId/like", requireAuth, async (req: any, res) => {
+    try {
+      const { storyId } = req.params;
+      
+      // Check if story exists
+      const story = await storage.getStory(storyId);
+      if (!story) {
+        return res.status(404).json({ message: "Story not found" });
+      }
+      
+      await storage.unlikeStory(storyId, req.userId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to unlike story" });
+    }
+  });
+
+  app.get("/api/stories/:storyId/likes", requireAuth, async (req: any, res) => {
+    try {
+      const { storyId } = req.params;
+      
+      // Check if story exists
+      const story = await storage.getStory(storyId);
+      if (!story) {
+        return res.status(404).json({ message: "Story not found" });
+      }
+      
+      const likes = await storage.getStoryLikes(storyId);
+      const likeCount = await storage.getStoryLikeCount(storyId);
+      const hasUserLiked = await storage.hasUserLikedStory(storyId, req.userId);
+      
+      res.json({
+        likes,
+        count: likeCount,
+        hasUserLiked,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get story likes" });
+    }
+  });
+
+  // Story Comments endpoints
+  app.post("/api/stories/:storyId/comments", requireAuth, async (req: any, res) => {
+    try {
+      const { storyId } = req.params;
+      const { content } = req.body;
+      
+      // Check if story exists
+      const story = await storage.getStory(storyId);
+      if (!story) {
+        return res.status(404).json({ message: "Story not found" });
+      }
+      
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+      
+      const commentData = insertStoryCommentSchema.parse({
+        storyId,
+        userId: req.userId,
+        content: content.trim(),
+      });
+      
+      const comment = await storage.addStoryComment(commentData);
+      const user = await storage.getUser(req.userId);
+      res.json({ ...comment, user });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to add comment" });
+    }
+  });
+
+  app.get("/api/stories/:storyId/comments", requireAuth, async (req: any, res) => {
+    try {
+      const { storyId } = req.params;
+      
+      // Check if story exists
+      const story = await storage.getStory(storyId);
+      if (!story) {
+        return res.status(404).json({ message: "Story not found" });
+      }
+      
+      const comments = await storage.getStoryComments(storyId);
+      const commentCount = await storage.getStoryCommentCount(storyId);
+      
+      res.json({
+        comments,
+        count: commentCount,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get story comments" });
+    }
+  });
+
+  app.put("/api/stories/:storyId/comments/:commentId", requireAuth, async (req: any, res) => {
+    try {
+      const { commentId } = req.params;
+      const { content } = req.body;
+      
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+      
+      const updatedComment = await storage.updateStoryComment(commentId, content.trim());
+      if (!updatedComment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Check if user owns the comment
+      if (updatedComment.userId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to edit this comment" });
+      }
+      
+      const user = await storage.getUser(updatedComment.userId);
+      res.json({ ...updatedComment, user });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update comment" });
+    }
+  });
+
+  app.delete("/api/stories/:storyId/comments/:commentId", requireAuth, async (req: any, res) => {
+    try {
+      const { commentId } = req.params;
+      
+      // First get the comment to check ownership
+      const comments = await storage.getStoryComments(req.params.storyId);
+      const comment = comments.find(c => c.id === commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Check if user owns the comment
+      if (comment.userId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this comment" });
+      }
+      
+      await storage.deleteStoryComment(commentId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete comment" });
     }
   });
 

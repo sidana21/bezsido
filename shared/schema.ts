@@ -301,6 +301,36 @@ export const insertVerificationRequestSchema = createInsertSchema(verificationRe
   reviewedAt: true,
 });
 
+// Story likes for reactions
+export const storyLikes = pgTable("story_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storyId: varchar("story_id").notNull().references(() => stories.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  reactionType: text("reaction_type").notNull().default("like"), // like, love, laugh, sad, angry
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Story comments
+export const storyComments = pgTable("story_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storyId: varchar("story_id").notNull().references(() => stories.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertStoryLikeSchema = createInsertSchema(storyLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStoryCommentSchema = createInsertSchema(storyComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChat = z.infer<typeof insertChatSchema>;
@@ -331,3 +361,7 @@ export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
 export type VerificationRequest = typeof verificationRequests.$inferSelect;
+export type InsertStoryLike = z.infer<typeof insertStoryLikeSchema>;
+export type StoryLike = typeof storyLikes.$inferSelect;
+export type InsertStoryComment = z.infer<typeof insertStoryCommentSchema>;
+export type StoryComment = typeof storyComments.$inferSelect;

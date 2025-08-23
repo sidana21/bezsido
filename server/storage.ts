@@ -28,7 +28,11 @@ import {
   type OrderItem,
   type InsertOrderItem,
   type VerificationRequest,
-  type InsertVerificationRequest
+  type InsertVerificationRequest,
+  type StoryLike,
+  type InsertStoryLike,
+  type StoryComment,
+  type InsertStoryComment
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -125,6 +129,20 @@ export interface IStorage {
   getVerificationRequest(id: string): Promise<VerificationRequest | undefined>;
   updateVerificationRequestStatus(id: string, status: string, adminNote?: string, reviewedBy?: string): Promise<VerificationRequest | undefined>;
 
+  // Story Likes
+  likeStory(storyId: string, userId: string, reactionType?: string): Promise<StoryLike>;
+  unlikeStory(storyId: string, userId: string): Promise<void>;
+  getStoryLikes(storyId: string): Promise<(StoryLike & { user: User })[]>;
+  getStoryLikeCount(storyId: string): Promise<number>;
+  hasUserLikedStory(storyId: string, userId: string): Promise<boolean>;
+  
+  // Story Comments
+  addStoryComment(comment: InsertStoryComment): Promise<StoryComment>;
+  getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]>;
+  updateStoryComment(commentId: string, content: string): Promise<StoryComment | undefined>;
+  deleteStoryComment(commentId: string): Promise<void>;
+  getStoryCommentCount(storyId: string): Promise<number>;
+
   // Admin Functions
   getUserById(id: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
@@ -162,6 +180,8 @@ export class MemStorage implements IStorage {
   private orders: Map<string, Order>;
   private orderItems: Map<string, OrderItem>;
   private verificationRequests: Map<string, VerificationRequest>;
+  private storyLikes: Map<string, StoryLike>;
+  private storyComments: Map<string, StoryComment>;
 
   constructor() {
     this.users = new Map();
@@ -179,6 +199,8 @@ export class MemStorage implements IStorage {
     this.orders = new Map();
     this.orderItems = new Map();
     this.verificationRequests = new Map();
+    this.storyLikes = new Map();
+    this.storyComments = new Map();
     this.initializeMockData();
     this.initializeTestSession();
   }
@@ -2168,6 +2190,102 @@ export class MemStorage implements IStorage {
       activeUsers,
       verifiedUsers,
     };
+  }
+
+  // Story Likes Implementation
+  async likeStory(storyId: string, userId: string, reactionType: string = 'like'): Promise<StoryLike> {
+    // Remove existing like if any
+    const existingLike = Array.from(this.storyLikes.values()).find(
+      like => like.storyId === storyId && like.userId === userId
+    );
+    
+    if (existingLike) {
+      this.storyLikes.delete(existingLike.id);
+    }
+
+    const newLike: StoryLike = {
+      id: randomUUID(),
+      storyId,
+      userId,
+      reactionType,
+      createdAt: new Date(),
+    };
+
+    this.storyLikes.set(newLike.id, newLike);
+    return newLike;
+  }
+
+  async unlikeStory(storyId: string, userId: string): Promise<void> {
+    const existingLike = Array.from(this.storyLikes.values()).find(
+      like => like.storyId === storyId && like.userId === userId
+    );
+    
+    if (existingLike) {
+      this.storyLikes.delete(existingLike.id);
+    }
+  }
+
+  async getStoryLikes(storyId: string): Promise<(StoryLike & { user: User })[]> {
+    const likes = Array.from(this.storyLikes.values())
+      .filter(like => like.storyId === storyId);
+    
+    return likes.map(like => ({
+      ...like,
+      user: this.users.get(like.userId)!,
+    })).filter(like => like.user); // Filter out likes from deleted users
+  }
+
+  async getStoryLikeCount(storyId: string): Promise<number> {
+    return Array.from(this.storyLikes.values())
+      .filter(like => like.storyId === storyId).length;
+  }
+
+  async hasUserLikedStory(storyId: string, userId: string): Promise<boolean> {
+    return Array.from(this.storyLikes.values())
+      .some(like => like.storyId === storyId && like.userId === userId);
+  }
+
+  // Story Comments Implementation
+  async addStoryComment(comment: InsertStoryComment): Promise<StoryComment> {
+    const newComment: StoryComment = {
+      id: randomUUID(),
+      ...comment,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.storyComments.set(newComment.id, newComment);
+    return newComment;
+  }
+
+  async getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]> {
+    const comments = Array.from(this.storyComments.values())
+      .filter(comment => comment.storyId === storyId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()); // Sort by creation time
+    
+    return comments.map(comment => ({
+      ...comment,
+      user: this.users.get(comment.userId)!,
+    })).filter(comment => comment.user); // Filter out comments from deleted users
+  }
+
+  async updateStoryComment(commentId: string, content: string): Promise<StoryComment | undefined> {
+    const comment = this.storyComments.get(commentId);
+    if (!comment) return undefined;
+
+    comment.content = content;
+    comment.updatedAt = new Date();
+    this.storyComments.set(commentId, comment);
+    return comment;
+  }
+
+  async deleteStoryComment(commentId: string): Promise<void> {
+    this.storyComments.delete(commentId);
+  }
+
+  async getStoryCommentCount(storyId: string): Promise<number> {
+    return Array.from(this.storyComments.values())
+      .filter(comment => comment.storyId === storyId).length;
   }
 }
 

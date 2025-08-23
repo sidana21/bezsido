@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
+import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle, Heart, MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
-import { Story, User } from "@shared/schema";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Story, User, StoryComment, StoryLike } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { formatTimeAgo } from "@/lib/utils";
 
 interface StoryViewerProps {
   storyId: string;
@@ -22,6 +25,8 @@ interface StoryWithUser extends Story {
 export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
@@ -58,6 +63,71 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
       setLocation(`/chat/${data.chatId}`);
     },
   });
+
+  // Story likes and comments queries
+  const { data: likesData } = useQuery<{ likes: (StoryLike & { user: User })[], count: number, hasUserLiked: boolean }>({
+    queryKey: ['/api/stories', storyId, 'likes'],
+    enabled: !!storyId,
+  });
+
+  const { data: commentsData } = useQuery<{ comments: (StoryComment & { user: User })[], count: number }>({
+    queryKey: ['/api/stories', storyId, 'comments'],
+    enabled: !!storyId,
+  });
+
+  // Like/unlike mutations
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/stories/${storyId}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reactionType: 'like' }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stories', storyId, 'likes'] });
+    },
+  });
+
+  const unlikeMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/stories/${storyId}/like`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stories', storyId, 'likes'] });
+    },
+  });
+
+  // Comment mutations
+  const addCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest(`/api/stories/${storyId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stories', storyId, 'comments'] });
+      setNewComment('');
+    },
+  });
+
+  const handleLikeToggle = () => {
+    if (likesData?.hasUserLiked) {
+      unlikeMutation.mutate();
+    } else {
+      likeMutation.mutate();
+    }
+  };
+
+  const handleAddComment = () => {
+    if (newComment.trim()) {
+      addCommentMutation.mutate(newComment.trim());
+    }
+  };
 
   // Mark story as viewed when component mounts
   useEffect(() => {
@@ -245,12 +315,98 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
           </Button>
         )}
 
-        {/* View Count */}
-        <div className="absolute bottom-4 right-4">
+        {/* Story Actions */}
+        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4 space-x-reverse">
+            {/* Like Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLikeToggle}
+              disabled={likeMutation.isPending || unlikeMutation.isPending}
+              className="text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-1 space-x-reverse"
+              data-testid="button-like-story"
+            >
+              <Heart className={`h-5 w-5 ${likesData?.hasUserLiked ? 'fill-red-500 text-red-500' : ''}`} />
+              <span className="text-sm">{likesData?.count || 0}</span>
+            </Button>
+
+            {/* Comments Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowComments(!showComments)}
+              className="text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-1 space-x-reverse"
+              data-testid="button-comments-story"
+            >
+              <MessageSquare className="h-5 w-5" />
+              <span className="text-sm">{commentsData?.count || 0}</span>
+            </Button>
+          </div>
+
+          {/* View Count */}
           <div className="bg-black bg-opacity-50 rounded-full px-3 py-1">
             <span className="text-white text-sm">👁 {story.viewCount}</span>
           </div>
         </div>
+
+        {/* Comments Panel */}
+        {showComments && (
+          <div className="absolute bottom-20 left-4 right-4 bg-black bg-opacity-80 rounded-lg p-4 max-h-60">
+            {/* Comments List */}
+            <ScrollArea className="h-32 mb-3">
+              {commentsData?.comments?.map((comment) => (
+                <div key={comment.id} className="mb-3 pb-2 border-b border-white border-opacity-20 last:border-b-0">
+                  <div className="flex items-start space-x-2 space-x-reverse">
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={comment.user.avatar || undefined} alt={comment.user.name} />
+                      <AvatarFallback className="text-xs">{comment.user.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <span className="text-white text-sm font-medium">{comment.user.name}</span>
+                        {comment.user.isVerified && (
+                          <VerifiedBadge className="w-3 h-3" />
+                        )}
+                        <span className="text-white text-opacity-60 text-xs">
+                          {formatTimeAgo(comment.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-white text-sm mt-1">{comment.content}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {(!commentsData?.comments || commentsData.comments.length === 0) && (
+                <p className="text-white text-opacity-60 text-sm text-center py-4">
+                  لا توجد تعليقات بعد
+                </p>
+              )}
+            </ScrollArea>
+
+            {/* Add Comment */}
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Input
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="أضف تعليق..."
+                className="flex-1 bg-white bg-opacity-20 border-white border-opacity-30 text-white placeholder-white placeholder-opacity-60"
+                onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
+                data-testid="input-add-comment"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleAddComment}
+                disabled={!newComment.trim() || addCommentMutation.isPending}
+                className="text-white hover:bg-white hover:bg-opacity-20"
+                data-testid="button-send-comment"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
