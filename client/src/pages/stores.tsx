@@ -332,7 +332,8 @@ export default function Stores() {
                             ) : (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {storeProducts.map((product) => (
-                                  <Card key={product.id} className="overflow-hidden" data-testid={`product-card-${product.id}`}>
+                                  <Link key={product.id} href={`/product/${product.id}`}>
+                                    <Card className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" data-testid={`product-card-${product.id}`}>
                                     <CardHeader className="p-0">
                                       {product.imageUrl && (
                                         <img
@@ -365,38 +366,13 @@ export default function Stores() {
                                           </div>
                                         </div>
                                         
-                                        {product.isActive ? (
-                                          <div className="flex gap-2">
-                                            <Button 
-                                              className="flex-1 bg-blue-500 hover:bg-blue-600"
-                                              onClick={() => buyNowMutation.mutate({ 
-                                                product, 
-                                                sellerId: selectedStore?.userId || '' 
-                                              })}
-                                              disabled={buyNowMutation.isPending}
-                                              data-testid={`button-buy-now-${product.id}`}
-                                            >
-                                              <MessageCircle className="w-4 h-4 ml-1" />
-                                              {buyNowMutation.isPending ? "جاري..." : "اشتري الآن"}
-                                            </Button>
-                                            <Button 
-                                              className="flex-1 bg-whatsapp-green hover:bg-green-600"
-                                              onClick={() => addToCartMutation.mutate({ productId: product.id })}
-                                              disabled={addToCartMutation.isPending}
-                                              data-testid={`button-add-cart-${product.id}`}
-                                            >
-                                              <Plus className="w-4 h-4 ml-1" />
-                                              إضافة للسلة
-                                            </Button>
-                                          </div>
-                                        ) : (
-                                          <Button variant="secondary" disabled className="w-full">
-                                            غير متوفر حالياً
-                                          </Button>
-                                        )}
+                                        <div className="text-center">
+                                          <p className="text-sm text-gray-500">انقر لعرض التفاصيل</p>
+                                        </div>
                                       </div>
                                     </CardContent>
-                                  </Card>
+                                    </Card>
+                                  </Link>
                                 ))}
                               </div>
                             )}

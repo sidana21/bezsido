@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import Chat from "@/pages/chat";
 import Status from "@/pages/status";
 import Stores from "@/pages/stores";
+import ProductDetail from "@/pages/product-detail";
 import MyStore from "@/pages/my-store";
 import Affiliate from "@/pages/affiliate";
 import Profile from "@/pages/profile";
@@ -57,6 +58,7 @@ function Router() {
             <Route path="/chat/:chatId" component={Chat} />
             <Route path="/status" component={Status} />
             <Route path="/stores" component={Stores} />
+            <Route path="/product/:productId" component={ProductDetail} />
             <Route path="/my-store" component={MyStore} />
             <Route path="/cart" component={Cart} />
             <Route path="/orders" component={Orders} />
