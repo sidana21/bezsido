@@ -1023,8 +1023,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
-      const owner = await storage.getUser(product.userId);
-      res.json({ ...product, owner });
+      res.json(product);
     } catch (error) {
       res.status(500).json({ message: "Failed to get product" });
     }

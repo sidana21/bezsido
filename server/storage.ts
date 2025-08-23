@@ -1578,8 +1578,17 @@ export class MemStorage implements IStorage {
     return productsWithOwners.sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0));
   }
 
-  async getProduct(id: string): Promise<Product | undefined> {
-    return this.products.get(id);
+  async getProduct(id: string): Promise<(Product & { owner: User }) | undefined> {
+    const product = this.products.get(id);
+    if (!product) return undefined;
+    
+    const owner = await this.getUser(product.userId);
+    if (!owner) return undefined;
+    
+    return {
+      ...product,
+      owner,
+    };
   }
 
   async getUserProducts(userId: string): Promise<Product[]> {
