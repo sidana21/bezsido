@@ -28,12 +28,15 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isDraggedForCancel, setIsDraggedForCancel] = useState(false);
+  const [isRequestingMic, setIsRequestingMic] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
   const startPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
@@ -142,50 +145,84 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     }
   }, [chatId, messages, currentUser]);
 
+  // Initialize microphone stream (cached for better performance)
+  const initMicrophone = async () => {
+    if (mediaStreamRef.current) {
+      return mediaStreamRef.current;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('MediaRecorder not supported');
+    }
+
+    setIsRequestingMic(true);
+    try {
+      // Optimized audio constraints for better performance
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000, // Reduced from 44100 for better performance
+          channelCount: 1 // Mono for smaller file sizes
+        } 
+      });
+      
+      mediaStreamRef.current = stream;
+      return stream;
+    } finally {
+      setIsRequestingMic(false);
+    }
+  };
+
   const startRecording = async (event: React.MouseEvent | React.TouchEvent) => {
+    // Debounce to prevent multiple rapid clicks
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    if (isRecording || isRequestingMic) {
+      return; // Prevent multiple simultaneous recordings
+    }
+
     console.log('Starting recording...');
     
     try {
-      // التحقق من دعم MediaRecorder
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('MediaRecorder not supported');
-      }
-
       // حفظ موقع البداية
       const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
       const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
       startPositionRef.current = { x: clientX, y: clientY };
       
-      console.log('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100
-        } 
-      });
+      console.log('Initializing microphone...');
+      const stream = await initMicrophone();
       
-      console.log('Microphone access granted, creating MediaRecorder...');
+      console.log('Microphone ready, creating MediaRecorder...');
       
-      // تجربة أنواع مختلفة من MIME
-      let mimeType = 'audio/webm;codecs=opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/webm';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'audio/mp4';
-          if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = ''; // استخدم النوع الافتراضي
-          }
+      // Optimized MIME type selection
+      let mimeType = '';
+      const supportedTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/wav'
+      ];
+      
+      for (const type of supportedTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          break;
         }
       }
       
-      console.log('Using MIME type:', mimeType);
+      console.log('Using MIME type:', mimeType || 'default');
       
-      mediaRecorderRef.current = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = new MediaRecorder(
+        stream, 
+        mimeType ? { mimeType } : undefined
+      );
       audioChunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
-        console.log('Data available:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
@@ -194,19 +231,22 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       mediaRecorderRef.current.onstop = () => {
         console.log('Recording stopped. Chunks:', audioChunksRef.current.length);
         if (!isDraggedForCancel && audioChunksRef.current.length > 0) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+          const audioBlob = new Blob(audioChunksRef.current, { 
+            type: mimeType || 'audio/webm' 
+          });
           console.log('Audio blob created:', audioBlob.size, 'bytes');
           sendAudioMessage(audioBlob);
         }
-        stream.getTracks().forEach(track => track.stop());
         setIsDraggedForCancel(false);
       };
 
       mediaRecorderRef.current.onerror = (event) => {
         console.error('MediaRecorder error:', event);
+        setIsRecording(false);
       };
 
-      mediaRecorderRef.current.start(1000); // جمع البيانات كل ثانية
+      // Start recording with smaller chunks for better responsiveness
+      mediaRecorderRef.current.start(500);
       setIsRecording(true);
       setRecordingTime(0);
       setIsDraggedForCancel(false);
@@ -219,6 +259,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     } catch (error) {
       console.error('Error starting recording:', error);
       setIsRecording(false);
+      setIsRequestingMic(false);
       
       const err = error as any;
       if (err.name === 'NotAllowedError') {
@@ -238,6 +279,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       setRecordingTime(0);
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
       }
     }
   };
@@ -248,11 +290,12 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
     const deltaX = startPositionRef.current.x - clientX;
 
-    // إذا سحب المستخدم لليمين أكثر من 100 بكسل، اعتبره إلغاء
-    if (deltaX > 100) {
-      setIsDraggedForCancel(true);
-    } else {
-      setIsDraggedForCancel(false);
+    // Optimized threshold calculation with better responsiveness
+    const cancelThreshold = 80; // Reduced from 100 for better UX
+    const shouldCancel = deltaX > cancelThreshold;
+    
+    if (shouldCancel !== isDraggedForCancel) {
+      setIsDraggedForCancel(shouldCancel);
     }
   };
 
@@ -264,6 +307,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       setRecordingTime(0);
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
       }
     }
   };
@@ -326,38 +370,31 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     scrollToBottom();
   }, [messages]);
 
-  // إضافة event listeners للسحب على مستوى النافذة
+  // Optimized event listeners with passive events for better performance
   useEffect(() => {
+    if (!isRecording) return;
+
     const handleMouseMove = (event: MouseEvent) => {
-      if (isRecording) {
-        handleDragMove(event as any);
-      }
+      handleDragMove(event as any);
     };
 
     const handleTouchMove = (event: TouchEvent) => {
-      if (isRecording) {
-        handleDragMove(event as any);
-      }
+      handleDragMove(event as any);
     };
 
     const handleMouseUp = () => {
-      if (isRecording) {
-        stopRecording();
-      }
+      stopRecording();
     };
 
     const handleTouchEnd = () => {
-      if (isRecording) {
-        stopRecording();
-      }
+      stopRecording();
     };
 
-    if (isRecording) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('touchmove', handleTouchMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      window.addEventListener('touchend', handleTouchEnd);
-    }
+    // Add passive listeners for better performance
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchend', handleTouchEnd);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
@@ -366,6 +403,22 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [isRecording]);
+
+  // Cleanup microphone stream on component unmount
+  useEffect(() => {
+    return () => {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+      }
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSendMessage = () => {
     const trimmedText = messageText.trim();
@@ -644,12 +697,16 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             )}
             <Input
               type="text"
-              placeholder={isRecording ? "جاري التسجيل..." : "اكتب رسالة..."}
+              placeholder={
+                isRequestingMic ? "جاري تجهيز الميكروفون..." : 
+                isRecording ? "جاري التسجيل..." : 
+                "اكتب رسالة..."
+              }
               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full py-2 sm:py-3 px-4 sm:px-5 focus:border-[var(--whatsapp-primary)] focus:bg-white dark:focus:bg-gray-600 text-base"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               onKeyPress={handleKeyPress}
-              disabled={sendMessageMutation.isPending || isRecording}
+              disabled={sendMessageMutation.isPending || isRecording || isRequestingMic}
               data-testid="input-message"
             />
           </div>
@@ -671,22 +728,31 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
               size="icon"
               onMouseDown={(e) => {
                 e.preventDefault();
-                startRecording(e);
+                debounceTimerRef.current = setTimeout(() => {
+                  startRecording(e);
+                }, 50); // Small debounce for better UX
               }}
               onTouchStart={(e) => {
                 e.preventDefault();
-                startRecording(e);
+                debounceTimerRef.current = setTimeout(() => {
+                  startRecording(e);
+                }, 50);
               }}
-              className={`mobile-touch-target rounded-full transition-all duration-200 ${
+              disabled={isRequestingMic}
+              className={`mobile-touch-target rounded-full transition-all duration-150 ${
                 isRecording
                   ? isDraggedForCancel
                     ? "bg-gray-500 text-white hover:bg-gray-600"
-                    : "bg-red-500 text-white hover:bg-red-600"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-600"
+                    : "bg-red-500 text-white hover:bg-red-600 animate-pulse"
+                  : isRequestingMic
+                    ? "bg-blue-500 text-white opacity-75"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-600 hover:scale-105"
               }`}
               data-testid="button-voice"
             >
-              {isRecording ? (
+              {isRequestingMic ? (
+                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+              ) : isRecording ? (
                 isDraggedForCancel ? (
                   <X className="h-5 w-5" />
                 ) : (
