@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { 
   insertMessageSchema, 
   insertStorySchema, 
@@ -471,8 +472,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const audioUrl = `/uploads/${audioFilename}`;
       
       // Move the file to uploads directory
-      const fs = require('fs');
-      const path = require('path');
       const uploadDir = path.join(process.cwd(), 'uploads');
       
       // Create uploads directory if it doesn't exist
