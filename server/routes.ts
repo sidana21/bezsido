@@ -1461,6 +1461,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ADMIN ROUTES
   // ======================
 
+  // Admin Login with Email and Password
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
+      }
+      
+      // Check admin credentials
+      if (email !== "admin@bizchat.com" || password !== "admin123") {
+        return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
+      }
+      
+      // Get admin user (already exists in storage)
+      const adminUser = await storage.getUser("current-user"); // current-user is the admin
+      if (!adminUser) {
+        return res.status(500).json({ message: "خطأ في النظام: لم يتم العثور على المدير" });
+      }
+      
+      // Create session
+      const sessionData = {
+        userId: adminUser.id,
+        token: `admin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      };
+      const session = await storage.createSession(sessionData);
+      
+      res.json({
+        token: session.token,
+        user: adminUser,
+        message: "تم تسجيل الدخول بنجاح"
+      });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "خطأ في الخادم. حاول مرة أخرى." });
+    }
+  });
+
   // Admin Dashboard Statistics
   app.get("/api/admin/dashboard-stats", requireAdmin, async (req: any, res) => {
     try {

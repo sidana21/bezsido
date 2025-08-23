@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Shield, Phone, KeyRound } from 'lucide-react';
+import { Shield, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,102 +13,50 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
-const otpSchema = z.object({
-  phoneNumber: z.string().min(1, 'رقم الهاتف مطلوب'),
+const loginSchema = z.object({
+  email: z.string().email('يرجى إدخال بريد إلكتروني صحيح'),
+  password: z.string().min(6, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
 });
 
-const verifySchema = z.object({
-  code: z.string().min(6, 'كود التحقق يجب أن يكون 6 أرقام').max(6, 'كود التحقق يجب أن يكون 6 أرقام'),
-});
-
-type OtpForm = z.infer<typeof otpSchema>;
-type VerifyForm = z.infer<typeof verifySchema>;
+type LoginForm = z.infer<typeof loginSchema>;
 
 export function AdminLogin() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<'phone' | 'verify'>('phone');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
-  const otpForm = useForm<OtpForm>({
-    resolver: zodResolver(otpSchema),
+  const form = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
-      phoneNumber: '',
+      email: '',
+      password: '',
     },
   });
 
-  const verifyForm = useForm<VerifyForm>({
-    resolver: zodResolver(verifySchema),
-    defaultValues: {
-      code: '',
-    },
-  });
-
-  const sendOtpMutation = useMutation({
-    mutationFn: (data: OtpForm) => apiRequest('/api/auth/send-otp', {
+  const loginMutation = useMutation({
+    mutationFn: (data: LoginForm) => apiRequest('/api/admin/login', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-    onSuccess: () => {
-      toast({
-        title: 'تم إرسال الكود',
-        description: 'تحقق من رسائل SMS للحصول على كود التحقق',
-      });
-      setStep('verify');
-      setPhoneNumber(otpForm.getValues().phoneNumber);
-    },
-    onError: () => {
-      toast({
-        title: 'خطأ',
-        description: 'فشل في إرسال كود التحقق. حاول مرة أخرى.',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const verifyOtpMutation = useMutation({
-    mutationFn: (data: VerifyForm) => apiRequest('/api/auth/verify-otp', {
-      method: 'POST',
-      body: JSON.stringify({
-        phoneNumber,
-        code: data.code,
-        name: 'Admin',
-        location: 'Admin'
-      }),
-    }),
     onSuccess: (data: any) => {
-      // Check if user is admin
-      if (!data.user.isAdmin) {
-        toast({
-          title: 'غير مصرح',
-          description: 'ليس لديك صلاحية الوصول للوحة الإدارة',
-          variant: 'destructive',
-        });
-        return;
-      }
-
       localStorage.setItem('token', data.token);
       toast({
-        title: 'مرحباً بك',
+        title: 'مرحباً بك في لوحة الإدارة',
         description: 'تم تسجيل الدخول بنجاح',
       });
       setLocation('/admin');
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
-        title: 'خطأ',
-        description: 'كود التحقق غير صحيح أو انتهت صلاحيته',
+        title: 'خطأ في تسجيل الدخول',
+        description: error.message || 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
         variant: 'destructive',
       });
     },
   });
 
-  const onSendOtp = (data: OtpForm) => {
-    sendOtpMutation.mutate(data);
-  };
-
-  const onVerifyOtp = (data: VerifyForm) => {
-    verifyOtpMutation.mutate(data);
+  const onSubmit = (data: LoginForm) => {
+    loginMutation.mutate(data);
   };
 
   return (
@@ -122,98 +70,84 @@ export function AdminLogin() {
             لوحة الإدارة
           </CardTitle>
           <CardDescription>
-            {step === 'phone' 
-              ? 'أدخل رقم هاتف المدير للدخول' 
-              : 'أدخل كود التحقق المرسل لهاتفك'
-            }
+            أدخل بيانات المدير للوصول للوحة التحكم
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {step === 'phone' && (
-            <Form {...otpForm}>
-              <form onSubmit={otpForm.handleSubmit(onSendOtp)} className="space-y-4">
-                <FormField
-                  control={otpForm.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>رقم الهاتف</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Phone className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input
-                            {...field}
-                            type="tel"
-                            placeholder="+213555123456"
-                            className="pr-10"
-                            data-testid="input-phone"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={sendOtpMutation.isPending}
-                  data-testid="button-send-otp"
-                >
-                  {sendOtpMutation.isPending ? 'جاري الإرسال...' : 'إرسال كود التحقق'}
-                </Button>
-              </form>
-            </Form>
-          )}
-
-          {step === 'verify' && (
-            <Form {...verifyForm}>
-              <form onSubmit={verifyForm.handleSubmit(onVerifyOtp)} className="space-y-4">
-                <FormField
-                  control={verifyForm.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>كود التحقق</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <KeyRound className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input
-                            {...field}
-                            type="text"
-                            maxLength={6}
-                            placeholder="123456"
-                            className="pr-10 text-center text-lg tracking-widest"
-                            data-testid="input-code"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="space-y-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={verifyOtpMutation.isPending}
-                    data-testid="button-verify"
-                  >
-                    {verifyOtpMutation.isPending ? 'جاري التحقق...' : 'تسجيل الدخول'}
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => setStep('phone')}
-                    data-testid="button-back"
-                  >
-                    العودة لإدخال رقم الهاتف
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          )}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>البريد الإلكتروني</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="admin@example.com"
+                          className="pr-10"
+                          data-testid="input-email"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>كلمة المرور</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          {...field}
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          className="pr-10 pl-10"
+                          data-testid="input-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute left-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
+                          data-testid="toggle-password"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loginMutation.isPending}
+                data-testid="button-login"
+              >
+                {loginMutation.isPending ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+              </Button>
+            </form>
+          </Form>
+          
+          <div className="text-center text-sm text-gray-500 mt-6">
+            <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+              <p className="font-medium mb-1">للاختبار:</p>
+              <p>البريد: admin@bizchat.com</p>
+              <p>كلمة المرور: admin123</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
