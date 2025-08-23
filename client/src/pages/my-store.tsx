@@ -57,6 +57,7 @@ export default function MyStore() {
       phoneNumber: "",
       imageUrl: "",
       isOpen: true,
+      isActive: true,
     },
   });
 
@@ -80,11 +81,14 @@ export default function MyStore() {
 
   const createStoreMutation = useMutation({
     mutationFn: async (data: StoreFormData) => {
-      return apiRequest("/api/stores", {
+      console.log("Sending store data to API:", data);
+      const response = await apiRequest("/api/stores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      console.log("API response:", response);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/store"] });
@@ -96,10 +100,11 @@ export default function MyStore() {
       form.reset();
     },
     onError: (error: any) => {
-      console.log("Create store error:", error);
+      console.error("Create store error:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
       toast({
         title: "خطأ",
-        description: error.message || "فشل في إنشاء المتجر",
+        description: error.message || "فشل في إنشاء المتجر. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
         variant: "destructive",
       });
     },
@@ -165,6 +170,19 @@ export default function MyStore() {
   const handleCreateStore = (data: StoreFormData) => {
     console.log("Form data:", data);
     console.log("Form errors:", form.formState.errors);
+    console.log("Form is valid:", form.formState.isValid);
+    console.log("Form is submitting:", form.formState.isSubmitting);
+    
+    // Additional validation check
+    if (!data.name || !data.description || !data.category || !data.location) {
+      toast({
+        title: "خطأ في البيانات",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     createStoreMutation.mutate(data);
   };
 
@@ -309,8 +327,8 @@ export default function MyStore() {
                       </Button>
                       <Button
                         type="submit"
-                        disabled={createStoreMutation.isPending}
-                        className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]"
+                        disabled={createStoreMutation.isPending || !form.formState.isValid}
+                        className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] disabled:opacity-50"
                         data-testid="button-submit-create"
                       >
                         {createStoreMutation.isPending ? "جاري الإنشاء..." : "إنشاء المتجر"}
