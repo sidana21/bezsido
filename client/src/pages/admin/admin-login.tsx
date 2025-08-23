@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -24,6 +24,14 @@ export function AdminLogin() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
+
+  // Check if already logged in as admin
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token && token.startsWith('admin-')) {
+      setLocation('/admin');
+    }
+  }, [setLocation]);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),

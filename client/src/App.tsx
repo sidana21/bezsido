@@ -24,6 +24,7 @@ import { AdminDashboard } from "@/pages/admin/admin-dashboard";
 import { VerificationRequests } from "@/pages/admin/verification-requests";
 import { UsersManagement } from "@/pages/admin/users-management";
 import { StoresManagement } from "@/pages/admin/stores-management";
+import { AdminProtectedRoute } from "@/components/admin/admin-protected-route";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -44,10 +45,26 @@ function Router() {
         <Route path="/admin/login" component={AdminLogin} />
         
         {/* Admin Routes - Protected */}
-        <Route path="/admin/verification-requests" component={VerificationRequests} />
-        <Route path="/admin/users" component={UsersManagement} />
-        <Route path="/admin/stores" component={StoresManagement} />
-        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/verification-requests">
+          <AdminProtectedRoute>
+            <VerificationRequests />
+          </AdminProtectedRoute>
+        </Route>
+        <Route path="/admin/users">
+          <AdminProtectedRoute>
+            <UsersManagement />
+          </AdminProtectedRoute>
+        </Route>
+        <Route path="/admin/stores">
+          <AdminProtectedRoute>
+            <StoresManagement />
+          </AdminProtectedRoute>
+        </Route>
+        <Route path="/admin">
+          <AdminProtectedRoute>
+            <AdminDashboard />
+          </AdminProtectedRoute>
+        </Route>
         
         {/* Regular App Routes */}
         {!isAuthenticated ? (
