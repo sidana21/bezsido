@@ -706,7 +706,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-1",
         userId: "user-store-1", // Electronics store owner
-        storeId: null,
+        storeId: "store-1",
         name: "سماعة بلوتوث لاسلكية",
         description: "سماعة عالية الجودة مع تقنية إلغاء الضوضاء وبطارية تدوم 24 ساعة",
         price: "15000",
@@ -721,7 +721,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-2", 
         userId: "user-store-1",
-        storeId: null,
+        storeId: "store-1",
         name: "شاحن سريع للهاتف",
         description: "شاحن سريع 65W متوافق مع جميع الهواتف الذكية",
         price: "3500",
@@ -736,7 +736,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-3",
         userId: "user-store-2", // Grocery store owner
-        storeId: null,
+        storeId: "store-2",
         name: "عسل طبيعي صحراوي",
         description: "عسل طبيعي 100% من الصحراء الجزائرية، غني بالفوائد الطبية",
         price: "2500",
@@ -751,7 +751,7 @@ export class MemStorage implements IStorage {
       {
         id: "product-4",
         userId: "user-store-3", // Bakery owner
-        storeId: null,
+        storeId: "store-3",
         name: "خبز تندوف التقليدي",
         description: "خبز طازج يومياً من الفرن التقليدي بوصفة محلية أصيلة",
         price: "150",
@@ -923,6 +923,7 @@ export class MemStorage implements IStorage {
         isOnline: true,
         isVerified: true,
         verifiedAt: new Date(Date.now() - 345600000),
+        isAdmin: false,
         lastSeen: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -936,6 +937,7 @@ export class MemStorage implements IStorage {
         isOnline: false,
         isVerified: false,
         verifiedAt: null,
+        isAdmin: false,
         lastSeen: new Date(Date.now() - 3600000),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -949,6 +951,7 @@ export class MemStorage implements IStorage {
         isOnline: true,
         isVerified: true,
         verifiedAt: new Date(Date.now() - 604800000),
+        isAdmin: false,
         lastSeen: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -962,6 +965,7 @@ export class MemStorage implements IStorage {
         isOnline: false,
         isVerified: true,
         verifiedAt: new Date(Date.now() - 172800000),
+        isAdmin: false,
         lastSeen: new Date(Date.now() - 1800000),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -975,6 +979,7 @@ export class MemStorage implements IStorage {
         isOnline: true,
         isVerified: false,
         verifiedAt: null,
+        isAdmin: false,
         lastSeen: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
