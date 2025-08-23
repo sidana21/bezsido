@@ -316,6 +316,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to promote user to admin" });
     }
   });
+
+  // Development endpoint to promote any user by phone number to admin  
+  app.post("/api/dev/make-admin-by-phone", async (req: any, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    try {
+      const { phoneNumber } = req.body;
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number required" });
+      }
+      
+      const user = await storage.getUserByPhoneNumber(phoneNumber);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const updatedUser = await storage.updateUserAdminStatus(user.id, true);
+      res.json({ success: true, user: updatedUser, message: "User promoted to admin" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to promote user to admin" });
+    }
+  });
   
   app.post("/api/auth/logout", requireAuth, async (req: any, res) => {
     try {

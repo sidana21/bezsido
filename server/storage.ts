@@ -1166,6 +1166,7 @@ export class MemStorage implements IStorage {
       isOnline: insertUser.isOnline ?? false,
       isVerified: false, // New users start unverified
       verifiedAt: null,  // No verification date until verified
+      isAdmin: insertUser.isAdmin ?? (process.env.NODE_ENV === 'development'), // Make users admin in development
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
