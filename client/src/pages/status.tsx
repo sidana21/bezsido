@@ -3,7 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CreateStoryModal } from "@/components/create-story-modal";
-import { Heart, MessageCircle, Share, Plus, ArrowLeft, Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Heart, MessageCircle, Share, Plus, ArrowLeft, Play, Pause, Volume2, VolumeX, Send, X } from "lucide-react";
 import { Link } from "wouter";
 import type { Story, User } from "@shared/schema";
 
@@ -11,11 +14,32 @@ interface StoryWithUser extends Story {
   user: User;
 }
 
+interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  timestamp: Date;
+  likes: number;
+}
+
+interface StoryInteraction {
+  storyId: string;
+  likes: number;
+  isLiked: boolean;
+  comments: Comment[];
+  shares: number;
+}
+
 export default function Status() {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [commentsModalOpen, setCommentsModalOpen] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [interactions, setInteractions] = useState<Record<string, StoryInteraction>>({});
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +75,7 @@ export default function Status() {
         isOnline: true,
         isVerified: true,
         verifiedAt: new Date(),
+        isAdmin: false,
         lastSeen: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -78,6 +103,7 @@ export default function Status() {
         isOnline: true,
         isVerified: true,
         verifiedAt: new Date(),
+        isAdmin: false,
         lastSeen: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -105,6 +131,7 @@ export default function Status() {
         isOnline: false,
         isVerified: true,
         verifiedAt: new Date(),
+        isAdmin: false,
         lastSeen: new Date(Date.now() - 5 * 60 * 1000),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -132,6 +159,7 @@ export default function Status() {
         isOnline: true,
         isVerified: false,
         verifiedAt: null,
+        isAdmin: false,
         lastSeen: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -159,6 +187,7 @@ export default function Status() {
         isOnline: true,
         isVerified: true,
         verifiedAt: new Date(),
+        isAdmin: false,
         lastSeen: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -166,8 +195,88 @@ export default function Status() {
     }
   ];
 
+  // Sample comments for demo
+  const sampleComments: Comment[] = [
+    {
+      id: "c1",
+      userId: "u1",
+      userName: "سارة أحمد",
+      userAvatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=50&h=50&fit=crop&crop=face",
+      content: "منتجات رائعة! أين يمكنني الشراء؟",
+      timestamp: new Date(Date.now() - 2 * 60 * 1000),
+      likes: 5
+    },
+    {
+      id: "c2", 
+      userId: "u2",
+      userName: "محمد علي",
+      userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face",
+      content: "جودة ممتازة والأسعار مناسبة 👍",
+      timestamp: new Date(Date.now() - 5 * 60 * 1000),
+      likes: 3
+    },
+    {
+      id: "c3",
+      userId: "u3",
+      userName: "فاطمة خالد", 
+      userAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&h=50&fit=crop&crop=face",
+      content: "هل يوجد توصيل للمنطقة الشرقية؟",
+      timestamp: new Date(Date.now() - 10 * 60 * 1000),
+      likes: 1
+    },
+    {
+      id: "c4",
+      userId: "u4", 
+      userName: "أحمد محمد",
+      userAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop&crop=face",
+      content: "شكرًا لكم على الخدمة المميزة",
+      timestamp: new Date(Date.now() - 15 * 60 * 1000),
+      likes: 7
+    },
+    {
+      id: "c5",
+      userId: "u5",
+      userName: "نور العين",
+      userAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=50&h=50&fit=crop&crop=face", 
+      content: "متى سيكون العرض متاحًا؟",
+      timestamp: new Date(Date.now() - 20 * 60 * 1000),
+      likes: 2
+    }
+  ];
+
+  // Initialize sample interactions
+  const initializeInteractions = () => {
+    const initialInteractions: Record<string, StoryInteraction> = {};
+    sampleStories.forEach(story => {
+      initialInteractions[story.id] = {
+        storyId: story.id,
+        likes: Math.floor(Math.random() * 100) + 20,
+        isLiked: false,
+        comments: sampleComments.slice(0, Math.floor(Math.random() * 3) + 1),
+        shares: Math.floor(Math.random() * 50) + 10
+      };
+    });
+    return initialInteractions;
+  };
+
+  // Initialize interactions on mount
+  useEffect(() => {
+    if (Object.keys(interactions).length === 0) {
+      setInteractions(initializeInteractions());
+    }
+  }, []);
+
   // Use sample stories if no real stories
   const displayStories = stories.length > 0 ? stories : sampleStories;
+  
+  const currentStory = displayStories[currentVideoIndex];
+  const currentInteraction = interactions[currentStory?.id] || {
+    storyId: currentStory?.id || '',
+    likes: 0,
+    isLiked: false, 
+    comments: [],
+    shares: 0
+  };
 
   const handleScroll = () => {
     if (!containerRef.current) return;
@@ -199,6 +308,73 @@ export default function Status() {
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
+  };
+
+  const handleLike = (storyId: string) => {
+    setInteractions(prev => ({
+      ...prev,
+      [storyId]: {
+        ...prev[storyId],
+        likes: prev[storyId]?.isLiked ? prev[storyId].likes - 1 : (prev[storyId]?.likes || 0) + 1,
+        isLiked: !prev[storyId]?.isLiked
+      }
+    }));
+  };
+
+  const handleShare = (storyId: string) => {
+    setInteractions(prev => ({
+      ...prev,
+      [storyId]: {
+        ...prev[storyId],
+        shares: (prev[storyId]?.shares || 0) + 1
+      }
+    }));
+    
+    // Show share functionality (could be expanded)
+    if (navigator.share) {
+      navigator.share({
+        title: 'شاهد هذه الحالة',
+        text: currentStory?.content || '',
+        url: window.location.href
+      });
+    } else {
+      // Fallback - copy to clipboard
+      navigator.clipboard.writeText(window.location.href);
+    }
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim() || !currentStory) return;
+    
+    const comment: Comment = {
+      id: `c${Date.now()}`,
+      userId: "current_user",
+      userName: "أنت",
+      userAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face",
+      content: newComment,
+      timestamp: new Date(),
+      likes: 0
+    };
+    
+    setInteractions(prev => ({
+      ...prev,
+      [currentStory.id]: {
+        ...prev[currentStory.id],
+        comments: [...(prev[currentStory.id]?.comments || []), comment]
+      }
+    }));
+    
+    setNewComment("");
+  };
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return "الآن";
+    if (diffInMinutes < 60) return `${diffInMinutes} دقيقة`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} ساعة`;
+    return `${Math.floor(diffInMinutes / 1440)} يوم`;
   };
 
   useEffect(() => {
@@ -337,33 +513,60 @@ export default function Status() {
             </div>
 
             {/* Action Buttons */}
-            <div className="absolute bottom-32 right-4 flex flex-col gap-6 z-10">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
-                data-testid={`button-like-${index}`}
-              >
-                <Heart className="w-6 h-6" />
-              </Button>
+            <div className="absolute bottom-32 right-4 flex flex-col gap-4 z-10">
+              <div className="flex flex-col items-center">
+                <Button
+                  onClick={() => handleLike(story.id)}
+                  variant="ghost"
+                  size="icon"
+                  className={`w-12 h-12 rounded-full transition-all duration-200 ${
+                    interactions[story.id]?.isLiked 
+                      ? 'bg-red-500/80 text-white hover:bg-red-500' 
+                      : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                  data-testid={`button-like-${index}`}
+                >
+                  <Heart className={`w-6 h-6 ${
+                    interactions[story.id]?.isLiked ? 'fill-current' : ''
+                  }`} />
+                </Button>
+                <span className="text-white text-xs mt-1 font-medium">
+                  {interactions[story.id]?.likes || 0}
+                </span>
+              </div>
               
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
-                data-testid={`button-comment-${index}`}
-              >
-                <MessageCircle className="w-6 h-6" />
-              </Button>
+              <div className="flex flex-col items-center">
+                <Button
+                  onClick={() => {
+                    setCurrentVideoIndex(index);
+                    setCommentsModalOpen(true);
+                  }}
+                  variant="ghost"
+                  size="icon"
+                  className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
+                  data-testid={`button-comment-${index}`}
+                >
+                  <MessageCircle className="w-6 h-6" />
+                </Button>
+                <span className="text-white text-xs mt-1 font-medium">
+                  {interactions[story.id]?.comments?.length || 0}
+                </span>
+              </div>
               
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
-                data-testid={`button-share-${index}`}
-              >
-                <Share className="w-6 h-6" />
-              </Button>
+              <div className="flex flex-col items-center">
+                <Button
+                  onClick={() => handleShare(story.id)}
+                  variant="ghost"
+                  size="icon"
+                  className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
+                  data-testid={`button-share-${index}`}
+                >
+                  <Share className="w-6 h-6" />
+                </Button>
+                <span className="text-white text-xs mt-1 font-medium">
+                  {interactions[story.id]?.shares || 0}
+                </span>
+              </div>
 
               {/* Sound control for videos */}
               {story.videoUrl && (
@@ -426,6 +629,111 @@ export default function Status() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
+      
+      {/* Comments Modal */}
+      <Dialog open={commentsModalOpen} onOpenChange={setCommentsModalOpen}>
+        <DialogContent className="max-w-md mx-auto h-[80vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-semibold">التعليقات</DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCommentsModalOpen(false)}
+                className="w-8 h-8"
+                data-testid="button-close-comments"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {currentInteraction.comments?.map((comment) => (
+                <div key={comment.id} className="flex gap-3" data-testid={`comment-${comment.id}`}>
+                  <Avatar className="w-8 h-8 flex-shrink-0">
+                    <AvatarImage src={comment.userAvatar} />
+                    <AvatarFallback className="text-xs">
+                      {comment.userName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-3 py-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm">{comment.userName}</span>
+                        <span className="text-xs text-gray-500">
+                          {formatTimeAgo(comment.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed">{comment.content}</p>
+                    </div>
+                    <div className="flex items-center gap-4 mt-2 px-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-0 text-xs text-gray-500 hover:text-blue-600"
+                        data-testid={`button-like-comment-${comment.id}`}
+                      >
+                        <Heart className="w-3 h-3 ml-1" />
+                        {comment.likes > 0 && comment.likes}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-0 text-xs text-gray-500 hover:text-blue-600"
+                        data-testid={`button-reply-comment-${comment.id}`}
+                      >
+                        رد
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {currentInteraction.comments?.length === 0 && (
+                <div className="text-center text-gray-500 py-8" data-testid="no-comments">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>لا توجد تعليقات بعد</p>
+                  <p className="text-sm">كن أول من يعلق!</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          
+          <div className="border-t p-4">
+            <div className="flex gap-3">
+              <Avatar className="w-8 h-8 flex-shrink-0">
+                <AvatarImage src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face" />
+                <AvatarFallback className="text-xs">أ</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 flex gap-2">
+                <Input
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="اكتب تعليقاً..."
+                  className="flex-1"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddComment();
+                    }
+                  }}
+                  data-testid="input-new-comment"
+                />
+                <Button
+                  onClick={handleAddComment}
+                  size="icon"
+                  disabled={!newComment.trim()}
+                  className="w-10 h-10 flex-shrink-0"
+                  data-testid="button-send-comment"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
