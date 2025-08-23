@@ -1,7 +1,8 @@
 import { Message, User } from "@shared/schema";
-import { Check, CheckCheck, Clock, Reply, MoreVertical } from "lucide-react";
+import { Check, CheckCheck, Clock, Reply, MoreVertical, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useState, useRef, useEffect } from "react";
 
 interface MessageBubbleProps {
   message: Message & { sender?: User; replyTo?: Message & { sender?: User } };
@@ -12,6 +13,11 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, isOwn, onReply, onEdit, onDelete }: MessageBubbleProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
   const formatTime = (date: Date | null) => {
     if (!date) return "";
     return new Date(date).toLocaleTimeString('ar-SA', {
@@ -20,6 +26,42 @@ export function MessageBubble({ message, isOwn, onReply, onEdit, onDelete }: Mes
       hour12: false,
     });
   };
+
+  const formatAudioTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateDuration = () => setDuration(audio.duration);
+    const handleEnded = () => setIsPlaying(false);
+
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('loadedmetadata', updateDuration);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('loadedmetadata', updateDuration);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, []);
 
   const getStatusIcon = () => {
     if (!isOwn) return null;
@@ -64,9 +106,46 @@ export function MessageBubble({ message, isOwn, onReply, onEdit, onDelete }: Mes
               data-testid="message-image"
             />
           )}
-          <p className="text-gray-800 dark:text-gray-200 break-words" data-testid="message-content">
-            {message.content}
-          </p>
+          
+          {message.messageType === 'audio' && message.audioUrl && (
+            <div className="flex items-center space-x-3 space-x-reverse p-2 bg-gray-50 dark:bg-gray-600 rounded-lg">
+              <Button
+                onClick={togglePlayPause}
+                size="sm"
+                variant="ghost"
+                className="p-2 rounded-full bg-[var(--whatsapp-primary)] text-white hover:bg-[var(--whatsapp-secondary)]"
+                data-testid="button-audio-play"
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              
+              <div className="flex-1">
+                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+                  <span>رسالة صوتية</span>
+                  <span>{formatAudioTime(duration || 0)}</span>
+                </div>
+                <div className="w-full bg-gray-300 dark:bg-gray-400 rounded-full h-1 mt-1">
+                  <div
+                    className="bg-[var(--whatsapp-primary)] h-1 rounded-full transition-all duration-100"
+                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <audio
+                ref={audioRef}
+                src={message.audioUrl}
+                onEnded={() => setIsPlaying(false)}
+                data-testid="audio-player"
+              />
+            </div>
+          )}
+          
+          {message.messageType === 'text' && message.content && (
+            <p className="text-gray-800 dark:text-gray-200 break-words" data-testid="message-content">
+              {message.content}
+            </p>
+          )}
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-center gap-1">
               {getStatusIcon()}

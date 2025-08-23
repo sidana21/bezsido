@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef, useEffect } from "react";
-import { Search, Phone, Video, MoreVertical, Smile, Paperclip, Send, ArrowRight, Menu, X } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Search, Phone, Video, MoreVertical, Smile, Paperclip, Send, ArrowRight, Menu, X, Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,14 +25,20 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
     queryKey: ['/api/user/current'],
   });
 
-  const { data: messages = [], isLoading } = useQuery<ChatMessage[]>({
+  const { data: messages = [], isLoading, isSuccess } = useQuery<ChatMessage[]>({
     queryKey: ['/api/chats', chatId, 'messages'],
     enabled: !!chatId,
     refetchInterval: 3000, // تحديث الرسائل كل 3 ثواني
@@ -101,6 +107,115 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
     },
   });
+
+  // إعداد الصوت للتنبيه
+  useEffect(() => {
+    // إنشاء صوت التنبيه (بسيط للغاية)
+    notificationSoundRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjibzvPfiTcIG2m98OScTQwNUarm7blsGws5n9P1vmocBjiAyfTakTsIGGm98OScTQwNUarm7bhkHA=');
+    notificationSoundRef.current.volume = 0.5;
+  }, []);
+
+  // تشغيل صوت التنبيه عند استلام رسائل جديدة غير مقروءة
+  useEffect(() => {
+    if (isSuccess && messages.length > 0) {
+      const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== (currentUser as any)?.id);
+      if (unreadMessages.length > 0) {
+        // تشغيل صوت التنبيه
+        notificationSoundRef.current?.play().catch(err => console.log('Cannot play notification sound:', err));
+      }
+    }
+  }, [messages, isSuccess, currentUser]);
+
+  // تمييز الرسائل كمقروءة عند دخول المحادثة
+  useEffect(() => {
+    if (chatId && messages.length > 0 && currentUser) {
+      const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== (currentUser as any)?.id);
+      unreadMessages.forEach(message => {
+        // استدعاء API لتمييز الرسالة كمقروءة
+        fetch(`/api/messages/${message.id}/read`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' }
+        }).catch(err => console.log('Failed to mark message as read:', err));
+      });
+    }
+  }, [chatId, messages, currentUser]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        sendAudioMessage(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('خطأ في الوصول للميكروفون. تأكد من السماح بالوصول للميكروفون.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setRecordingTime(0);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    }
+  };
+
+  const sendAudioMessage = async (audioBlob: Blob) => {
+    if (!chatId) return;
+
+    try {
+      // إنشاء FormData لرفع الملف الصوتي
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice-message.wav');
+      formData.append('messageType', 'audio');
+      formData.append('chatId', chatId);
+      if (replyingTo?.id) {
+        formData.append('replyToId', replyingTo.id);
+      }
+
+      const response = await fetch(`/api/chats/${chatId}/messages/audio`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+        setReplyingTo(null);
+      } else {
+        throw new Error('Failed to send audio message');
+      }
+    } catch (error) {
+      console.error('Error sending audio message:', error);
+      alert('فشل في إرسال الرسالة الصوتية');
+    }
+  };
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -372,22 +487,52 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <Paperclip className="h-5 w-5" />
           </Button>
           
+          {/* Voice Message Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+            onTouchStart={startRecording}
+            onTouchEnd={stopRecording}
+            className={`mobile-touch-target ${
+              isRecording
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+            data-testid="button-voice"
+          >
+            {isRecording ? (
+              <Square className="h-5 w-5" />
+            ) : (
+              <Mic className="h-5 w-5" />
+            )}
+          </Button>
+          
           <div className="flex-1 relative">
+            {isRecording && (
+              <div className="absolute -top-12 left-0 right-0 bg-red-500 text-white p-2 rounded-lg text-center">
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span className="text-sm">تسجيل... {formatRecordingTime(recordingTime)}</span>
+                </div>
+              </div>
+            )}
             <Input
               type="text"
-              placeholder="اكتب رسالة..."
+              placeholder={isRecording ? "جاري التسجيل..." : "اكتب رسالة..."}
               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full py-2 sm:py-3 px-4 sm:px-5 focus:border-[var(--whatsapp-primary)] focus:bg-white dark:focus:bg-gray-600 text-base"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               onKeyPress={handleKeyPress}
-              disabled={sendMessageMutation.isPending}
+              disabled={sendMessageMutation.isPending || isRecording}
               data-testid="input-message"
             />
           </div>
           
           <Button
             onClick={handleSendMessage}
-            disabled={!messageText.trim() || sendMessageMutation.isPending}
+            disabled={!messageText.trim() || sendMessageMutation.isPending || isRecording}
             className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-2 sm:p-3 rounded-full shadow-lg mobile-touch-target"
             size="icon"
             data-testid="button-send"

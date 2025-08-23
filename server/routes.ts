@@ -43,11 +43,26 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024, // 50MB limit for videos
   },
   fileFilter: (req, file, cb) => {
-    // Accept both image and video files
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+    // Accept image, video, and audio files
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image and video files are allowed'));
+      cb(new Error('Only image, video, and audio files are allowed'));
+    }
+  }
+});
+
+// Configure multer for audio uploads using memory storage
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for audio files
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('audio/') || file.mimetype === 'audio/wav' || file.mimetype === 'audio/webm') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only audio files are allowed'));
     }
   }
 });
@@ -428,6 +443,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Send audio message
+  app.post("/api/chats/:chatId/messages/audio", requireAuth, audioUpload.single('audio'), async (req: any, res) => {
+    try {
+      const { chatId } = req.params;
+      const { messageType, replyToId } = req.body;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No audio file provided" });
+      }
+
+      // Generate a unique filename for the audio
+      const audioFilename = `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.wav`;
+      const audioUrl = `/uploads/${audioFilename}`;
+      
+      // Move the file to uploads directory
+      const fs = require('fs');
+      const path = require('path');
+      const uploadDir = path.join(process.cwd(), 'uploads');
+      
+      // Create uploads directory if it doesn't exist
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      // Move the file
+      fs.writeFileSync(path.join(uploadDir, audioFilename), req.file.buffer);
+
+      const messageData = insertMessageSchema.parse({
+        chatId,
+        senderId: req.userId,
+        content: null,
+        messageType: 'audio',
+        audioUrl: audioUrl,
+        replyToMessageId: replyToId || null,
+      });
+      
+      const message = await storage.createMessage(messageData);
+      const sender = await storage.getUser(message.senderId);
+      
+      res.json({
+        ...message,
+        sender,
+      });
+    } catch (error) {
+      console.error('Error sending audio message:', error);
+      res.status(500).json({ message: "Failed to send audio message" });
     }
   });
 
