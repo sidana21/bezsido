@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MessageBubble } from "./message-bubble";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { Message, User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -552,9 +553,14 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           </div>
           
           <div className="mr-3">
-            <h2 className="font-medium text-gray-900 dark:text-gray-100" data-testid="chat-header-name">
-              {chatDisplayName}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-medium text-gray-900 dark:text-gray-100" data-testid="chat-header-name">
+                {chatDisplayName}
+              </h2>
+              {!currentChat?.isGroup && currentChat?.otherParticipant?.isVerified && (
+                <VerifiedBadge className="w-4 h-4" />
+              )}
+            </div>
             <p className="text-sm text-[var(--whatsapp-online)]" data-testid="chat-status">
               {isOnline ? "متصل" : "آخر ظهور مؤخراً"}
             </p>

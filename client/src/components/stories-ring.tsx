@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { Story, User } from "@shared/schema";
 
 interface StoriesRingProps {
@@ -111,9 +112,12 @@ export function StoriesRing({ onStoryClick, onCreateStory }: StoriesRingProps) {
                       {userStoryList.length}
                     </div>
                   </div>
-                  <span className="text-xs text-gray-600 dark:text-gray-300 truncate max-w-12 sm:max-w-16 hidden sm:block">
-                    {firstStory.user.name}
-                  </span>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 truncate max-w-12 sm:max-w-16 hidden sm:flex items-center gap-1">
+                    <span>{firstStory.user.name}</span>
+                    {firstStory.user.isVerified && (
+                      <VerifiedBadge className="w-2.5 h-2.5 flex-shrink-0" />
+                    )}
+                  </div>
                 </Button>
               </div>
             );

@@ -2,6 +2,7 @@ import { Message, User } from "@shared/schema";
 import { Check, CheckCheck, Clock, Reply, MoreVertical, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { useState, useRef, useEffect } from "react";
 
 interface MessageBubbleProps {
@@ -89,8 +90,11 @@ export function MessageBubble({ message, isOwn, onReply, onEdit, onDelete }: Mes
           {/* Reply preview */}
           {message.replyTo && (
             <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded border-l-4 border-[var(--whatsapp-primary)]">
-              <div className="text-xs font-medium text-[var(--whatsapp-primary)] mb-1">
-                {message.replyTo.sender?.name || "رسالة محذوفة"}
+              <div className="text-xs font-medium text-[var(--whatsapp-primary)] mb-1 flex items-center gap-1">
+                <span>{message.replyTo.sender?.name || "رسالة محذوفة"}</span>
+                {message.replyTo.sender?.isVerified && (
+                  <VerifiedBadge className="w-3 h-3" />
+                )}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
                 {message.replyTo.content}

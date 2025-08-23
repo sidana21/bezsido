@@ -24,6 +24,7 @@ import { StoriesRing } from "./stories-ring";
 import { StoryViewer } from "./story-viewer";
 import { CreateStoryModal } from "./create-story-modal";
 import { ContactsModal } from "./contacts-modal";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -46,6 +47,7 @@ interface Chat {
     name: string;
     avatar: string | null;
     isOnline: boolean;
+    isVerified?: boolean;
     lastSeen: Date;
   } | null;
 }
@@ -322,9 +324,14 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
               
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100" data-testid="chat-name">
-                    {getChatDisplayName(chat)}
-                  </h3>
+                  <div className="flex items-center gap-1">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100" data-testid="chat-name">
+                      {getChatDisplayName(chat)}
+                    </h3>
+                    {!chat.isGroup && chat.otherParticipant?.isVerified && (
+                      <VerifiedBadge className="w-3.5 h-3.5" />
+                    )}
+                  </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400" data-testid="chat-time">
                     {chat.lastMessage ? formatTime(chat.lastMessage.timestamp) : ""}
                   </span>

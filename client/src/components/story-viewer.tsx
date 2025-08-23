@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { Story, User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -145,7 +146,12 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
               <AvatarFallback className="text-black">{story.user.name[0]}</AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="text-white font-medium text-sm">{story.user.name}</h3>
+              <div className="flex items-center gap-1">
+                <h3 className="text-white font-medium text-sm">{story.user.name}</h3>
+                {story.user.isVerified && (
+                  <VerifiedBadge className="w-3.5 h-3.5" />
+                )}
+              </div>
               <p className="text-white text-opacity-80 text-xs">
                 {formatTimeAgo(story.timestamp || new Date())}
               </p>

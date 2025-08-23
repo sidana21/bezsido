@@ -198,8 +198,8 @@ export class MemStorage implements IStorage {
       avatar: "https://pixabay.com/get/g5ede2eab7ebacb14e91863d35be3f093549755f13131724e5e19c6a49a45921c44adc3a540b01f28abed2c4568cf8e907881a83c9d0679b2c22c054985afc7d2_1280.jpg",
       location: "تندوف",
       isOnline: true,
-      isVerified: false,
-      verifiedAt: null,
+      isVerified: true, // Made verified for testing
+      verifiedAt: new Date(Date.now() - 43200000), // 12 hours ago
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
