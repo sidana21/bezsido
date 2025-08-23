@@ -79,13 +79,19 @@ export default function ProductDetail() {
   // Start chat mutation
   const startChatMutation = useMutation({
     mutationFn: async (sellerId: string) => {
+      console.log("Sending request with sellerId:", sellerId);
+      
+      const requestBody = { 
+        otherUserId: sellerId,
+        // Include product context in the initial message
+        initialMessage: `مرحباً 👋\n\nأنا مهتم بهذا المنتج:\n🛍️ ${product?.name}\n💰 ${formatCurrency(product?.price || '0')}\n📍 ${product?.location}\n\nهل يمكنك تزويدي بمزيد من التفاصيل؟\nشكراً لك 🙏`
+      };
+      
+      console.log("Request body:", requestBody);
+      
       const response = await apiRequest(`/api/chats/start`, {
         method: "POST",
-        body: JSON.stringify({ 
-          otherUserId: sellerId,
-          // Include product context in the initial message
-          initialMessage: `مرحباً 👋\n\nأنا مهتم بهذا المنتج:\n🛍️ ${product?.name}\n💰 ${formatCurrency(product?.price || '0')}\n📍 ${product?.location}\n\nهل يمكنك تزويدي بمزيد من التفاصيل؟\nشكراً لك 🙏`
-        }),
+        body: JSON.stringify(requestBody),
       });
       return response.json();
     },
@@ -164,6 +170,19 @@ export default function ProductDetail() {
 
   const handleContactSeller = () => {
     if (product) {
+      console.log("Product data:", product);
+      console.log("Owner ID:", product.owner?.id);
+      console.log("Owner data:", product.owner);
+      
+      if (!product.owner?.id) {
+        toast({
+          title: "خطأ",
+          description: "لا يمكن العثور على بيانات البائع",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       startChatMutation.mutate(product.owner.id);
     }
   };
