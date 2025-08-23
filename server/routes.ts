@@ -436,9 +436,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create or get existing chat with another user
   app.post("/api/chats/start", requireAuth, async (req: any, res) => {
     try {
+      console.log("Chat start request body:", req.body);
+      console.log("Received data:", JSON.stringify(req.body, null, 2));
+      
       const { otherUserId } = req.body;
+      console.log("Extracted otherUserId:", otherUserId);
       
       if (!otherUserId) {
+        console.log("Missing otherUserId in request");
         return res.status(400).json({ message: "Other user ID is required" });
       }
       
