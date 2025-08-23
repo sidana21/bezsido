@@ -41,10 +41,10 @@ export function AdminLogin() {
     onSuccess: (data: any) => {
       localStorage.setItem('token', data.token);
       toast({
-        title: 'مرحباً بك في واتس الإدارة',
-        description: 'تم تسجيل الدخول بنجاح - جار فتح واتس الإدارة',
+        title: 'مرحباً بك في لوحة الإدارة',
+        description: 'تم تسجيل الدخول بنجاح',
       });
-      setLocation('/');
+      setLocation('/admin');
     },
     onError: (error: any) => {
       toast({
@@ -67,10 +67,10 @@ export function AdminLogin() {
             <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
           <CardTitle className="text-2xl font-bold">
-            واتس الإدارة
+            لوحة الإدارة
           </CardTitle>
           <CardDescription>
-            أدخل بيانات المدير للوصول لواتس الإدارة
+            أدخل بيانات المدير للوصول للوحة التحكم
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
