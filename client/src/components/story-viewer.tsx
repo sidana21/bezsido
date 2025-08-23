@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle, Heart, MessageSquare, Send } from "lucide-react";
+import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle, Heart, MessageSquare, Send, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
@@ -9,7 +9,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Story, User, StoryComment, StoryLike } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { formatTimeAgo } from "@/lib/utils";
 
 interface StoryViewerProps {
   storyId: string;
@@ -163,7 +162,9 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
     setIsPlaying(true);
   }, [storyId]);
 
-  const formatTimeAgo = (date: Date) => {
+  const formatTimeAgo = (date: Date | null) => {
+    if (!date) return '';
+    
     const now = new Date();
     const diffInHours = Math.abs(now.getTime() - new Date(date).getTime()) / (1000 * 60 * 60);
     
@@ -315,36 +316,56 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
           </Button>
         )}
 
-        {/* Story Actions */}
-        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4 space-x-reverse">
-            {/* Like Button */}
+        {/* Story Actions - Right Side */}
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4">
+          {/* Like Button */}
+          <div className="flex flex-col items-center">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={handleLikeToggle}
               disabled={likeMutation.isPending || unlikeMutation.isPending}
-              className="text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-1 space-x-reverse"
+              className="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-12 h-12"
               data-testid="button-like-story"
             >
-              <Heart className={`h-5 w-5 ${likesData?.hasUserLiked ? 'fill-red-500 text-red-500' : ''}`} />
-              <span className="text-sm">{likesData?.count || 0}</span>
+              <Heart className={`h-6 w-6 ${likesData?.hasUserLiked ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
-
-            {/* Comments Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowComments(!showComments)}
-              className="text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-1 space-x-reverse"
-              data-testid="button-comments-story"
-            >
-              <MessageSquare className="h-5 w-5" />
-              <span className="text-sm">{commentsData?.count || 0}</span>
-            </Button>
+            {(likesData?.count || 0) > 0 && (
+              <span className="text-white text-sm mt-1">{likesData?.count}</span>
+            )}
           </div>
 
-          {/* View Count */}
+          {/* Comments Button */}
+          <div className="flex flex-col items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowComments(!showComments)}
+              className="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-12 h-12"
+              data-testid="button-comments-story"
+            >
+              <MessageSquare className="h-6 w-6" />
+            </Button>
+            {(commentsData?.count || 0) > 0 && (
+              <span className="text-white text-sm mt-1">{commentsData?.count}</span>
+            )}
+          </div>
+
+          {/* Share Button */}
+          <div className="flex flex-col items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-12 h-12"
+              data-testid="button-share-story"
+            >
+              <Share className="h-6 w-6" />
+            </Button>
+          </div>
+        </div>
+
+        {/* View Count - Bottom Right */}
+        <div className="absolute bottom-4 right-4">
           <div className="bg-black bg-opacity-50 rounded-full px-3 py-1">
             <span className="text-white text-sm">👁 {story.viewCount}</span>
           </div>
