@@ -152,6 +152,11 @@ export default function Profile() {
         return;
       }
 
+      // If not in editing mode, automatically enable it when uploading
+      if (!isEditing) {
+        setIsEditing(true);
+      }
+
       uploadAvatarMutation.mutate(file);
     }
     
@@ -237,28 +242,26 @@ export default function Profile() {
               </AvatarFallback>
             </Avatar>
             
-            {isEditing && (
-              <div className="absolute bottom-0 right-0">
-                <label htmlFor="avatar-upload" className="cursor-pointer">
-                  <div className="w-10 h-10 rounded-full bg-whatsapp-green hover:bg-green-600 flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105">
-                    {uploadAvatarMutation.isPending ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <Camera className="w-5 h-5 text-white" />
-                    )}
-                  </div>
-                </label>
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*,image/jpeg,image/png,image/gif,image/webp"
-                  capture="environment"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                  data-testid="input-avatar-upload"
-                />
-              </div>
-            )}
+            <div className="absolute bottom-0 right-0">
+              <label htmlFor="avatar-upload" className="cursor-pointer">
+                <div className="w-10 h-10 rounded-full bg-whatsapp-green hover:bg-green-600 flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105">
+                  {uploadAvatarMutation.isPending ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Camera className="w-5 h-5 text-white" />
+                  )}
+                </div>
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*,image/jpeg,image/png,image/gif,image/webp"
+                capture="environment"
+                onChange={handleAvatarChange}
+                className="hidden"
+                data-testid="input-avatar-upload"
+              />
+            </div>
           </div>
           
           {uploadAvatarMutation.isPending && (
