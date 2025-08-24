@@ -69,19 +69,31 @@ export function StoresManagement() {
   });
 
   const updateStoreMutation = useMutation({
-    mutationFn: ({ storeId, status }: { storeId: string; status: string }) => 
+    mutationFn: ({ storeId, status, rejectionReason }: { storeId: string; status: string; rejectionReason?: string }) => 
       apiRequest(`/api/admin/stores/${storeId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ status }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status, rejectionReason }),
       }),
-    onSuccess: () => {
+    onSuccess: (updatedStore, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/stores'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-stats'] });
+      
+      // Also invalidate user store queries to trigger immediate updates for the user
+      queryClient.invalidateQueries({ queryKey: ['/api/user/store'] });
+      
       setSelectedStore(null);
       setAdminNote('');
+      
+      const statusText = variables.status === 'approved' ? 'تم الموافقة على المتجر' :
+                        variables.status === 'rejected' ? 'تم رفض المتجر' :
+                        variables.status === 'suspended' ? 'تم تعليق المتجر' : 'تم تحديث حالة المتجر';
+      
       toast({
         title: 'تم التحديث',
-        description: 'تم تحديث حالة المتجر بنجاح',
+        description: statusText + ' بنجاح',
       });
     },
     onError: () => {
@@ -98,7 +110,8 @@ export function StoresManagement() {
   };
 
   const handleReject = (storeId: string) => {
-    updateStoreMutation.mutate({ storeId, status: 'rejected' });
+    const reason = adminNote.trim() || 'لم يتم تحديد سبب الرفض';
+    updateStoreMutation.mutate({ storeId, status: 'rejected', rejectionReason: reason });
   };
 
   const handleSuspend = (storeId: string) => {

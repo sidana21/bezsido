@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Store, User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,9 @@ export default function MyStore() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
+  const [lastStoreStatus, setLastStoreStatus] = useState<string | null>(null);
   const { toast } = useToast();
+  const isInitialMount = useRef(true);
 
   const { data: currentUser } = useQuery<User>({
     queryKey: ["/api/user/current"],
@@ -41,6 +43,7 @@ export default function MyStore() {
 
   const { data: userStore, isLoading: isLoadingStore } = useQuery<Store | null>({
     queryKey: ["/api/user/store"],
+    refetchInterval: 30000, // Check every 30 seconds for updates
   });
 
   const { data: storeProducts = [] } = useQuery<any[]>({
@@ -66,6 +69,35 @@ export default function MyStore() {
       form.setValue("location", currentUser.location);
     }
   }, [currentUser, form]);
+
+  // Monitor store status changes and show congratulatory message
+  useEffect(() => {
+    if (userStore && !isInitialMount.current) {
+      // Check if store status changed to approved
+      if (lastStoreStatus === 'pending' && userStore.status === 'approved') {
+        toast({
+          title: "🎉 مبروك عليك!",
+          description: "تم الموافقة على متجرك بنجاح! يمكنك الآن إضافة منتجاتك وبدء البيع.",
+          duration: 8000,
+        });
+      }
+      // Check if store was rejected
+      else if (lastStoreStatus === 'pending' && userStore.status === 'rejected') {
+        toast({
+          title: "تم رفض طلب المتجر",
+          description: userStore.rejectionReason || "يرجى مراجعة البيانات والمحاولة مرة أخرى.",
+          variant: "destructive",
+          duration: 8000,
+        });
+      }
+      // Update last status
+      setLastStoreStatus(userStore.status);
+    } else if (userStore && isInitialMount.current) {
+      // Set initial status without showing notification
+      setLastStoreStatus(userStore.status);
+      isInitialMount.current = false;
+    }
+  }, [userStore, lastStoreStatus, toast]);
 
   const productForm = useForm({
     resolver: zodResolver(insertProductSchema.extend({
