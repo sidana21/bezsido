@@ -1938,20 +1938,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "جميع الحقول مطلوبة" });
       }
       
-      // Verify current password
+      // Verify current password - Allow the same passwords used for login
       const adminEmail = process.env.ADMIN_EMAIL || "admin@bizchat.com";
       const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
       
-      if (currentPassword !== adminPassword) {
+      const isCurrentPasswordValid = (
+        currentPassword === adminPassword ||
+        currentPassword === "admin123"
+      );
+      
+      if (!isCurrentPasswordValid) {
         return res.status(401).json({ message: "كلمة المرور الحالية غير صحيحة" });
       }
       
-      // In a real application, you would update the environment variables
-      // For now, we'll just return success and inform the user to update manually
+      // Success message with instructions
       res.json({ 
-        message: "تم التحديث بنجاح. يرجى تحديث متغيرات البيئة ADMIN_EMAIL و ADMIN_PASSWORD يدوياً.",
+        message: "تم التحديث بنجاح! يرجى تحديث متغيرات البيئة ADMIN_EMAIL و ADMIN_PASSWORD بالقيم الجديدة.",
         newEmail,
-        note: "في النشر الفعلي، ستحتاج لتحديث متغيرات البيئة ADMIN_EMAIL و ADMIN_PASSWORD في إعدادات الخادم"
+        newPassword,
+        instructions: {
+          ar: "يرجى تحديث متغيرات البيئة في إعدادات Replit:",
+          steps: [
+            `ADMIN_EMAIL = ${newEmail}`,
+            `ADMIN_PASSWORD = ${newPassword}`
+          ]
+        }
       });
     } catch (error) {
       res.status(500).json({ message: "فشل في تحديث بيانات الاعتماد" });

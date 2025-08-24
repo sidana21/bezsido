@@ -49,18 +49,18 @@ export function AdminSettings() {
       },
       body: JSON.stringify(data),
     }),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast({
         title: 'تم تحديث البيانات بنجاح',
-        description: 'تم تحديث بيانات الإدارة بنجاح. ستحتاج لتسجيل الدخول مرة أخرى.',
+        description: data.message,
       });
       // Clear form
       form.reset();
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        localStorage.removeItem('auth_token');
-        window.location.href = '/admin/login';
-      }, 3000);
+      
+      // Show instructions in console for environment variables
+      console.log('تعليمات تحديث متغيرات البيئة:');
+      console.log('ADMIN_EMAIL =', data.newEmail);
+      console.log('ADMIN_PASSWORD =', data.newPassword);
     },
     onError: (error: any) => {
       toast({
