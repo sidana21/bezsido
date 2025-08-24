@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, jsonb, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, jsonb, decimal, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -52,9 +52,11 @@ export const messages = pgTable("messages", {
   chatId: varchar("chat_id").notNull().references(() => chats.id),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   content: text("content"),
-  messageType: text("message_type").notNull().default("text"), // text, image, file, audio, location
+  messageType: text("message_type").notNull().default("text"), // text, image, file, audio, location, sticker
   imageUrl: text("image_url"),
   audioUrl: text("audio_url"),
+  stickerUrl: text("sticker_url"),
+  stickerId: varchar("sticker_id"),
   locationLat: decimal("location_lat"),
   locationLon: decimal("location_lon"),
   locationName: text("location_name"),
@@ -93,6 +95,17 @@ export const insertChatSchema = createInsertSchema(chats).omit({
   updatedAt: true,
 });
 
+// Stickers for chat messages
+export const stickers = pgTable("stickers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  category: text("category").notNull().default("general"), // general, emoji, business, fun
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const stories = pgTable("stories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -117,6 +130,11 @@ export const insertStorySchema = createInsertSchema(stories).omit({
   id: true,
   timestamp: true,
   viewCount: true,
+});
+
+export const insertStickerSchema = createInsertSchema(stickers).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Stores for users
@@ -373,3 +391,5 @@ export type InsertStoryLike = z.infer<typeof insertStoryLikeSchema>;
 export type StoryLike = typeof storyLikes.$inferSelect;
 export type InsertStoryComment = z.infer<typeof insertStoryCommentSchema>;
 export type StoryComment = typeof storyComments.$inferSelect;
+export type InsertSticker = z.infer<typeof insertStickerSchema>;
+export type Sticker = typeof stickers.$inferSelect;

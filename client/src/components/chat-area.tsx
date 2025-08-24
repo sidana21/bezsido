@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MessageBubble } from "./message-bubble";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
-import { Message, User } from "@shared/schema";
+import { Message, User, Sticker } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 interface ChatAreaProps {
@@ -30,6 +30,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [isDraggedForCancel, setIsDraggedForCancel] = useState(false);
   const [isRequestingMic, setIsRequestingMic] = useState(false);
+  const [showStickers, setShowStickers] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -54,6 +55,10 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
   const { data: chats = [] } = useQuery<any[]>({
     queryKey: ['/api/chats'],
+  });
+
+  const { data: stickers = [] } = useQuery<Sticker[]>({
+    queryKey: ['/api/stickers'],
   });
 
   const sendMessageMutation = useMutation({
@@ -361,6 +366,33 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const sendSticker = async (sticker: Sticker) => {
+    if (!chatId) return;
+
+    try {
+      console.log("إرسال ملصق:", sticker.name);
+      
+      const result = await apiRequest(`/api/chats/${chatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: sticker.name,
+          messageType: "sticker",
+          stickerUrl: sticker.imageUrl,
+          replyToId: replyingTo?.id || null,
+        }),
+      });
+      
+      console.log("تم إرسال الملصق بنجاح:", result);
+      queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      setReplyingTo(null);
+      setShowStickers(false);
+    } catch (error) {
+      console.error("خطأ في إرسال الملصق:", error);
+    }
   };
 
   const scrollToBottom = () => {
@@ -678,6 +710,20 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           >
             <Smile className="h-5 w-5" />
           </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowStickers(!showStickers)}
+            className={`mobile-touch-target ${
+              showStickers 
+                ? 'text-[var(--whatsapp-primary)] bg-[var(--whatsapp-primary)]/10' 
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+            data-testid="button-stickers"
+          >
+            <span className="text-lg">😊</span>
+          </Button>
           
           <Button
             variant="ghost"
@@ -770,6 +816,33 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             </Button>
           )}
         </div>
+
+        {/* Stickers Panel */}
+        {showStickers && (
+          <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 max-h-64 overflow-y-auto">
+            <div className="mb-3">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الملصقات</h3>
+              <div className="grid grid-cols-6 gap-2">
+                {stickers.map((sticker) => (
+                  <button
+                    key={sticker.id}
+                    onClick={() => sendSticker(sticker)}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-3xl flex items-center justify-center"
+                    title={sticker.name}
+                    data-testid={`sticker-${sticker.id}`}
+                  >
+                    {sticker.imageUrl}
+                  </button>
+                ))}
+              </div>
+              {stickers.length === 0 && (
+                <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  لا توجد ملصقات متاحة
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search Modal */}

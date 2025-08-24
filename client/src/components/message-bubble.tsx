@@ -144,6 +144,14 @@ export function MessageBubble({ message, isOwn, onReply, onEdit, onDelete }: Mes
               />
             </div>
           )}
+
+          {message.messageType === 'sticker' && message.stickerUrl && (
+            <div className="flex justify-center items-center p-2" data-testid="message-sticker">
+              <span className="text-6xl select-none" style={{ fontSize: '4rem', lineHeight: '1' }}>
+                {message.stickerUrl}
+              </span>
+            </div>
+          )}
           
           {message.messageType === 'text' && message.content && (
             <p className="text-gray-800 dark:text-gray-200 break-words" data-testid="message-content">

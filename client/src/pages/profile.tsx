@@ -73,10 +73,15 @@ export default function Profile() {
       const formData = new FormData();
       formData.append('media', file);
       
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        throw new Error("يجب تسجيل الدخول أولاً");
+      }
+      
       const response = await fetch("/api/upload/media", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });

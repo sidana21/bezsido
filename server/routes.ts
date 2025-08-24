@@ -1480,48 +1480,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!adminUser) {
         // Create admin user if doesn't exist
         adminUser = await storage.createUser({
-          id: "current-user",
           name: "المدير العام",
           phoneNumber: "+213123456789",
           location: "الجزائر",
-          isAdmin: true,
-          isVerified: true,
           avatar: null,
           isOnline: true,
         });
+        // Make the created user admin
+        const updatedAdmin = await storage.updateUserAdminStatus(adminUser.id, true);
+        adminUser = updatedAdmin ? await storage.updateUserVerificationStatus(updatedAdmin.id, true) : null;
       } else if (!adminUser.isAdmin) {
         // Make sure user is admin
         adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
+      }
+
+      if (!adminUser) {
+        return res.status(500).json({ message: "فشل في إنشاء أو العثور على مستخدم الإدارة" });
       }
       
       // Add sample data if no users exist (first login)
       const allUsers = await storage.getAllUsers();
       if (allUsers.length <= 1) { // Only admin exists
         // Create sample users
-        await storage.createUser({
+        const user1 = await storage.createUser({
           name: "أحمد محمد",
           phoneNumber: "+213555123456",
           location: "تندوف",
-          isVerified: true,
           avatar: null,
           isOnline: true,
         });
+        await storage.updateUserVerificationStatus(user1.id, true);
         await storage.createUser({
           name: "فاطمة بن علي",
           phoneNumber: "+213555234567",
           location: "الجزائر",
-          isVerified: false,
           avatar: null,
           isOnline: false,
         });
-        await storage.createUser({
+        const user3 = await storage.createUser({
           name: "يوسف الزهراني",
           phoneNumber: "+213555345678",
           location: "وهران",
-          isVerified: true,
           avatar: null,
           isOnline: true,
         });
+        await storage.updateUserVerificationStatus(user3.id, true);
         
         // Create sample orders if none exist
         const allOrders = await storage.getAllOrders();
@@ -1573,7 +1576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create session
       const sessionData = {
-        userId: adminUser.id,
+        userId: adminUser!.id,
         token: `admin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       };
@@ -2015,6 +2018,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stickers routes
+  app.get('/api/stickers', async (req, res) => {
+    try {
+      const stickers = await storage.getAllStickers();
+      res.json(stickers);
+    } catch (error) {
+      console.error('Error fetching stickers:', error);
+      res.status(500).json({ error: 'Failed to fetch stickers' });
+    }
+  });
+
+  app.get('/api/stickers/category/:category', async (req, res) => {
+    try {
+      const { category } = req.params;
+      const stickers = await storage.getStickersByCategory(category);
+      res.json(stickers);
+    } catch (error) {
+      console.error('Error fetching stickers by category:', error);
+      res.status(500).json({ error: 'Failed to fetch stickers' });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

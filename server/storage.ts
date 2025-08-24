@@ -32,7 +32,9 @@ import {
   type StoryLike,
   type InsertStoryLike,
   type StoryComment,
-  type InsertStoryComment
+  type InsertStoryComment,
+  type Sticker,
+  type InsertSticker
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -143,6 +145,12 @@ export interface IStorage {
   deleteStoryComment(commentId: string): Promise<void>;
   getStoryCommentCount(storyId: string): Promise<number>;
 
+  // Stickers
+  getAllStickers(): Promise<Sticker[]>;
+  getStickersByCategory(category: string): Promise<Sticker[]>;
+  getSticker(id: string): Promise<Sticker | undefined>;
+  createSticker(sticker: InsertSticker): Promise<Sticker>;
+
   // Admin Functions
   getUserById(id: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
@@ -182,6 +190,7 @@ export class MemStorage implements IStorage {
   private verificationRequests: Map<string, VerificationRequest>;
   private storyLikes: Map<string, StoryLike>;
   private storyComments: Map<string, StoryComment>;
+  private stickers: Map<string, Sticker>;
 
   constructor() {
     this.users = new Map();
@@ -201,6 +210,7 @@ export class MemStorage implements IStorage {
     this.verificationRequests = new Map();
     this.storyLikes = new Map();
     this.storyComments = new Map();
+    this.stickers = new Map();
     this.initializeMockData();
     this.initializeTestSession();
   }
@@ -1123,8 +1133,12 @@ export class MemStorage implements IStorage {
         phoneNumber: "+213555999000",
         isOpen: true,
         isActive: true,
+        status: "approved",
         isVerified: false,
         verifiedAt: null,
+        approvedAt: new Date(Date.now() - 432000000),
+        approvedBy: "admin-user",
+        rejectionReason: null,
         createdAt: new Date(Date.now() - 432000000),
         updatedAt: new Date(),
       },
@@ -1200,6 +1214,88 @@ export class MemStorage implements IStorage {
     mockVerificationRequests.forEach(request => {
       this.verificationRequests.set(request.id, request);
     });
+
+    // Create default stickers
+    const mockStickers: Sticker[] = [
+      // General category
+      {
+        id: "sticker-1",
+        name: "ابتسامة",
+        imageUrl: "😊",
+        category: "general",
+        isActive: true,
+        sortOrder: 1,
+        createdAt: new Date(),
+      },
+      {
+        id: "sticker-2", 
+        name: "حزين",
+        imageUrl: "😢",
+        category: "general",
+        isActive: true,
+        sortOrder: 2,
+        createdAt: new Date(),
+      },
+      {
+        id: "sticker-3",
+        name: "حب",
+        imageUrl: "❤️",
+        category: "general", 
+        isActive: true,
+        sortOrder: 3,
+        createdAt: new Date(),
+      },
+      {
+        id: "sticker-4",
+        name: "إعجاب",
+        imageUrl: "👍",
+        category: "general",
+        isActive: true,
+        sortOrder: 4,
+        createdAt: new Date(),
+      },
+      {
+        id: "sticker-5",
+        name: "ضحك",
+        imageUrl: "😂",
+        category: "general",
+        isActive: true,
+        sortOrder: 5,
+        createdAt: new Date(),
+      },
+      // Business category
+      {
+        id: "sticker-6",
+        name: "نجاح",
+        imageUrl: "🎉",
+        category: "business",
+        isActive: true,
+        sortOrder: 6,
+        createdAt: new Date(),
+      },
+      {
+        id: "sticker-7",
+        name: "أموال",
+        imageUrl: "💰",
+        category: "business",
+        isActive: true,
+        sortOrder: 7,
+        createdAt: new Date(),
+      },
+      {
+        id: "sticker-8",
+        name: "صفقة",
+        imageUrl: "🤝",
+        category: "business",
+        isActive: true,
+        sortOrder: 8,
+        createdAt: new Date(),
+      }
+    ];
+
+    mockStickers.forEach(sticker => {
+      this.stickers.set(sticker.id, sticker);
+    });
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -1221,7 +1317,7 @@ export class MemStorage implements IStorage {
       isOnline: insertUser.isOnline ?? false,
       isVerified: false, // New users start unverified
       verifiedAt: null,  // No verification date until verified
-      isAdmin: insertUser.isAdmin ?? (process.env.NODE_ENV === 'development'), // Make users admin in development
+      isAdmin: false, // New users start as non-admin
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -2222,7 +2318,7 @@ export class MemStorage implements IStorage {
       .reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
 
     const recentOrders = orders.filter(order => 
-      order.createdAt && order.createdAt >= last24Hours
+      order.orderDate && order.orderDate >= last24Hours
     ).length;
 
     const activeUsers = users.filter(user => 
@@ -2316,7 +2412,7 @@ export class MemStorage implements IStorage {
   async getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]> {
     const comments = Array.from(this.storyComments.values())
       .filter(comment => comment.storyId === storyId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()); // Sort by creation time
+      .sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)); // Sort by creation time
     
     return comments.map(comment => ({
       ...comment,
@@ -2341,6 +2437,34 @@ export class MemStorage implements IStorage {
   async getStoryCommentCount(storyId: string): Promise<number> {
     return Array.from(this.storyComments.values())
       .filter(comment => comment.storyId === storyId).length;
+  }
+
+  // Stickers Implementation
+  async getAllStickers(): Promise<Sticker[]> {
+    return Array.from(this.stickers.values())
+      .filter(sticker => sticker.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  async getStickersByCategory(category: string): Promise<Sticker[]> {
+    return Array.from(this.stickers.values())
+      .filter(sticker => sticker.isActive && sticker.category === category)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  async getSticker(id: string): Promise<Sticker | undefined> {
+    return this.stickers.get(id);
+  }
+
+  async createSticker(insertSticker: InsertSticker): Promise<Sticker> {
+    const id = randomUUID();
+    const sticker: Sticker = {
+      ...insertSticker,
+      id,
+      createdAt: new Date(),
+    };
+    this.stickers.set(id, sticker);
+    return sticker;
   }
 }
 

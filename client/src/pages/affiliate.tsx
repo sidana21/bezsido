@@ -91,16 +91,11 @@ export default function Affiliate() {
   // Create affiliate link mutation
   const createAffiliateLinkMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const response = await fetch("/api/affiliate-links", {
+      return apiRequest("/api/affiliate-links", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId }),
       });
-      if (!response.ok) throw new Error("فشل في إنشاء رابط التسويق");
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/affiliate-links"] });
