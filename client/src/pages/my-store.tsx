@@ -175,6 +175,7 @@ export default function MyStore() {
   });
 
   const handleCreateStore = (data: StoreFormData) => {
+    console.log("=== handleCreateStore called ===");
     console.log("Form data:", data);
     console.log("Form errors:", form.formState.errors);
     console.log("Form is valid:", form.formState.isValid);
@@ -182,6 +183,7 @@ export default function MyStore() {
     
     // Additional validation check
     if (!data.name || !data.description || !data.category || !data.location) {
+      console.log("Validation failed - missing required fields");
       toast({
         title: "خطأ في البيانات",
         description: "يرجى ملء جميع الحقول المطلوبة",
@@ -190,6 +192,7 @@ export default function MyStore() {
       return;
     }
     
+    console.log("All validations passed, calling mutation...");
     createStoreMutation.mutate(data);
   };
 
@@ -260,7 +263,14 @@ export default function MyStore() {
                   <DialogHeader>
                     <DialogTitle>إنشاء متجر جديد</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={form.handleSubmit(handleCreateStore)} className="space-y-4">
+                  <form 
+                    onSubmit={(e) => {
+                      console.log("=== Form onSubmit triggered ===");
+                      console.log("Event:", e);
+                      form.handleSubmit(handleCreateStore)(e);
+                    }} 
+                    className="space-y-4"
+                  >
                     <div className="space-y-2">
                       <Label htmlFor="name">اسم المتجر *</Label>
                       <Input
@@ -337,6 +347,12 @@ export default function MyStore() {
                         disabled={createStoreMutation.isPending}
                         className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] disabled:opacity-50"
                         data-testid="button-submit-create"
+                        onClick={() => {
+                          console.log("=== Button clicked ===");
+                          console.log("Form state:", form.formState);
+                          console.log("Form errors:", form.formState.errors);
+                          console.log("Form values:", form.getValues());
+                        }}
                       >
                         {createStoreMutation.isPending ? "جاري الإنشاء..." : "إنشاء المتجر"}
                       </Button>
