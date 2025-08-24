@@ -1519,9 +1519,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminEmail = process.env.ADMIN_EMAIL || "admin@bizchat.com";
       const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
       
+      console.log(`Admin login attempt: ${email}`);
+      console.log(`Expected email: ${adminEmail}`);
+      console.log(`Expected password exists: ${!!adminPassword}`);
+      
       if (email !== adminEmail || password !== adminPassword) {
+        console.log(`Login failed for: ${email}`);
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
+      
+      console.log(`Admin login successful for: ${email}`);
       
       // Get or create admin user
       let adminUser = await storage.getUser("current-user");
