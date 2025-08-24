@@ -408,7 +408,15 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
             </ScrollArea>
 
             {/* Add Comment */}
-            <div className="flex items-center space-x-2 space-x-reverse">
+            <div className="flex items-center space-x-3 space-x-reverse">
+              {/* Current User Avatar */}
+              <Avatar className="w-8 h-8 ring-2 ring-white ring-opacity-30">
+                <AvatarImage src={currentUser?.avatar || undefined} alt={currentUser?.name} />
+                <AvatarFallback className="text-xs bg-gradient-to-br from-green-500 to-emerald-600 text-white font-semibold">
+                  {currentUser?.name?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              
               <Input
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
