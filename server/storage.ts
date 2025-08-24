@@ -1648,7 +1648,7 @@ export class MemStorage implements IStorage {
   }
 
   async getUserStore(userId: string): Promise<Store | undefined> {
-    return Array.from(this.stores.values()).find(s => s.userId === userId && s.isActive);
+    return Array.from(this.stores.values()).find(s => s.userId === userId);
   }
 
   async createStore(insertStore: InsertStore): Promise<Store> {
