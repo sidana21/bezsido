@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Store, User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -53,13 +53,20 @@ export default function MyStore() {
       name: "",
       description: "",
       category: "",
-      location: currentUser?.location || "",
+      location: "",
       phoneNumber: "",
       imageUrl: "",
       isOpen: true,
-      isActive: true,
     },
+    mode: "onChange", // Enable real-time validation
   });
+
+  // Update location field when currentUser data is available
+  useEffect(() => {
+    if (currentUser?.location) {
+      form.setValue("location", currentUser.location);
+    }
+  }, [currentUser, form]);
 
   const productForm = useForm({
     resolver: zodResolver(insertProductSchema.extend({
@@ -327,7 +334,7 @@ export default function MyStore() {
                       </Button>
                       <Button
                         type="submit"
-                        disabled={createStoreMutation.isPending || !form.formState.isValid}
+                        disabled={createStoreMutation.isPending}
                         className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] disabled:opacity-50"
                         data-testid="button-submit-create"
                       >
