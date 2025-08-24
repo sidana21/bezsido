@@ -112,7 +112,7 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="whatsapp-ui-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="whatsapp-ui-theme">
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
