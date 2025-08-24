@@ -152,6 +152,14 @@ export function AdminLogin() {
             </form>
           </Form>
           
+          
+          <div className="text-center text-sm text-gray-500 mt-6">
+            <div className="bg-blue-50 dark:bg-blue-900 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="font-medium mb-1 text-blue-700 dark:text-blue-300">للدخول:</p>
+              <p className="text-blue-600 dark:text-blue-400">الإيميل: sidanalahbib3@gmail.com</p>
+              <p className="text-blue-600 dark:text-blue-400">كلمة المرور: admin123</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
