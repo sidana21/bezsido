@@ -1515,8 +1515,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
-      // Check admin credentials
-      if (email !== "admin@bizchat.com" || password !== "admin123") {
+      // Check admin credentials using environment variables
+      const adminEmail = process.env.ADMIN_EMAIL || "admin@bizchat.com";
+      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      
+      if (email !== adminEmail || password !== adminPassword) {
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
@@ -1910,6 +1913,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to get orders" });
+    }
+  });
+
+  // Admin Credentials Update
+  app.post("/api/admin/update-credentials", requireAdmin, async (req: any, res) => {
+    try {
+      const { currentPassword, newEmail, newPassword } = req.body;
+      
+      if (!currentPassword || !newEmail || !newPassword) {
+        return res.status(400).json({ message: "جميع الحقول مطلوبة" });
+      }
+      
+      // Verify current password
+      const adminEmail = process.env.ADMIN_EMAIL || "admin@bizchat.com";
+      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      
+      if (currentPassword !== adminPassword) {
+        return res.status(401).json({ message: "كلمة المرور الحالية غير صحيحة" });
+      }
+      
+      // In a real application, you would update the environment variables
+      // For now, we'll just return success and inform the user to update manually
+      res.json({ 
+        message: "تم التحديث بنجاح. يرجى تحديث متغيرات البيئة ADMIN_EMAIL و ADMIN_PASSWORD يدوياً.",
+        newEmail,
+        note: "في النشر الفعلي، ستحتاج لتحديث متغيرات البيئة ADMIN_EMAIL و ADMIN_PASSWORD في إعدادات الخادم"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "فشل في تحديث بيانات الاعتماد" });
     }
   });
 

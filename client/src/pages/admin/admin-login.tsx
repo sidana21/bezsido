@@ -153,10 +153,9 @@ export function AdminLogin() {
           </Form>
           
           <div className="text-center text-sm text-gray-500 mt-6">
-            <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-              <p className="font-medium mb-1">للاختبار:</p>
-              <p>البريد: admin@bizchat.com</p>
-              <p>كلمة المرور: admin123</p>
+            <div className="bg-blue-50 dark:bg-blue-900 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="font-medium mb-1 text-blue-700 dark:text-blue-300">معلومات تسجيل الدخول:</p>
+              <p className="text-blue-600 dark:text-blue-400">استخدم بيانات الاعتماد المخصصة للإدارة</p>
             </div>
           </div>
         </CardContent>
