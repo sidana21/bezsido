@@ -304,6 +304,7 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
 
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
   id: true,
+  orderId: true,
 });
 
 // Verification requests table
