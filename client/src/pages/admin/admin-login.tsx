@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,6 +25,15 @@ export function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
+  // Check admin setup status
+  const { data: setupStatus, isLoading: setupLoading } = useQuery({
+    queryKey: ['/api/admin/setup-status'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/admin/setup-status');
+      return response;
+    }
+  });
+
   // Check if already logged in as admin
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -32,6 +41,21 @@ export function AdminLogin() {
       setLocation('/admin');
     }
   }, [setLocation]);
+
+  // Redirect to setup if not configured
+  useEffect(() => {
+    if (setupStatus && !setupStatus.isSetup) {
+      setLocation('/admin/setup');
+    }
+  }, [setupStatus, setLocation]);
+
+  if (setupLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-lg">جاري التحقق من الإعدادات...</div>
+      </div>
+    );
+  }
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -152,14 +176,6 @@ export function AdminLogin() {
             </form>
           </Form>
           
-          
-          <div className="text-center text-sm text-gray-500 mt-6">
-            <div className="bg-blue-50 dark:bg-blue-900 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="font-medium mb-1 text-blue-700 dark:text-blue-300">للدخول:</p>
-              <p className="text-blue-600 dark:text-blue-400">الإيميل: sidanalahbib3@gmail.com</p>
-              <p className="text-blue-600 dark:text-blue-400">كلمة المرور: admin123</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

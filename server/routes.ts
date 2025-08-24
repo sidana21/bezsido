@@ -1506,6 +1506,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ADMIN ROUTES
   // ======================
 
+  // Check if admin is set up
+  app.get('/api/admin/setup-status', async (req: any, res: any) => {
+    try {
+      const storedCredentials = await storage.getAdminCredentials();
+      
+      res.json({
+        isSetup: !!storedCredentials
+      });
+    } catch (error) {
+      console.error('Setup status error:', error);
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  // Admin setup
+  app.post('/api/admin/setup', async (req: any, res: any) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
+      }
+      
+      // Check if already set up
+      const storedCredentials = await storage.getAdminCredentials();
+      if (storedCredentials) {
+        return res.status(400).json({ message: "تم إعداد النظام مسبقاً" });
+      }
+      
+      // Save admin credentials
+      await storage.updateAdminCredentials({ email, password });
+      
+      res.json({
+        message: "تم إعداد حساب الإدارة بنجاح"
+      });
+      
+    } catch (error) {
+      console.error('Admin setup error:', error);
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
   // Admin Login with Email and Password
   app.post("/api/admin/login", async (req, res) => {
     try {
@@ -1515,31 +1557,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
-      // Simple and reliable login system
+      // Get stored credentials
       const storedCredentials = await storage.getAdminCredentials();
-      
-      // Multiple valid login options
-      const validLogins = [
-        // Stored credentials (if updated)
-        storedCredentials && { email: storedCredentials.email, password: storedCredentials.password },
-        // Environment variables
-        process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD && { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD },
-        // Fallback for setup
-        { email: "sidanalahbib3@gmail.com", password: "admin123" },
-        { email: "admin@bizchat.com", password: "admin123" }
-      ].filter(Boolean);
-      
-      const isValidLogin = validLogins.some(cred => 
-        cred && email === cred.email && password === cred.password
-      );
-      
-      if (!isValidLogin) {
-        return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
+      if (!storedCredentials) {
+        return res.status(400).json({ message: "لم يتم إعداد النظام بعد" });
       }
       
-      // If this is the first login with fallback credentials, save them
-      if (!storedCredentials && (email === "sidanalahbib3@gmail.com" || email === "admin@bizchat.com")) {
-        await storage.updateAdminCredentials({ email, password });
+      if (email !== storedCredentials.email || password !== storedCredentials.password) {
+        return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
       console.log(`Admin login successful for: ${email}`);
