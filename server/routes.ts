@@ -1515,24 +1515,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
-      // Check admin credentials using environment variables
+      // Temporary solution: Allow access with either environment variables or default credentials
       const adminEmail = process.env.ADMIN_EMAIL || "admin@bizchat.com";
       const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
       
-      console.log(`Admin login attempt: ${email}`);
-      console.log(`Expected email: ${adminEmail}`);
-      console.log(`Password length received: ${password.length}`);
-      console.log(`Expected password length: ${adminPassword.length}`);
+      // Allow login with:
+      // 1. Environment variables (if set)
+      // 2. Your email with "admin123" as temporary password
+      // 3. Default admin@bizchat.com with admin123
+      const isValidLogin = (
+        (email === adminEmail && password === adminPassword) ||
+        (email === "sidanalahbib3@gmail.com" && password === "admin123") ||
+        (email === "admin@bizchat.com" && password === "admin123")
+      );
       
-      // Temporary fallback for easier access during setup
-      const isPasswordMatch = password === adminPassword || password === "admin123";
-      
-      if (email !== adminEmail || !isPasswordMatch) {
-        console.log(`Login failed for: ${email} - Email match: ${email === adminEmail}, Password match: ${isPasswordMatch}`);
-        return res.status(401).json({ 
-          message: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
-          debug: `Expected password length: ${adminPassword.length}, Received: ${password.length}`
-        });
+      if (!isValidLogin) {
+        console.log(`Login failed for: ${email}`);
+        return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
       console.log(`Admin login successful for: ${email}`);
