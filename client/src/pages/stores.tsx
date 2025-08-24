@@ -332,8 +332,7 @@ export default function Stores() {
                             ) : (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {storeProducts.map((product) => (
-                                  <Link key={product.id} href={`/product/${product.id}`}>
-                                    <Card className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" data-testid={`product-card-${product.id}`}>
+                                  <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow" data-testid={`product-card-${product.id}`}>
                                     <CardHeader className="p-0">
                                       {product.imageUrl && (
                                         <img
@@ -366,13 +365,36 @@ export default function Stores() {
                                           </div>
                                         </div>
                                         
-                                        <div className="text-center">
-                                          <p className="text-sm text-gray-500">انقر لعرض التفاصيل</p>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              addToCartMutation.mutate({ productId: product.id });
+                                            }}
+                                            disabled={addToCartMutation.isPending}
+                                            data-testid={`button-add-to-cart-${product.id}`}
+                                          >
+                                            <ShoppingCart className="w-3 h-3 mr-1" />
+                                            {addToCartMutation.isPending ? "جاري..." : "أضف للسلة"}
+                                          </Button>
+                                          
+                                          <Link href={`/product/${product.id}`}>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="flex-1 min-w-fit"
+                                              data-testid={`button-view-details-${product.id}`}
+                                            >
+                                              عرض التفاصيل
+                                            </Button>
+                                          </Link>
                                         </div>
                                       </div>
                                     </CardContent>
-                                    </Card>
-                                  </Link>
+                                  </Card>
                                 ))}
                               </div>
                             )}
