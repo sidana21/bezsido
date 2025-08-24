@@ -34,7 +34,9 @@ import {
   type StoryComment,
   type InsertStoryComment,
   type Sticker,
-  type InsertSticker
+  type InsertSticker,
+  type AdminCredentials,
+  type InsertAdminCredentials
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -170,6 +172,10 @@ export interface IStorage {
     activeUsers: number;
     verifiedUsers: number;
   }>;
+  
+  // Admin Credentials
+  getAdminCredentials(): Promise<AdminCredentials | undefined>;
+  updateAdminCredentials(credentials: InsertAdminCredentials): Promise<AdminCredentials>;
 }
 
 export class MemStorage implements IStorage {
@@ -191,6 +197,7 @@ export class MemStorage implements IStorage {
   private storyLikes: Map<string, StoryLike>;
   private storyComments: Map<string, StoryComment>;
   private stickers: Map<string, Sticker>;
+  private adminCredentials: AdminCredentials | undefined;
 
   constructor() {
     this.users = new Map();
@@ -2492,6 +2499,23 @@ export class MemStorage implements IStorage {
     };
     this.stickers.set(id, sticker);
     return sticker;
+  }
+
+  // Admin Credentials Implementation
+  async getAdminCredentials(): Promise<AdminCredentials | undefined> {
+    return this.adminCredentials;
+  }
+
+  async updateAdminCredentials(credentials: InsertAdminCredentials): Promise<AdminCredentials> {
+    const adminCreds: AdminCredentials = {
+      id: "admin_settings",
+      email: credentials.email,
+      password: credentials.password,
+      createdAt: this.adminCredentials?.createdAt || new Date(),
+      updatedAt: new Date(),
+    };
+    this.adminCredentials = adminCreds;
+    return adminCreds;
   }
 }
 

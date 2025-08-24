@@ -69,6 +69,15 @@ export const messages = pgTable("messages", {
   deletedAt: timestamp("deleted_at"),
 });
 
+// Admin credentials table
+export const adminCredentials = pgTable("admin_credentials", {
+  id: varchar("id").primaryKey().default("admin_settings"),
+  email: text("email").notNull(),
+  password: text("password").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   isVerified: true,
@@ -394,3 +403,13 @@ export type InsertStoryComment = z.infer<typeof insertStoryCommentSchema>;
 export type StoryComment = typeof storyComments.$inferSelect;
 export type InsertSticker = z.infer<typeof insertStickerSchema>;
 export type Sticker = typeof stickers.$inferSelect;
+
+// Admin credentials schema and types
+export const insertAdminCredentialsSchema = createInsertSchema(adminCredentials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAdminCredentials = z.infer<typeof insertAdminCredentialsSchema>;
+export type AdminCredentials = typeof adminCredentials.$inferSelect;

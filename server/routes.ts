@@ -1515,14 +1515,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
-      // Temporary solution: Allow access with either environment variables or default credentials
-      const adminEmail = process.env.ADMIN_EMAIL || "admin@bizchat.com";
-      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      // Check stored admin credentials first, then fallback to environment/defaults
+      const storedCredentials = await storage.getAdminCredentials();
+      const adminEmail = storedCredentials?.email || process.env.ADMIN_EMAIL || "admin@bizchat.com";
+      const adminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD || "admin123";
       
       // Allow login with:
-      // 1. Environment variables (if set)
-      // 2. Your email with "admin123" as temporary password
-      // 3. Default admin@bizchat.com with admin123
+      // 1. Stored credentials (if updated)
+      // 2. Environment variables (if set)
+      // 3. Temporary fallback for initial setup
       const isValidLogin = (
         (email === adminEmail && password === adminPassword) ||
         (email === "sidanalahbib3@gmail.com" && password === "admin123") ||
@@ -1530,7 +1531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       if (!isValidLogin) {
-        console.log(`Login failed for: ${email}`);
+        console.log(`Login failed for: ${email} - Expected: ${adminEmail}`);
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
@@ -1938,12 +1939,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "جميع الحقول مطلوبة" });
       }
       
-      // Verify current password - Allow the same passwords used for login
-      const adminEmail = process.env.ADMIN_EMAIL || "admin@bizchat.com";
-      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      // Verify current password against stored or environment credentials
+      const storedCredentials = await storage.getAdminCredentials();
+      const currentAdminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD || "admin123";
       
       const isCurrentPasswordValid = (
-        currentPassword === adminPassword ||
+        currentPassword === currentAdminPassword ||
         currentPassword === "admin123"
       );
       
@@ -1951,18 +1952,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "كلمة المرور الحالية غير صحيحة" });
       }
       
-      // Success message with instructions
+      // Update stored credentials
+      await storage.updateAdminCredentials({
+        email: newEmail,
+        password: newPassword
+      });
+      
+      // Success message
       res.json({ 
-        message: "تم التحديث بنجاح! يرجى تحديث متغيرات البيئة ADMIN_EMAIL و ADMIN_PASSWORD بالقيم الجديدة.",
+        message: "تم تحديث البيانات بنجاح! يمكنك الآن استخدام الإيميل وكلمة المرور الجديدة لتسجيل الدخول.",
         newEmail,
-        newPassword,
-        instructions: {
-          ar: "يرجى تحديث متغيرات البيئة في إعدادات Replit:",
-          steps: [
-            `ADMIN_EMAIL = ${newEmail}`,
-            `ADMIN_PASSWORD = ${newPassword}`
-          ]
-        }
+        note: "تم حفظ البيانات الجديدة بنجاح"
       });
     } catch (error) {
       res.status(500).json({ message: "فشل في تحديث بيانات الاعتماد" });
