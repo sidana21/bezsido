@@ -25,38 +25,7 @@ export function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
-  // Check admin setup status
-  const { data: setupStatus, isLoading: setupLoading } = useQuery({
-    queryKey: ['/api/admin/setup-status'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/admin/setup-status');
-      return response;
-    }
-  });
-
-  // Check if already logged in as admin
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token && token.startsWith('admin-')) {
-      setLocation('/admin');
-    }
-  }, [setLocation]);
-
-  // Redirect to setup if not configured
-  useEffect(() => {
-    if (setupStatus && !setupStatus.isSetup) {
-      setLocation('/admin/setup');
-    }
-  }, [setupStatus, setLocation]);
-
-  if (setupLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-lg">جاري التحقق من الإعدادات...</div>
-      </div>
-    );
-  }
-
+  // Initialize form and mutation before any early returns
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -89,6 +58,38 @@ export function AdminLogin() {
       });
     },
   });
+
+  // Check admin setup status
+  const { data: setupStatus, isLoading: setupLoading } = useQuery({
+    queryKey: ['/api/admin/setup-status'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/admin/setup-status');
+      return response;
+    }
+  });
+
+  // Check if already logged in as admin
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token && token.startsWith('admin-')) {
+      setLocation('/admin');
+    }
+  }, [setLocation]);
+
+  // Redirect to setup if not configured
+  useEffect(() => {
+    if (setupStatus && !setupStatus.isSetup) {
+      setLocation('/admin/setup');
+    }
+  }, [setupStatus, setLocation]);
+
+  if (setupLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-lg">جاري التحقق من الإعدادات...</div>
+      </div>
+    );
+  }
 
   const onSubmit = (data: LoginForm) => {
     loginMutation.mutate(data);
