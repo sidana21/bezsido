@@ -1357,7 +1357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(500).json({ 
         message: "Failed to create order", 
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined 
       });
     }
   });
@@ -1521,7 +1521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         // Make the created user admin
         const updatedAdmin = await storage.updateUserAdminStatus(adminUser.id, true);
-        adminUser = updatedAdmin ? await storage.updateUserVerificationStatus(updatedAdmin.id, true) : null;
+        adminUser = updatedAdmin ? await storage.updateUserVerificationStatus(updatedAdmin.id, true) : undefined;
       } else if (!adminUser.isAdmin) {
         // Make sure user is admin
         adminUser = await storage.updateUserAdminStatus(adminUser.id, true);

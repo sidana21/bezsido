@@ -454,6 +454,8 @@ export class MemStorage implements IStorage {
         messageType: "text",
         imageUrl: null,
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -473,6 +475,8 @@ export class MemStorage implements IStorage {
         messageType: "text",
         imageUrl: null,
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -492,6 +496,8 @@ export class MemStorage implements IStorage {
         messageType: "image",
         imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -511,6 +517,8 @@ export class MemStorage implements IStorage {
         messageType: "text",
         imageUrl: null,
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -530,6 +538,8 @@ export class MemStorage implements IStorage {
         messageType: "text",
         imageUrl: null,
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -549,6 +559,8 @@ export class MemStorage implements IStorage {
         messageType: "image",
         imageUrl: "https://pixabay.com/get/gea1be77aa5dcbc2d39439c59e6b5feac148a0dfca36adf924c39583adb8620c2dc7693eb1b91ae3403b59786254a797ddd8c179d871743545cf7ddeb15b970ef_1280.jpg",
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -568,6 +580,8 @@ export class MemStorage implements IStorage {
         messageType: "text",
         imageUrl: null,
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -587,6 +601,8 @@ export class MemStorage implements IStorage {
         messageType: "image",
         imageUrl: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -606,6 +622,8 @@ export class MemStorage implements IStorage {
         messageType: "image",
         imageUrl: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -625,6 +643,8 @@ export class MemStorage implements IStorage {
         messageType: "image",
         imageUrl: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=300",
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -644,6 +664,8 @@ export class MemStorage implements IStorage {
         messageType: "text",
         imageUrl: null,
         audioUrl: null,
+        stickerUrl: null,
+        stickerId: null,
         locationLat: null,
         locationLon: null,
         locationName: null,
@@ -1405,6 +1427,8 @@ export class MemStorage implements IStorage {
       messageType: insertMessage.messageType ?? "text",
       imageUrl: insertMessage.imageUrl ?? null,
       audioUrl: insertMessage.audioUrl ?? null,
+      stickerUrl: insertMessage.stickerUrl ?? null,
+      stickerId: insertMessage.stickerId ?? null,
       locationLat: insertMessage.locationLat ?? null,
       locationLon: insertMessage.locationLon ?? null,
       locationName: insertMessage.locationName ?? null,
@@ -2443,13 +2467,13 @@ export class MemStorage implements IStorage {
   async getAllStickers(): Promise<Sticker[]> {
     return Array.from(this.stickers.values())
       .filter(sticker => sticker.isActive)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
 
   async getStickersByCategory(category: string): Promise<Sticker[]> {
     return Array.from(this.stickers.values())
       .filter(sticker => sticker.isActive && sticker.category === category)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
 
   async getSticker(id: string): Promise<Sticker | undefined> {
@@ -2461,6 +2485,9 @@ export class MemStorage implements IStorage {
     const sticker: Sticker = {
       ...insertSticker,
       id,
+      category: insertSticker.category || "general",
+      isActive: insertSticker.isActive ?? true,
+      sortOrder: insertSticker.sortOrder ?? 0,
       createdAt: new Date(),
     };
     this.stickers.set(id, sticker);
