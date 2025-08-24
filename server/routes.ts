@@ -1524,6 +1524,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Admin email: ${adminEmail}`);
       console.log(`Environment email: ${process.env.ADMIN_EMAIL}`);
       console.log(`Environment password exists: ${!!process.env.ADMIN_PASSWORD}`);
+      console.log(`Environment password length: ${process.env.ADMIN_PASSWORD?.length || 0}`);
+      console.log(`Received password: "${password}"`);
+      console.log(`Expected password: "${adminPassword}"`);
+      console.log(`Password match: ${password === adminPassword}`);
       
       // Emergency fallback: if no credentials are available, allow setup with your credentials
       if (!adminEmail || !adminPassword) {
