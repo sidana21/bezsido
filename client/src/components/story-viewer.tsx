@@ -379,21 +379,23 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
               {commentsData?.comments?.map((comment) => (
                 <div key={comment.id} className="mb-3 pb-2 border-b border-white border-opacity-20 last:border-b-0">
                   <div className="flex items-start space-x-2 space-x-reverse">
-                    <Avatar className="w-6 h-6">
+                    <Avatar className="w-8 h-8 ring-2 ring-white ring-opacity-30">
                       <AvatarImage src={comment.user.avatar || undefined} alt={comment.user.name} />
-                      <AvatarFallback className="text-xs">{comment.user.name[0]}</AvatarFallback>
+                      <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                        {comment.user.name[0]}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <span className="text-white text-sm font-medium">{comment.user.name}</span>
+                      <div className="flex items-center space-x-2 space-x-reverse mb-1">
+                        <span className="text-white text-sm font-bold">{comment.user.name}</span>
                         {comment.user.isVerified && (
-                          <VerifiedBadge className="w-3 h-3" />
+                          <VerifiedBadge className="w-4 h-4" title="حساب موثق" animated={false} />
                         )}
-                        <span className="text-white text-opacity-60 text-xs">
+                        <span className="text-white text-opacity-70 text-xs">
                           {formatTimeAgo(comment.createdAt)}
                         </span>
                       </div>
-                      <p className="text-white text-sm mt-1">{comment.content}</p>
+                      <p className="text-white text-sm leading-relaxed">{comment.content}</p>
                     </div>
                   </div>
                 </div>

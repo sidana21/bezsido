@@ -220,6 +220,7 @@ export class MemStorage implements IStorage {
     this.stickers = new Map();
     this.initializeMockData();
     this.initializeTestSession();
+    this.initializeMockComments();
   }
 
   private initializeTestSession() {
@@ -232,6 +233,40 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.sessions.set(testSession.token, testSession);
+  }
+
+  private initializeMockComments() {
+    // Add some mock comments to demonstrate the feature
+    const mockComments: StoryComment[] = [
+      {
+        id: "comment-1",
+        storyId: "story-sarah-1",
+        userId: "current-user",
+        content: "صورة رائعة! 😍",
+        createdAt: new Date(Date.now() - 3600000), // 1 hour ago
+        updatedAt: new Date(Date.now() - 3600000),
+      },
+      {
+        id: "comment-2", 
+        storyId: "story-sarah-1",
+        userId: "ahmed-user",
+        content: "مناظر جميلة جداً 🌟",
+        createdAt: new Date(Date.now() - 1800000), // 30 minutes ago
+        updatedAt: new Date(Date.now() - 1800000),
+      },
+      {
+        id: "comment-3",
+        storyId: "story-fatima-1", 
+        userId: "sarah-user",
+        content: "نعم يوم جميل فعلاً ☀️",
+        createdAt: new Date(Date.now() - 900000), // 15 minutes ago
+        updatedAt: new Date(Date.now() - 900000),
+      }
+    ];
+
+    mockComments.forEach(comment => {
+      this.storyComments.set(comment.id, comment);
+    });
   }
 
   private initializeMockData() {
