@@ -1517,16 +1517,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check stored admin credentials first, then fallback to environment variables
       const storedCredentials = await storage.getAdminCredentials();
-      const adminEmail = storedCredentials?.email || process.env.ADMIN_EMAIL;
-      const adminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD;
+      let adminEmail = storedCredentials?.email || process.env.ADMIN_EMAIL;
+      let adminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD;
       
       console.log(`Stored credentials exist: ${!!storedCredentials}`);
       console.log(`Admin email: ${adminEmail}`);
       console.log(`Environment email: ${process.env.ADMIN_EMAIL}`);
       console.log(`Environment password exists: ${!!process.env.ADMIN_PASSWORD}`);
       
+      // Emergency fallback: if no credentials are available, allow setup with your credentials
       if (!adminEmail || !adminPassword) {
-        return res.status(500).json({ message: "إعدادات الإدارة غير مكتملة. يرجى التواصل مع مطور النظام." });
+        if (email === "sidanalahbib3@gmail.com" && password === "admin123") {
+          // Initialize admin credentials
+          await storage.updateAdminCredentials({
+            email: "sidanalahbib3@gmail.com",
+            password: "admin123"
+          });
+          adminEmail = "sidanalahbib3@gmail.com";
+          adminPassword = "admin123";
+          console.log("Emergency admin setup completed");
+        } else {
+          return res.status(500).json({ message: "إعدادات الإدارة غير مكتملة. يرجى التواصل مع مطور النظام." });
+        }
       }
       
       if (email !== adminEmail || password !== adminPassword) {
