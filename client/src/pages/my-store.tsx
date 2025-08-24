@@ -58,7 +58,6 @@ export default function MyStore() {
       imageUrl: "",
       isOpen: true,
     },
-    mode: "onChange", // Enable real-time validation
   });
 
   // Update location field when currentUser data is available
@@ -174,16 +173,13 @@ export default function MyStore() {
     },
   });
 
-  const handleCreateStore = (data: StoreFormData) => {
-    console.log("=== handleCreateStore called ===");
-    console.log("Form data:", data);
-    console.log("Form errors:", form.formState.errors);
-    console.log("Form is valid:", form.formState.isValid);
-    console.log("Form is submitting:", form.formState.isSubmitting);
+
+  // Simple button click handler
+  const handleButtonClick = () => {
+    const formData = form.getValues();
     
-    // Additional validation check
-    if (!data.name || !data.description || !data.category || !data.location) {
-      console.log("Validation failed - missing required fields");
+    // Validate required fields
+    if (!formData.name || !formData.description || !formData.category || !formData.location) {
       toast({
         title: "خطأ في البيانات",
         description: "يرجى ملء جميع الحقول المطلوبة",
@@ -192,8 +188,8 @@ export default function MyStore() {
       return;
     }
     
-    console.log("All validations passed, calling mutation...");
-    createStoreMutation.mutate(data);
+    // Submit the form
+    createStoreMutation.mutate(formData);
   };
 
   const handleUpdateStore = (data: StoreFormData) => {
@@ -263,14 +259,7 @@ export default function MyStore() {
                   <DialogHeader>
                     <DialogTitle>إنشاء متجر جديد</DialogTitle>
                   </DialogHeader>
-                  <form 
-                    onSubmit={(e) => {
-                      console.log("=== Form onSubmit triggered ===");
-                      console.log("Event:", e);
-                      form.handleSubmit(handleCreateStore)(e);
-                    }} 
-                    className="space-y-4"
-                  >
+                  <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">اسم المتجر *</Label>
                       <Input
@@ -343,21 +332,16 @@ export default function MyStore() {
                         إلغاء
                       </Button>
                       <Button
-                        type="submit"
+                        type="button"
                         disabled={createStoreMutation.isPending}
                         className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] disabled:opacity-50"
                         data-testid="button-submit-create"
-                        onClick={() => {
-                          console.log("=== Button clicked ===");
-                          console.log("Form state:", form.formState);
-                          console.log("Form errors:", form.formState.errors);
-                          console.log("Form values:", form.getValues());
-                        }}
+                        onClick={handleButtonClick}
                       >
                         {createStoreMutation.isPending ? "جاري الإنشاء..." : "إنشاء المتجر"}
                       </Button>
                     </div>
-                  </form>
+                  </div>
                 </DialogContent>
               </Dialog>
             </CardContent>
