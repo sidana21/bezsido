@@ -1515,23 +1515,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
-      // Check stored admin credentials first, then fallback to environment/defaults
+      // Check stored admin credentials first, then fallback to environment variables
       const storedCredentials = await storage.getAdminCredentials();
-      const adminEmail = storedCredentials?.email || process.env.ADMIN_EMAIL || "admin@bizchat.com";
-      const adminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD || "admin123";
+      const adminEmail = storedCredentials?.email || process.env.ADMIN_EMAIL;
+      const adminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD;
       
-      // Allow login with:
-      // 1. Stored credentials (if updated)
-      // 2. Environment variables (if set)
-      // 3. Temporary fallback for initial setup
-      const isValidLogin = (
-        (email === adminEmail && password === adminPassword) ||
-        (email === "sidanalahbib3@gmail.com" && password === "admin123") ||
-        (email === "admin@bizchat.com" && password === "admin123")
-      );
+      if (!adminEmail || !adminPassword) {
+        return res.status(500).json({ message: "إعدادات الإدارة غير مكتملة. يرجى التواصل مع مطور النظام." });
+      }
       
-      if (!isValidLogin) {
-        console.log(`Login failed for: ${email} - Expected: ${adminEmail}`);
+      if (email !== adminEmail || password !== adminPassword) {
+        console.log(`Login failed for: ${email}`);
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
@@ -1941,14 +1935,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verify current password against stored or environment credentials
       const storedCredentials = await storage.getAdminCredentials();
-      const currentAdminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD || "admin123";
+      const currentAdminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD;
       
-      const isCurrentPasswordValid = (
-        currentPassword === currentAdminPassword ||
-        currentPassword === "admin123"
-      );
+      if (!currentAdminPassword) {
+        return res.status(500).json({ message: "إعدادات الإدارة غير مكتملة" });
+      }
       
-      if (!isCurrentPasswordValid) {
+      if (currentPassword !== currentAdminPassword) {
         return res.status(401).json({ message: "كلمة المرور الحالية غير صحيحة" });
       }
       

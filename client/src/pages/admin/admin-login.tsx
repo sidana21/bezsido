@@ -152,14 +152,6 @@ export function AdminLogin() {
             </form>
           </Form>
           
-          <div className="text-center text-sm text-gray-500 mt-6">
-            <div className="bg-green-50 dark:bg-green-900 p-3 rounded-lg border border-green-200 dark:border-green-800">
-              <p className="font-medium mb-1 text-green-700 dark:text-green-300">للدخول المؤقت:</p>
-              <p className="text-green-600 dark:text-green-400">الإيميل: sidanalahbib3@gmail.com</p>
-              <p className="text-green-600 dark:text-green-400">كلمة المرور: admin123</p>
-              <p className="text-xs text-green-500 mt-2">يمكنك تغيير البيانات من صفحة الإعدادات بعد الدخول</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
