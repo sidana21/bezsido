@@ -40,6 +40,9 @@ export function AdminSetup() {
     try {
       await apiRequest("/api/admin/setup", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           email: data.email,
           password: data.password
@@ -52,10 +55,11 @@ export function AdminSetup() {
       });
 
       setLocation("/admin/login");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Setup error:", error);
       toast({
         title: "خطأ في الإعداد",
-        description: "حدث خطأ أثناء إنشاء حساب الإدارة",
+        description: error.message || "حدث خطأ أثناء إنشاء حساب الإدارة",
         variant: "destructive"
       });
     } finally {
