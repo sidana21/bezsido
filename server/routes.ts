@@ -1563,6 +1563,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "لم يتم إعداد النظام بعد" });
       }
       
+      console.log('Debug login attempt:');
+      console.log('Received email:', JSON.stringify(email));
+      console.log('Received password:', JSON.stringify(password));
+      console.log('Stored email:', JSON.stringify(storedCredentials.email));
+      console.log('Stored password:', JSON.stringify(storedCredentials.password));
+      console.log('Email match:', email === storedCredentials.email);
+      console.log('Password match:', password === storedCredentials.password);
+      
       if (email !== storedCredentials.email || password !== storedCredentials.password) {
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
