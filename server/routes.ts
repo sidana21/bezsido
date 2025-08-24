@@ -950,9 +950,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/stores", requireAuth, async (req: any, res) => {
     try {
+      console.log("Store creation request:", req.body);
+      console.log("User ID:", req.userId);
+      
       // Check if user already has a store
       const existingStore = await storage.getUserStore(req.userId);
       if (existingStore) {
+        console.log("User already has store:", existingStore.id);
         return res.status(400).json({ message: "User already has a store" });
       }
 
@@ -961,10 +965,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.userId,
       });
       
+      console.log("Parsed store data:", storeData);
+      
       const store = await storage.createStore(storeData);
+      console.log("Store created successfully:", store.id);
       res.json(store);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create store" });
+      console.error("Store creation error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Failed to create store" });
+      }
     }
   });
 
