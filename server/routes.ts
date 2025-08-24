@@ -1311,6 +1311,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { order, items } = req.body;
       
+      console.log("Order creation request:", {
+        userId: req.userId,
+        order,
+        items
+      });
+
+      if (!order) {
+        return res.status(400).json({ message: "Order data is required" });
+      }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Order items are required" });
+      }
+
       const orderData = insertOrderSchema.parse({
         ...order,
         buyerId: req.userId,
@@ -1318,14 +1332,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const orderItems = items.map((item: any) => insertOrderItemSchema.parse(item));
       
+      console.log("Parsed order data:", orderData);
+      console.log("Parsed order items:", orderItems);
+
       const createdOrder = await storage.createOrder(orderData, orderItems);
       
       // Clear cart after successful order
       await storage.clearCart(req.userId);
       
+      console.log("Order created successfully:", createdOrder.id);
       res.json(createdOrder);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create order" });
+      console.error("Order creation error:", error);
+      
+      // More specific error handling
+      if (error instanceof Error) {
+        if (error.message.includes('validation') || error.name === 'ZodError') {
+          return res.status(400).json({ 
+            message: "Invalid order data", 
+            details: error.message 
+          });
+        }
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to create order", 
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+      });
     }
   });
 
