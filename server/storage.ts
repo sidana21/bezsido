@@ -270,6 +270,15 @@ export class MemStorage implements IStorage {
   }
 
   private initializeMockData() {
+    // Initialize default admin credentials
+    this.adminCredentials = {
+      id: "admin_settings",
+      email: "admin@example.com",
+      password: "admin123",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     // Create mock users
     const currentUser: User = {
       id: "current-user",
