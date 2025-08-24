@@ -1520,12 +1520,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminEmail = storedCredentials?.email || process.env.ADMIN_EMAIL;
       const adminPassword = storedCredentials?.password || process.env.ADMIN_PASSWORD;
       
+      console.log(`Stored credentials exist: ${!!storedCredentials}`);
+      console.log(`Admin email: ${adminEmail}`);
+      console.log(`Environment email: ${process.env.ADMIN_EMAIL}`);
+      console.log(`Environment password exists: ${!!process.env.ADMIN_PASSWORD}`);
+      
       if (!adminEmail || !adminPassword) {
         return res.status(500).json({ message: "إعدادات الإدارة غير مكتملة. يرجى التواصل مع مطور النظام." });
       }
       
       if (email !== adminEmail || password !== adminPassword) {
-        console.log(`Login failed for: ${email}`);
+        console.log(`Login failed for: ${email} - Expected: ${adminEmail}`);
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
