@@ -14,7 +14,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertStoreSchema, insertProductSchema } from "@shared/schema";
 import { z } from "zod";
-import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings } from "lucide-react";
+import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings, Upload, ImageIcon, X } from "lucide-react";
 
 interface StoreWithOwner extends Store {
   owner: User;
@@ -34,6 +34,7 @@ export default function MyStore() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const [lastStoreStatus, setLastStoreStatus] = useState<string | null>(null);
+  const [productImageUrl, setProductImageUrl] = useState<string>("");
   const { toast } = useToast();
   const isInitialMount = useRef(true);
 
@@ -189,6 +190,7 @@ export default function MyStore() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
+          imageUrl: productImageUrl, // Use uploaded image URL
           userId: currentUser?.id,
           storeId: userStore.id,
         }),
@@ -201,6 +203,7 @@ export default function MyStore() {
         description: "تم إضافة المنتج بنجاح!",
       });
       setIsAddProductDialogOpen(false);
+      setProductImageUrl(""); // Reset image URL
       productForm.reset();
     },
     onError: (error: any) => {
@@ -212,6 +215,62 @@ export default function MyStore() {
     },
   });
 
+  const uploadProductImageMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('media', file);
+      
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        throw new Error("يجب تسجيل الدخول أولاً");
+      }
+      
+      const response = await fetch("/api/upload/media", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error("فشل في رفع الصورة");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setProductImageUrl(data.mediaUrl);
+      toast({
+        title: "تم رفع الصورة",
+        description: "تم رفع صورة المنتج بنجاح",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في رفع الصورة",
+        variant: "destructive",
+      });
+    },
+  });
+
+
+  // Handle product image upload
+  const handleProductImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "حجم الصورة كبير",
+          description: "يجب أن يكون حجم الصورة أقل من 5 ميجابايت",
+          variant: "destructive",
+        });
+        return;
+      }
+      uploadProductImageMutation.mutate(file);
+    }
+  };
 
   // Simple button click handler
   const handleButtonClick = () => {
@@ -237,6 +296,15 @@ export default function MyStore() {
 
   const handleAddProduct = (data: any) => {
     addProductMutation.mutate(data);
+  };
+
+  // Reset image when dialog closes
+  const handleCloseAddProductDialog = (open: boolean) => {
+    setIsAddProductDialogOpen(open);
+    if (!open) {
+      setProductImageUrl("");
+      productForm.reset();
+    }
   };
 
   const openEditDialog = () => {
@@ -470,7 +538,7 @@ export default function MyStore() {
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   <span>منتجات المتجر ({storeProducts.length})</span>
-                  <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
+                  <Dialog open={isAddProductDialogOpen} onOpenChange={handleCloseAddProductDialog}>
                     <DialogTrigger asChild>
                       <Button 
                         className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" 
@@ -540,20 +608,72 @@ export default function MyStore() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="productImageUrl">رابط الصورة</Label>
-                          <Input
-                            id="productImageUrl"
-                            {...productForm.register("imageUrl")}
-                            placeholder="https://example.com/image.jpg"
-                            data-testid="input-product-image"
-                          />
+                          <Label>صورة المنتج</Label>
+                          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                            {productImageUrl ? (
+                              <div className="relative">
+                                <img
+                                  src={productImageUrl}
+                                  alt="صورة المنتج"
+                                  className="w-full h-32 object-cover rounded-lg"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="absolute top-2 right-2"
+                                  onClick={() => setProductImageUrl("")}
+                                  data-testid="button-remove-image"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="text-center">
+                                <label htmlFor="product-image-upload" className="cursor-pointer">
+                                  <div className="flex flex-col items-center space-y-2">
+                                    <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                      {uploadProductImageMutation.isPending ? (
+                                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                      ) : (
+                                        <ImageIcon className="w-6 h-6 text-gray-400" />
+                                      )}
+                                    </div>
+                                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                                      {uploadProductImageMutation.isPending ? (
+                                        "جاري تحميل الصورة..."
+                                      ) : (
+                                        <>
+                                          <span className="font-semibold text-blue-600">انقر للتحميل</span>
+                                          <br />
+                                          أو اسحب الصورة هنا
+                                        </>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      JPG, PNG, GIF حتى 5MB
+                                    </div>
+                                  </div>
+                                </label>
+                                <input
+                                  id="product-image-upload"
+                                  type="file"
+                                  accept="image/*,image/jpeg,image/png,image/gif,image/webp"
+                                  onChange={handleProductImageChange}
+                                  className="hidden"
+                                  data-testid="input-product-image"
+                                  disabled={uploadProductImageMutation.isPending}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex justify-end space-x-2 space-x-reverse">
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setIsAddProductDialogOpen(false)}
+                            onClick={() => handleCloseAddProductDialog(false)}
                             data-testid="button-cancel-product"
                           >
                             إلغاء
