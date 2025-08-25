@@ -2172,6 +2172,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ======================
+  // FEATURE MANAGEMENT API
+  // ======================
+
+  // Get all features (public endpoint for app to check enabled features)
+  app.get('/api/features', async (req: any, res: any) => {
+    try {
+      const features = await storage.getAllFeatures();
+      res.json(features);
+    } catch (error) {
+      console.error('Get features error:', error);
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  // Get single feature status
+  app.get('/api/features/:featureId', async (req: any, res: any) => {
+    try {
+      const { featureId } = req.params;
+      const feature = await storage.getFeature(featureId);
+      
+      if (!feature) {
+        return res.status(404).json({ message: "الميزة غير موجودة" });
+      }
+      
+      res.json(feature);
+    } catch (error) {
+      console.error('Get feature error:', error);
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  // Update feature status (admin only)
+  app.put('/api/admin/features/:featureId', requireAdmin, async (req: any, res: any) => {
+    try {
+      const { featureId } = req.params;
+      const { isEnabled, name, description, category, priority } = req.body;
+
+      const feature = await storage.updateFeature(featureId, {
+        isEnabled,
+        name,
+        description,
+        category,
+        priority
+      });
+
+      if (!feature) {
+        return res.status(404).json({ message: "الميزة غير موجودة" });
+      }
+
+      res.json({
+        message: `تم ${isEnabled ? 'تفعيل' : 'إيقاف'} الميزة بنجاح`,
+        feature
+      });
+    } catch (error) {
+      console.error('Update feature error:', error);
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  // Get all features for admin management
+  app.get('/api/admin/features', requireAdmin, async (req: any, res: any) => {
+    try {
+      const features = await storage.getAllFeatures();
+      res.json(features);
+    } catch (error) {
+      console.error('Get admin features error:', error);
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

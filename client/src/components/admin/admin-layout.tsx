@@ -7,6 +7,7 @@ import {
   ShoppingCart, 
   CheckCircle, 
   Settings,
+  Settings2,
   LogOut,
   Menu,
   X
@@ -47,6 +48,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       title: 'إدارة الطلبات',
       icon: ShoppingCart,
       href: '/admin/orders',
+    },
+    {
+      title: 'إدارة الميزات',
+      icon: Settings2,
+      href: '/admin/features',
     },
     {
       title: 'الإعدادات',

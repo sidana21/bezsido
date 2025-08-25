@@ -36,11 +36,13 @@ import {
   type Sticker,
   type InsertSticker,
   type AdminCredentials,
-  type InsertAdminCredentials
+  type InsertAdminCredentials,
+  type AppFeature,
+  type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from './db';
-import { adminCredentials } from '@shared/schema';
+import { adminCredentials, appFeatures } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 export interface IStorage {
@@ -179,6 +181,12 @@ export interface IStorage {
   // Admin Credentials
   getAdminCredentials(): Promise<AdminCredentials | undefined>;
   updateAdminCredentials(credentials: InsertAdminCredentials): Promise<AdminCredentials>;
+  
+  // Feature Management
+  getAllFeatures(): Promise<AppFeature[]>;
+  getFeature(featureId: string): Promise<AppFeature | undefined>;
+  updateFeature(featureId: string, updates: Partial<InsertAppFeature>): Promise<AppFeature | undefined>;
+  initializeDefaultFeatures(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -201,6 +209,7 @@ export class MemStorage implements IStorage {
   private storyComments: Map<string, StoryComment>;
   private stickers: Map<string, Sticker>;
   private adminCredentials: AdminCredentials | undefined;
+  private features: Map<string, AppFeature>;
 
   constructor() {
     this.users = new Map();
@@ -221,9 +230,11 @@ export class MemStorage implements IStorage {
     this.storyLikes = new Map();
     this.storyComments = new Map();
     this.stickers = new Map();
+    this.features = new Map();
     this.initializeMockData();
     this.initializeTestSession();
     this.initializeMockComments();
+    this.initializeDefaultFeatures();
   }
 
   private initializeTestSession() {
@@ -2588,6 +2599,161 @@ export class MemStorage implements IStorage {
       };
       this.adminCredentials = adminCreds;
       return adminCreds;
+    }
+  }
+
+  // Feature Management Methods
+  async getAllFeatures(): Promise<AppFeature[]> {
+    try {
+      const result = await db.select().from(appFeatures).orderBy(appFeatures.category, appFeatures.priority);
+      return result;
+    } catch (error) {
+      console.error('Error getting features:', error);
+      return Array.from(this.features.values());
+    }
+  }
+
+  async getFeature(featureId: string): Promise<AppFeature | undefined> {
+    try {
+      const result = await db.select().from(appFeatures).where(eq(appFeatures.id, featureId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting feature:', error);
+      return this.features.get(featureId);
+    }
+  }
+
+  async updateFeature(featureId: string, updates: Partial<InsertAppFeature>): Promise<AppFeature | undefined> {
+    try {
+      const result = await db.update(appFeatures)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(appFeatures.id, featureId))
+        .returning();
+      
+      if (result[0]) {
+        this.features.set(featureId, result[0]);
+        return result[0];
+      }
+      return undefined;
+    } catch (error) {
+      console.error('Error updating feature:', error);
+      // Fallback to memory
+      const feature = this.features.get(featureId);
+      if (feature) {
+        const updatedFeature = { ...feature, ...updates, updatedAt: new Date() };
+        this.features.set(featureId, updatedFeature);
+        return updatedFeature;
+      }
+      return undefined;
+    }
+  }
+
+  async initializeDefaultFeatures(): Promise<void> {
+    const defaultFeatures: InsertAppFeature[] = [
+      {
+        id: "messaging",
+        name: "المراسلة",
+        description: "الدردشات الفردية والجماعية مع الرسائل النصية والصوتية والملفات",
+        isEnabled: true,
+        category: "communication",
+        priority: 1
+      },
+      {
+        id: "stories", 
+        name: "الحالات/القصص",
+        description: "انشر منتجك ومشاهدة حالات الآخرين لمدة 24 ساعة",
+        isEnabled: true,
+        category: "social",
+        priority: 2
+      },
+      {
+        id: "marketplace",
+        name: "المتاجر",
+        description: "تصفح المتاجر والمنتجات في منطقتك",
+        isEnabled: true,
+        category: "commerce",
+        priority: 3
+      },
+      {
+        id: "products",
+        name: "المنتجات", 
+        description: "عرض وبيع منتجاتك في السوق المحلي",
+        isEnabled: true,
+        category: "commerce",
+        priority: 4
+      },
+      {
+        id: "cart",
+        name: "سلة التسوق",
+        description: "إضافة المنتجات وإجراء عمليات الشراء",
+        isEnabled: true,
+        category: "commerce", 
+        priority: 5
+      },
+      {
+        id: "orders",
+        name: "الطلبات",
+        description: "متابعة طلباتك ومبيعاتك", 
+        isEnabled: true,
+        category: "commerce",
+        priority: 6
+      },
+      {
+        id: "affiliate",
+        name: "التسويق بالعمولة",
+        description: "ربح عمولة من خلال مشاركة المنتجات",
+        isEnabled: true,
+        category: "monetization",
+        priority: 7
+      },
+      {
+        id: "contacts",
+        name: "جهات الاتصال",
+        description: "إدارة الأصدقاء وجهات الاتصال",
+        isEnabled: true,
+        category: "communication",
+        priority: 8
+      },
+      {
+        id: "profile",
+        name: "الملف الشخصي",
+        description: "إعدادات وبيانات المستخدم الشخصية",
+        isEnabled: true,
+        category: "account",
+        priority: 9
+      }
+    ];
+
+    try {
+      // Check if features already exist in database
+      const existingFeatures = await db.select().from(appFeatures);
+      
+      if (existingFeatures.length === 0) {
+        // Insert default features into database
+        await db.insert(appFeatures).values(defaultFeatures);
+        console.log('Default features initialized in database');
+      }
+      
+      // Load features into memory
+      const allFeatures = await db.select().from(appFeatures);
+      allFeatures.forEach(feature => {
+        this.features.set(feature.id, feature);
+      });
+      
+    } catch (error) {
+      console.error('Error initializing features in database, using memory fallback:', error);
+      // Fallback to memory storage
+      defaultFeatures.forEach(feature => {
+        const fullFeature: AppFeature = {
+          ...feature,
+          category: feature.category || "general",
+          isEnabled: feature.isEnabled ?? true,
+          priority: feature.priority ?? 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        this.features.set(feature.id, fullFeature);
+      });
     }
   }
 }

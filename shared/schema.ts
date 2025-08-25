@@ -78,6 +78,18 @@ export const adminCredentials = pgTable("admin_credentials", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Feature management table
+export const appFeatures = pgTable("app_features", {
+  id: varchar("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  isEnabled: boolean("is_enabled").default(true),
+  category: text("category").notNull().default("general"), // messaging, marketplace, social, admin, etc.
+  priority: integer("priority").default(0), // Display order in admin panel
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   isVerified: true,
@@ -413,3 +425,12 @@ export const insertAdminCredentialsSchema = createInsertSchema(adminCredentials)
 
 export type InsertAdminCredentials = z.infer<typeof insertAdminCredentialsSchema>;
 export type AdminCredentials = typeof adminCredentials.$inferSelect;
+
+// App features schema and types
+export const insertAppFeatureSchema = createInsertSchema(appFeatures).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAppFeature = z.infer<typeof insertAppFeatureSchema>;
+export type AppFeature = typeof appFeatures.$inferSelect;

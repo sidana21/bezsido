@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { FeaturesProvider } from "@/hooks/use-features";
 import Chat from "@/pages/chat";
 import Status from "@/pages/status";
 import Stores from "@/pages/stores";
@@ -27,6 +28,7 @@ import { VerificationRequests } from "@/pages/admin/verification-requests";
 import { UsersManagement } from "@/pages/admin/users-management";
 import { StoresManagement } from "@/pages/admin/stores-management";
 import { OrdersManagement } from "@/pages/admin/orders-management";
+import { FeaturesManagement } from "@/pages/admin/features-management";
 import { AdminProtectedRoute } from "@/components/admin/admin-protected-route";
 
 function Router() {
@@ -67,6 +69,11 @@ function Router() {
         <Route path="/admin/orders">
           <AdminProtectedRoute>
             <OrdersManagement />
+          </AdminProtectedRoute>
+        </Route>
+        <Route path="/admin/features">
+          <AdminProtectedRoute>
+            <FeaturesManagement />
           </AdminProtectedRoute>
         </Route>
         <Route path="/admin/settings">
@@ -114,12 +121,14 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="whatsapp-ui-theme">
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </AuthProvider>
+        <FeaturesProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </AuthProvider>
+        </FeaturesProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

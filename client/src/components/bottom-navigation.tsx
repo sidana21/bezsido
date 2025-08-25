@@ -4,32 +4,37 @@ import { MessageSquare, Users, TrendingUp, Store, ShoppingCart } from "lucide-re
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { useFeatures } from "@/hooks/use-features";
 
 export function BottomNavigation() {
   const [location] = useLocation();
+  const { isFeatureEnabled } = useFeatures();
   
   const { data: cartItems = [] } = useQuery<any[]>({
     queryKey: ["/api/cart"],
   });
 
-  const navItems = [
+  const allNavItems = [
     {
       label: "المحدثات",
       icon: MessageSquare,
       href: "/",
       isActive: location === "/",
+      featureId: "messaging",
     },
     {
       label: "الحالات", 
       icon: Users,
       href: "/status",
       isActive: location === "/status",
+      featureId: "stories",
     },
     {
       label: "المتاجر",
       icon: Store,
       href: "/stores",
       isActive: location === "/stores" || location === "/my-store",
+      featureId: "marketplace",
     },
     {
       label: "السلة",
@@ -37,14 +42,19 @@ export function BottomNavigation() {
       href: "/cart",
       isActive: location === "/cart" || location === "/orders",
       badge: cartItems.length > 0 ? cartItems.length : undefined,
+      featureId: "cart",
     },
     {
       label: "التسويق",
       icon: TrendingUp,
       href: "/affiliate",
       isActive: location === "/affiliate",
+      featureId: "affiliate",
     },
   ];
+
+  // Filter navigation items based on enabled features
+  const navItems = allNavItems.filter(item => isFeatureEnabled(item.featureId));
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
