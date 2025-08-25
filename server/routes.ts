@@ -720,6 +720,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      console.log('Creating story with data:', req.body);
+      console.log('User location:', currentUser.location);
+
       const storyData = insertStorySchema.parse({
         ...req.body,
         userId: req.userId,
@@ -727,10 +730,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
       });
       
+      console.log('Parsed story data:', storyData);
+      
       const story = await storage.createStory(storyData);
+      console.log('Story created successfully:', story.id);
       res.json(story);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create story" });
+      console.error("Error creating story:", error);
+      res.status(500).json({ 
+        message: "Failed to create story", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 
