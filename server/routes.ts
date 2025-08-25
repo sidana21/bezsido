@@ -1562,13 +1562,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
         }
       } else {
-        console.log('Admin user not found, this means there are no users yet or admin was deleted');
-        // For now, use the first admin user in the system if exists
+        console.log('Admin user not found, creating new admin user...');
+        // Check if any admin user exists
         const firstAdminUser = existingUsers.find(user => user.isAdmin);
         if (firstAdminUser) {
           adminUser = firstAdminUser;
         } else {
-          return res.status(400).json({ message: "لا يوجد مستخدم إدارة في النظام. يرجى الاتصال بالدعم الفني." });
+          // Create admin user if none exists
+          console.log('Creating admin user...');
+          adminUser = await storage.createUser({
+            name: adminData.name || "المدير العام",
+            phoneNumber: "+213123456789",
+            location: "الجزائر",
+            avatar: null,
+            isOnline: true,
+          });
+          // Make the user admin
+          adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
+          // Verify the user
+          await storage.updateUserVerificationStatus(adminUser.id, true);
+          console.log('Admin user created successfully:', adminUser.name);
         }
       }
 
