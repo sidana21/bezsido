@@ -12,8 +12,9 @@ import { apiRequest } from "@/lib/queryClient";
 
 const setupSchema = z.object({
   email: z.string().email("يرجى إدخال بريد إلكتروني صحيح"),
-  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
-  confirmPassword: z.string()
+  password: z.string().min(8, "كلمة المرور يجب أن تكون 8 أحرف على الأقل"),
+  confirmPassword: z.string(),
+  setupKey: z.string().optional()
 }).refine((data) => data.password === data.confirmPassword, {
   message: "كلمة المرور غير متطابقة",
   path: ["confirmPassword"]
@@ -31,7 +32,8 @@ export function AdminSetup() {
     defaultValues: {
       email: "",
       password: "",
-      confirmPassword: ""
+      confirmPassword: "",
+      setupKey: ""
     }
   });
 
@@ -45,7 +47,8 @@ export function AdminSetup() {
         },
         body: JSON.stringify({
           email: data.email,
-          password: data.password
+          password: data.password,
+          setupKey: data.setupKey
         })
       });
 
@@ -132,6 +135,31 @@ export function AdminSetup() {
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="setupKey"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>مفتاح الإعداد</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="أدخل مفتاح الإعداد (اختياري في التطوير)"
+                        {...field}
+                        data-testid="input-setup-key"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <div className="text-xs text-muted-foreground">
+                      {import.meta.env.PROD ? 
+                        "مطلوب مفتاح الإعداد في الإنتاج لأغراض الحماية" : 
+                        "مفتاح الإعداد اختياري في بيئة التطوير"
+                      }
+                    </div>
                   </FormItem>
                 )}
               />

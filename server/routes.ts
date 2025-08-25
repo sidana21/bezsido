@@ -1522,13 +1522,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ADMIN ROUTES
   // ======================
 
-  // Check if admin is set up
+  // Check if admin is set up - SECURITY: Limited information disclosure
   app.get('/api/admin/setup-status', async (req: any, res: any) => {
     try {
       const storedCredentials = await storage.getAdminCredentials();
+      const isSetup = !!storedCredentials;
+      
+      // SECURITY: Log access attempts to this endpoint
+      const clientIP = req.ip || req.connection.remoteAddress;
+      console.log(`[SECURITY] Setup status check from IP: ${clientIP}, Setup status: ${isSetup}`);
+      
+      // SECURITY: In production, require setup key even to check status if not setup
+      if (!isSetup && process.env.NODE_ENV === 'production') {
+        const setupKey = req.query.setupKey || req.headers['x-setup-key'];
+        const requiredSetupKey = process.env.ADMIN_SETUP_KEY || 'CHANGE_ME_IN_PRODUCTION';
+        
+        if (!setupKey || setupKey !== requiredSetupKey) {
+          return res.status(403).json({ 
+            message: "غير مصرح بالوصول", 
+            isSetup: true  // Lie about setup status for security
+          });
+        }
+      }
       
       res.json({
-        isSetup: !!storedCredentials
+        isSetup,
+        requiresSetupKey: process.env.NODE_ENV === 'production' && !isSetup
       });
     } catch (error) {
       console.error('Setup status error:', error);
@@ -1536,23 +1555,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin setup
+  // Admin setup - SECURITY: Only allow setup once and with proper authorization
   app.post('/api/admin/setup', async (req: any, res: any) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, setupKey } = req.body;
       
       if (!email || !password) {
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
-      // Check if already set up
+      // SECURITY CHECK 1: Verify setup is allowed
       const storedCredentials = await storage.getAdminCredentials();
       if (storedCredentials) {
-        return res.status(400).json({ message: "تم إعداد النظام مسبقاً" });
+        return res.status(403).json({ message: "تم إعداد النظام مسبقاً ولا يمكن إعداد حساب إدارة آخر" });
       }
+      
+      // SECURITY CHECK 2: Require setup key in production
+      if (process.env.NODE_ENV === 'production') {
+        const requiredSetupKey = process.env.ADMIN_SETUP_KEY || 'CHANGE_ME_IN_PRODUCTION';
+        if (!setupKey || setupKey !== requiredSetupKey) {
+          return res.status(403).json({ message: "مفتاح الإعداد غير صحيح أو مفقود" });
+        }
+      }
+      
+      // SECURITY CHECK 3: Rate limiting - only allow setup attempts from same IP once per hour
+      const clientIP = req.ip || req.connection.remoteAddress;
+      const setupAttemptKey = `setup_attempt_${clientIP}`;
+      
+      // Simple in-memory rate limiting (in production, use Redis or similar)
+      if (!(global as any).setupAttempts) (global as any).setupAttempts = new Map();
+      const lastAttempt = (global as any).setupAttempts.get(setupAttemptKey);
+      const now = Date.now();
+      
+      if (lastAttempt && (now - lastAttempt) < 60 * 60 * 1000) { // 1 hour
+        return res.status(429).json({ message: "تم تجاوز الحد المسموح من محاولات الإعداد. حاول مرة أخرى لاحقاً" });
+      }
+      
+      (global as any).setupAttempts.set(setupAttemptKey, now);
+      
+      // SECURITY CHECK 4: Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "صيغة البريد الإلكتروني غير صحيحة" });
+      }
+      
+      // SECURITY CHECK 5: Validate password strength
+      if (password.length < 8) {
+        return res.status(400).json({ message: "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل" });
+      }
+      
+      // Log security event
+      console.log(`[SECURITY] Admin setup attempt from IP: ${clientIP}, Email: ${email}`);
       
       // Save admin credentials
       await storage.updateAdminCredentials({ email, password });
+      
+      // Log successful setup
+      console.log(`[SECURITY] Admin setup completed successfully for: ${email}`);
       
       res.json({
         message: "تم إعداد حساب الإدارة بنجاح"
