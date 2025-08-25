@@ -21,7 +21,6 @@ import Cart from "@/pages/cart";
 import Orders from "@/pages/orders";
 // Admin Pages
 import { AdminLogin } from "@/pages/admin/admin-login";
-import { AdminSetup } from "@/pages/admin/admin-setup";
 import { AdminDashboard } from "@/pages/admin/admin-dashboard";
 import { AdminSettings } from "@/pages/admin/admin-settings";
 import { VerificationRequests } from "@/pages/admin/verification-requests";
@@ -47,7 +46,6 @@ function Router() {
     <>
       <Switch>
         {/* Admin Routes - Public */}
-        <Route path="/admin/setup" component={AdminSetup} />
         <Route path="/admin/login" component={AdminLogin} />
         
         {/* Admin Routes - Protected */}

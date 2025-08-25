@@ -1522,106 +1522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ADMIN ROUTES
   // ======================
 
-  // Check if admin is set up - SECURITY: Limited information disclosure
-  app.get('/api/admin/setup-status', async (req: any, res: any) => {
-    try {
-      const storedCredentials = await storage.getAdminCredentials();
-      const isSetup = !!storedCredentials;
-      
-      // SECURITY: Log access attempts to this endpoint
-      const clientIP = req.ip || req.connection.remoteAddress;
-      console.log(`[SECURITY] Setup status check from IP: ${clientIP}, Setup status: ${isSetup}`);
-      
-      // SECURITY: In production, require setup key even to check status if not setup
-      if (!isSetup && process.env.NODE_ENV === 'production') {
-        const setupKey = req.query.setupKey || req.headers['x-setup-key'];
-        const requiredSetupKey = process.env.ADMIN_SETUP_KEY || 'CHANGE_ME_IN_PRODUCTION';
-        
-        if (!setupKey || setupKey !== requiredSetupKey) {
-          return res.status(403).json({ 
-            message: "غير مصرح بالوصول", 
-            isSetup: true  // Lie about setup status for security
-          });
-        }
-      }
-      
-      res.json({
-        isSetup,
-        requiresSetupKey: process.env.NODE_ENV === 'production' && !isSetup
-      });
-    } catch (error) {
-      console.error('Setup status error:', error);
-      res.status(500).json({ message: "خطأ في الخادم" });
-    }
-  });
-
-  // Admin setup - SECURITY: Only allow setup once and with proper authorization
-  app.post('/api/admin/setup', async (req: any, res: any) => {
-    try {
-      const { email, password, setupKey } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
-      }
-      
-      // SECURITY CHECK 1: Verify setup is allowed
-      const storedCredentials = await storage.getAdminCredentials();
-      if (storedCredentials) {
-        return res.status(403).json({ message: "تم إعداد النظام مسبقاً ولا يمكن إعداد حساب إدارة آخر" });
-      }
-      
-      // SECURITY CHECK 2: Require setup key in production
-      if (process.env.NODE_ENV === 'production') {
-        const requiredSetupKey = process.env.ADMIN_SETUP_KEY || 'CHANGE_ME_IN_PRODUCTION';
-        if (!setupKey || setupKey !== requiredSetupKey) {
-          return res.status(403).json({ message: "مفتاح الإعداد غير صحيح أو مفقود" });
-        }
-      }
-      
-      // SECURITY CHECK 3: Rate limiting - only allow setup attempts from same IP once per hour
-      const clientIP = req.ip || req.connection.remoteAddress;
-      const setupAttemptKey = `setup_attempt_${clientIP}`;
-      
-      // Simple in-memory rate limiting (in production, use Redis or similar)
-      if (!(global as any).setupAttempts) (global as any).setupAttempts = new Map();
-      const lastAttempt = (global as any).setupAttempts.get(setupAttemptKey);
-      const now = Date.now();
-      
-      if (lastAttempt && (now - lastAttempt) < 60 * 60 * 1000) { // 1 hour
-        return res.status(429).json({ message: "تم تجاوز الحد المسموح من محاولات الإعداد. حاول مرة أخرى لاحقاً" });
-      }
-      
-      (global as any).setupAttempts.set(setupAttemptKey, now);
-      
-      // SECURITY CHECK 4: Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({ message: "صيغة البريد الإلكتروني غير صحيحة" });
-      }
-      
-      // SECURITY CHECK 5: Validate password strength
-      if (password.length < 8) {
-        return res.status(400).json({ message: "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل" });
-      }
-      
-      // Log security event
-      console.log(`[SECURITY] Admin setup attempt from IP: ${clientIP}, Email: ${email}`);
-      
-      // Save admin credentials
-      await storage.updateAdminCredentials({ email, password });
-      
-      // Log successful setup
-      console.log(`[SECURITY] Admin setup completed successfully for: ${email}`);
-      
-      res.json({
-        message: "تم إعداد حساب الإدارة بنجاح"
-      });
-      
-    } catch (error) {
-      console.error('Admin setup error:', error);
-      res.status(500).json({ message: "خطأ في الخادم" });
-    }
-  });
+  // Admin credentials are now stored in admin.json file - no setup needed
 
   // Admin Login with Email and Password
   app.post("/api/admin/login", async (req, res) => {
@@ -1632,35 +1533,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
-      // Get stored credentials
-      const storedCredentials = await storage.getAdminCredentials();
-      if (!storedCredentials) {
-        return res.status(400).json({ message: "لم يتم إعداد النظام بعد" });
+      // Read admin credentials from admin.json file
+      let adminData;
+      try {
+        const adminFilePath = path.join(process.cwd(), 'admin.json');
+        const adminFileContent = fs.readFileSync(adminFilePath, 'utf8');
+        adminData = JSON.parse(adminFileContent);
+      } catch (error) {
+        console.error('Error reading admin.json:', error);
+        return res.status(500).json({ message: "خطأ في قراءة بيانات الإدارة" });
       }
       
-      if (email !== storedCredentials.email || password !== storedCredentials.password) {
+      if (email !== adminData.email || password !== adminData.password) {
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
       console.log(`Admin login successful for: ${email}`);
       
-      // Get or create admin user
-      let adminUser = await storage.getUser("current-user");
-      if (!adminUser) {
-        // Create admin user if doesn't exist
-        adminUser = await storage.createUser({
-          name: "المدير العام",
-          phoneNumber: "+213123456789",
-          location: "الجزائر",
-          avatar: null,
-          isOnline: true,
-        });
-        // Make the created user admin
-        const updatedAdmin = await storage.updateUserAdminStatus(adminUser.id, true);
-        adminUser = updatedAdmin ? await storage.updateUserVerificationStatus(updatedAdmin.id, true) : undefined;
-      } else if (!adminUser.isAdmin) {
-        // Make sure user is admin
-        adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
+      // Find existing admin user - simplified approach
+      const existingUsers = await storage.getAllUsers();
+      let adminUser = existingUsers.find(user => user.phoneNumber === "+213123456789");
+      
+      if (adminUser) {
+        console.log('Found existing admin user:', adminUser.name);
+        // Make sure existing user is admin
+        if (!adminUser.isAdmin) {
+          adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
+        }
+      } else {
+        console.log('Admin user not found, this means there are no users yet or admin was deleted');
+        // For now, use the first admin user in the system if exists
+        const firstAdminUser = existingUsers.find(user => user.isAdmin);
+        if (firstAdminUser) {
+          adminUser = firstAdminUser;
+        } else {
+          return res.status(400).json({ message: "لا يوجد مستخدم إدارة في النظام. يرجى الاتصال بالدعم الفني." });
+        }
       }
 
       if (!adminUser) {

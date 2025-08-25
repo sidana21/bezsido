@@ -59,14 +59,7 @@ export function AdminLogin() {
     },
   });
 
-  // Check admin setup status
-  const { data: setupStatus, isLoading: setupLoading } = useQuery({
-    queryKey: ['/api/admin/setup-status'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/admin/setup-status');
-      return response;
-    }
-  });
+  // Admin credentials are now stored in admin.json file
 
   // Check if already logged in as admin
   useEffect(() => {
@@ -76,20 +69,8 @@ export function AdminLogin() {
     }
   }, [setLocation]);
 
-  // Redirect to setup if not configured
-  useEffect(() => {
-    if (setupStatus && !setupStatus.isSetup) {
-      setLocation('/admin/setup');
-    }
-  }, [setupStatus, setLocation]);
+  // No setup needed anymore - admin credentials in admin.json
 
-  if (setupLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-lg">جاري التحقق من الإعدادات...</div>
-      </div>
-    );
-  }
 
   const onSubmit = (data: LoginForm) => {
     loginMutation.mutate(data);
