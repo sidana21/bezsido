@@ -41,7 +41,7 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
@@ -3082,9 +3082,40 @@ export class DatabaseStorage implements IStorage {
   // These can be fully implemented later when needed
   async createOtpCode(otp: InsertOtp): Promise<OtpCode> { throw new Error('Not implemented'); }
   async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> { return false; }
-  async createSession(session: InsertSession): Promise<Session> { throw new Error('Not implemented'); }
-  async getSessionByToken(token: string): Promise<Session | undefined> { return undefined; }
-  async deleteSession(token: string): Promise<void> {}
+  async createSession(session: InsertSession): Promise<Session> {
+    try {
+      const [newSession] = await db.insert(sessions).values(session).returning();
+      return newSession;
+    } catch (error) {
+      console.error('Error creating session:', error);
+      throw error;
+    }
+  }
+
+  async getSessionByToken(token: string): Promise<Session | undefined> {
+    try {
+      const [session] = await db.select().from(sessions).where(eq(sessions.token, token));
+      if (session && session.expiresAt > new Date()) {
+        return session;
+      }
+      // Session expired or doesn't exist
+      if (session) {
+        await this.deleteSession(token);
+      }
+      return undefined;
+    } catch (error) {
+      console.error('Error getting session:', error);
+      return undefined;
+    }
+  }
+
+  async deleteSession(token: string): Promise<void> {
+    try {
+      await db.delete(sessions).where(eq(sessions.token, token));
+    } catch (error) {
+      console.error('Error deleting session:', error);
+    }
+  }
   
   async getChat(id: string): Promise<Chat | undefined> { return undefined; }
   async getUserChats(userId: string): Promise<Chat[]> { return []; }
