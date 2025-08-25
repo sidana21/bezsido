@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Story, User, StoryComment, StoryLike } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { createStoryProgressManager, createStoryNavigator } from "@/utils/story-management";
 
 interface StoryViewerProps {
   storyId: string;
@@ -135,34 +136,21 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
     }
   }, [storyId, story]);
 
-  // Auto-progress story
+  // Auto-progress story with safe utilities
   useEffect(() => {
     if (!isPlaying) return;
     
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          try {
-            if (onNext) {
-              // Move to next story automatically
-            } else {
-              onClose();
-            }
-          } catch (error) {
-            console.debug('Story navigation warning:', error);
-          }
-          return 100;
-        }
-        return prev + 1;
-      });
-    }, 50); // 5 second story duration (50ms * 100 = 5000ms)
-
+    const navigator = createStoryNavigator(onNext, undefined, onClose);
+    const progressManager = createStoryProgressManager(
+      setProgress,
+      navigator.close,
+      5000 // 5 second duration
+    );
+    
+    progressManager.start();
+    
     return () => {
-      try {
-        clearInterval(interval);
-      } catch (error) {
-        console.debug('Interval cleanup warning:', error);
-      }
+      progressManager.stop();
     };
   }, [isPlaying, onNext, onClose]);
 

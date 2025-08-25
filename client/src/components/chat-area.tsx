@@ -9,6 +9,9 @@ import { MessageBubble } from "./message-bubble";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { Message, User, Sticker } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { safeExecute } from "@/utils/error-handling";
+import { safeAddEventListener, createSafeCleanup } from "@/utils/dom-cleanup";
+import { safeStopMediaStream, safeInitMicrophone, safeCreateMediaRecorder, createRecordingTimer } from "@/utils/audio-recording";
 
 interface ChatAreaProps {
   chatId: string | null;
@@ -407,75 +410,48 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   useEffect(() => {
     if (!isRecording) return;
 
-    const handleMouseMove = (event: MouseEvent) => {
-      if (typeof handleDragMove === 'function') {
-        handleDragMove(event as any);
-      }
+    const handleMouseMove = (event: Event) => {
+      safeExecute(handleDragMove, event as any);
     };
 
-    const handleTouchMove = (event: TouchEvent) => {
-      if (typeof handleDragMove === 'function') {
-        handleDragMove(event as any);
-      }
+    const handleTouchMove = (event: Event) => {
+      safeExecute(handleDragMove, event as any);
     };
 
     const handleMouseUp = () => {
-      if (typeof stopRecording === 'function') {
-        stopRecording();
-      }
+      safeExecute(stopRecording);
     };
 
     const handleTouchEnd = () => {
-      if (typeof stopRecording === 'function') {
-        stopRecording();
-      }
+      safeExecute(stopRecording);
     };
 
-    // Add passive listeners for better performance
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('touchend', handleTouchEnd);
+    // Add listeners using safe utilities
+    const cleanupMouseMove = safeAddEventListener(window, 'mousemove', handleMouseMove, { passive: true });
+    const cleanupTouchMove = safeAddEventListener(window, 'touchmove', handleTouchMove, { passive: true });
+    const cleanupMouseUp = safeAddEventListener(window, 'mouseup', handleMouseUp);
+    const cleanupTouchEnd = safeAddEventListener(window, 'touchend', handleTouchEnd);
 
-    return () => {
-      try {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('touchmove', handleTouchMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-        window.removeEventListener('touchend', handleTouchEnd);
-      } catch (error) {
-        // Silent catch to prevent removeChild errors
-        console.debug('Event listener cleanup warning:', error);
-      }
-    };
+    return createSafeCleanup([cleanupMouseMove, cleanupTouchMove, cleanupMouseUp, cleanupTouchEnd]);
   }, [isRecording, handleDragMove, stopRecording]);
 
   // Cleanup microphone stream on component unmount
   useEffect(() => {
-    return () => {
-      try {
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach(track => {
-            try {
-              track.stop();
-            } catch (e) {
-              console.debug('Track stop warning:', e);
-            }
-          });
-          mediaStreamRef.current = null;
-        }
+    return createSafeCleanup([
+      () => safeStopMediaStream(mediaStreamRef.current),
+      () => {
         if (debounceTimerRef.current) {
           clearTimeout(debounceTimerRef.current);
           debounceTimerRef.current = null;
         }
+      },
+      () => {
         if (recordingTimerRef.current) {
           clearInterval(recordingTimerRef.current);
           recordingTimerRef.current = null;
         }
-      } catch (error) {
-        console.debug('Cleanup warning:', error);
       }
-    };
+    ]);
   }, []);
 
   const handleSendMessage = () => {
