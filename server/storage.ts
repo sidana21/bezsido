@@ -167,7 +167,7 @@ export interface IStorage {
   updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined>;
   updateUserVerificationStatus(userId: string, isVerified: boolean): Promise<User | undefined>;
   getAllStores(): Promise<Store[]>;
-  updateStoreStatus(storeId: string, status: string): Promise<Store | undefined>;
+  updateStoreStatus(storeId: string, status: string, adminId?: string, rejectionReason?: string): Promise<Store | undefined>;
   getAllOrders(): Promise<Order[]>;
   getAdminDashboardStats(): Promise<{
     totalUsers: number;
@@ -2889,6 +2889,23 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteUser(userId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // For now, implement as a simple database delete
+      // In production, you might want to implement cascade deletes or soft deletes
+      await db.delete(users).where(eq(users.id, userId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  }
+
   // Admin Credentials - Already implemented in MemStorage, copy those methods
   async getAdminCredentials(): Promise<AdminCredentials | undefined> {
     try {
@@ -3249,7 +3266,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   async getAllStores(): Promise<Store[]> { return []; }
-  async updateStoreStatus(storeId: string, status: string): Promise<Store | undefined> { return undefined; }
+  async updateStoreStatus(storeId: string, status: string, adminId?: string, rejectionReason?: string): Promise<Store | undefined> { return undefined; }
   async getAllOrders(): Promise<Order[]> { return []; }
   async getAdminDashboardStats(): Promise<{
     totalUsers: number;
