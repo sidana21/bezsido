@@ -41,7 +41,7 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures } from '@shared/schema';
+import { adminCredentials, appFeatures, users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
@@ -2812,4 +2812,436 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Use database storage by creating a class that extends the interface
+export class DatabaseStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user || undefined;
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return undefined;
+    }
+  }
+
+  async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [user] = await db.select().from(users).where(eq(users.phoneNumber, phoneNumber));
+      return user || undefined;
+    } catch (error) {
+      console.error('Error getting user by phone:', error);
+      return undefined;
+    }
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [user] = await db.insert(users).values(insertUser).returning();
+      return user;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  }
+
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [user] = await db.update(users).set({
+        ...userData,
+        updatedAt: new Date()
+      }).where(eq(users.id, id)).returning();
+      return user || undefined;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return undefined;
+    }
+  }
+
+  async updateUserOnlineStatus(id: string, isOnline: boolean): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      await db.update(users).set({
+        isOnline,
+        lastSeen: new Date(),
+        updatedAt: new Date()
+      }).where(eq(users.id, id));
+    } catch (error) {
+      console.error('Error updating user online status:', error);
+    }
+  }
+
+  // Admin Credentials - Already implemented in MemStorage, copy those methods
+  async getAdminCredentials(): Promise<AdminCredentials | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [result] = await db.select().from(adminCredentials).where(eq(adminCredentials.id, 'admin_settings')).limit(1);
+      return result || undefined;
+    } catch (error) {
+      console.error('Error getting admin credentials:', error);
+      return undefined;
+    }
+  }
+
+  async updateAdminCredentials(credentials: InsertAdminCredentials): Promise<AdminCredentials> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const adminCreds = {
+        id: "admin_settings" as const,
+        email: credentials.email,
+        password: credentials.password,
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      };
+      
+      const [result] = await db.insert(adminCredentials)
+        .values(adminCreds)
+        .onConflictDoUpdate({
+          target: adminCredentials.id,
+          set: {
+            email: credentials.email,
+            password: credentials.password,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error('Error updating admin credentials:', error);
+      throw error;
+    }
+  }
+
+  // Feature Management
+  async getAllFeatures(): Promise<AppFeature[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const features = await db.select().from(appFeatures).orderBy(appFeatures.priority);
+      return features;
+    } catch (error) {
+      console.error('Error getting features:', error);
+      return [];
+    }
+  }
+
+  async getFeature(featureId: string): Promise<AppFeature | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [feature] = await db.select().from(appFeatures).where(eq(appFeatures.id, featureId)).limit(1);
+      return feature || undefined;
+    } catch (error) {
+      console.error('Error getting feature:', error);
+      return undefined;
+    }
+  }
+
+  async updateFeature(featureId: string, updates: Partial<InsertAppFeature>): Promise<AppFeature | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [feature] = await db.update(appFeatures).set({
+        ...updates,
+        updatedAt: new Date()
+      }).where(eq(appFeatures.id, featureId)).returning();
+      return feature || undefined;
+    } catch (error) {
+      console.error('Error updating feature:', error);
+      return undefined;
+    }
+  }
+
+  async initializeDefaultFeatures(): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const defaultFeatures = [
+        {
+          id: "messaging",
+          name: "المراسلة",
+          description: "إرسال واستقبال الرسائل النصية والوسائط",
+          isEnabled: true,
+          category: "communication",
+          priority: 1
+        },
+        {
+          id: "stories",
+          name: "الحالات",
+          description: "مشاركة الحالات والصور المؤقتة",
+          isEnabled: true,
+          category: "social",
+          priority: 2
+        },
+        {
+          id: "stores",
+          name: "المتاجر",
+          description: "إنشاء وإدارة المتاجر الإلكترونية",
+          isEnabled: true,
+          category: "commerce",
+          priority: 3
+        },
+        {
+          id: "products",
+          name: "المنتجات",
+          description: "عرض وبيع المنتجات",
+          isEnabled: true,
+          category: "commerce",
+          priority: 4
+        },
+        {
+          id: "cart",
+          name: "سلة التسوق",
+          description: "إضافة المنتجات وإجراء عمليات الشراء",
+          isEnabled: true,
+          category: "commerce", 
+          priority: 5
+        },
+        {
+          id: "orders",
+          name: "الطلبات",
+          description: "متابعة طلباتك ومبيعاتك", 
+          isEnabled: true,
+          category: "commerce",
+          priority: 6
+        },
+        {
+          id: "affiliate",
+          name: "التسويق بالعمولة",
+          description: "ربح عمولة من خلال مشاركة المنتجات",
+          isEnabled: true,
+          category: "monetization",
+          priority: 7
+        },
+        {
+          id: "contacts",
+          name: "جهات الاتصال",
+          description: "إدارة الأصدقاء وجهات الاتصال",
+          isEnabled: true,
+          category: "communication",
+          priority: 8
+        },
+        {
+          id: "profile",
+          name: "الملف الشخصي",
+          description: "إعدادات وبيانات المستخدم الشخصية",
+          isEnabled: true,
+          category: "account",
+          priority: 9
+        }
+      ];
+
+      // Check if features already exist
+      const existingFeatures = await db.select().from(appFeatures);
+      
+      if (existingFeatures.length === 0) {
+        // Insert default features
+        await db.insert(appFeatures).values(defaultFeatures);
+        console.log('Default features initialized in database');
+      }
+    } catch (error) {
+      console.error('Error initializing features:', error);
+    }
+  }
+
+  // For now, implement other methods as simple stubs to satisfy the interface
+  // These can be fully implemented later when needed
+  async createOtpCode(otp: InsertOtp): Promise<OtpCode> { throw new Error('Not implemented'); }
+  async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> { return false; }
+  async createSession(session: InsertSession): Promise<Session> { throw new Error('Not implemented'); }
+  async getSessionByToken(token: string): Promise<Session | undefined> { return undefined; }
+  async deleteSession(token: string): Promise<void> {}
+  
+  async getChat(id: string): Promise<Chat | undefined> { return undefined; }
+  async getUserChats(userId: string): Promise<Chat[]> { return []; }
+  async createChat(chat: InsertChat): Promise<Chat> { throw new Error('Not implemented'); }
+  async deleteChat(id: string): Promise<boolean> { return false; }
+  
+  async getChatMessages(chatId: string): Promise<Message[]> { return []; }
+  async createMessage(message: InsertMessage): Promise<Message> { throw new Error('Not implemented'); }
+  async markMessageAsRead(messageId: string): Promise<void> {}
+  async markMessageAsDelivered(messageId: string): Promise<void> {}
+  async searchMessages(chatId: string, searchTerm: string): Promise<Message[]> { return []; }
+  async updateMessage(messageId: string, content: string): Promise<Message | undefined> { return undefined; }
+  async deleteMessage(messageId: string): Promise<void> {}
+  
+  async getActiveStories(): Promise<(Story & { user: User })[]> { return []; }
+  async getUserStories(userId: string): Promise<Story[]> { return []; }
+  async createStory(story: InsertStory): Promise<Story> { throw new Error('Not implemented'); }
+  async viewStory(storyId: string, viewerId: string): Promise<void> {}
+  async getStory(storyId: string): Promise<Story | undefined> { return undefined; }
+  
+  async getStores(location?: string, category?: string): Promise<(Store & { owner: User })[]> { return []; }
+  async getStore(id: string): Promise<Store | undefined> { return undefined; }
+  async getUserStore(userId: string): Promise<Store | undefined> { return undefined; }
+  async createStore(store: InsertStore): Promise<Store> { throw new Error('Not implemented'); }
+  async updateStore(id: string, store: Partial<InsertStore>): Promise<Store | undefined> { return undefined; }
+  async deleteStore(id: string): Promise<boolean> { return false; }
+
+  async getProducts(location?: string, category?: string): Promise<(Product & { owner: User })[]> { return []; }
+  async getProduct(id: string): Promise<Product | undefined> { return undefined; }
+  async getUserProducts(userId: string): Promise<Product[]> { return []; }
+  async getStoreProducts(storeId: string): Promise<Product[]> { return []; }
+  async createProduct(product: InsertProduct): Promise<Product> { throw new Error('Not implemented'); }
+  async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined> { return undefined; }
+  async deleteProduct(id: string): Promise<boolean> { return false; }
+  
+  async createAffiliateLink(affiliateLink: InsertAffiliateLink): Promise<AffiliateLink> { throw new Error('Not implemented'); }
+  async getAffiliateLink(uniqueCode: string): Promise<AffiliateLink | undefined> { return undefined; }
+  async getUserAffiliateLinks(userId: string): Promise<(AffiliateLink & { product: Product })[]> { return []; }
+  async trackClick(uniqueCode: string): Promise<void> {}
+  async trackConversion(uniqueCode: string, buyerId: string, amount: string): Promise<Commission> { throw new Error('Not implemented'); }
+  
+  async getUserCommissions(userId: string): Promise<(Commission & { affiliateLink: AffiliateLink & { product: Product } })[]> { return []; }
+  async getTotalCommissions(userId: string): Promise<string> { return "0"; }
+  async getCommissionsByStatus(userId: string, status: string): Promise<Commission[]> { return []; }
+  
+  async getUserContacts(userId: string): Promise<(Contact & { user?: User })[]> { return []; }
+  async addContact(contact: InsertContact): Promise<Contact> { throw new Error('Not implemented'); }
+  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> { return undefined; }
+  async updateContactAppUser(contactId: string, contactUserId: string): Promise<void> {}
+
+  async getCartItems(userId: string): Promise<(CartItem & { product: Product & { owner: User } })[]> { return []; }
+  async addToCart(cartItem: InsertCartItem): Promise<CartItem> { throw new Error('Not implemented'); }
+  async updateCartItemQuantity(userId: string, productId: string, quantity: string): Promise<void> {}
+  async removeFromCart(userId: string, productId: string): Promise<void> {}
+  async clearCart(userId: string): Promise<void> {}
+  
+  async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> { throw new Error('Not implemented'); }
+  async getUserOrders(userId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], seller: User })[]> { return []; }
+  async getSellerOrders(sellerId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], buyer: User })[]> { return []; }
+  async getOrder(orderId: string): Promise<(Order & { items: (OrderItem & { product: Product })[], seller: User, buyer: User }) | undefined> { return undefined; }
+  async updateOrderStatus(orderId: string, status: string, updatedBy: string): Promise<Order | undefined> { return undefined; }
+  async cancelOrder(orderId: string, reason: string): Promise<Order | undefined> { return undefined; }
+  
+  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> { throw new Error('Not implemented'); }
+  async getUserVerificationRequests(userId: string): Promise<VerificationRequest[]> { return []; }
+  async getVerificationRequest(id: string): Promise<VerificationRequest | undefined> { return undefined; }
+  async updateVerificationRequestStatus(id: string, status: string, adminNote?: string, reviewedBy?: string): Promise<VerificationRequest | undefined> { return undefined; }
+
+  async likeStory(storyId: string, userId: string, reactionType?: string): Promise<StoryLike> { throw new Error('Not implemented'); }
+  async unlikeStory(storyId: string, userId: string): Promise<void> {}
+  async getStoryLikes(storyId: string): Promise<(StoryLike & { user: User })[]> { return []; }
+  async getStoryLikeCount(storyId: string): Promise<number> { return 0; }
+  async hasUserLikedStory(storyId: string, userId: string): Promise<boolean> { return false; }
+  
+  async addStoryComment(comment: InsertStoryComment): Promise<StoryComment> { throw new Error('Not implemented'); }
+  async getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]> { return []; }
+  async updateStoryComment(commentId: string, content: string): Promise<StoryComment | undefined> { return undefined; }
+  async deleteStoryComment(commentId: string): Promise<void> {}
+  async getStoryCommentCount(storyId: string): Promise<number> { return 0; }
+
+  async getAllStickers(): Promise<Sticker[]> { return []; }
+  async getStickersByCategory(category: string): Promise<Sticker[]> { return []; }
+  async getSticker(id: string): Promise<Sticker | undefined> { return undefined; }
+  async createSticker(sticker: InsertSticker): Promise<Sticker> { throw new Error('Not implemented'); }
+
+  async getUserById(id: string): Promise<User | undefined> { return this.getUser(id); }
+  async getAllUsers(): Promise<User[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      return await db.select().from(users);
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
+  }
+  async getAllVerificationRequests(status?: string): Promise<VerificationRequest[]> { return []; }
+  async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [user] = await db.update(users).set({
+        isAdmin,
+        updatedAt: new Date()
+      }).where(eq(users.id, userId)).returning();
+      return user || undefined;
+    } catch (error) {
+      console.error('Error updating user admin status:', error);
+      return undefined;
+    }
+  }
+  async updateUserVerificationStatus(userId: string, isVerified: boolean): Promise<User | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [user] = await db.update(users).set({
+        isVerified,
+        verifiedAt: isVerified ? new Date() : null,
+        updatedAt: new Date()
+      }).where(eq(users.id, userId)).returning();
+      return user || undefined;
+    } catch (error) {
+      console.error('Error updating user verification status:', error);
+      return undefined;
+    }
+  }
+  async getAllStores(): Promise<Store[]> { return []; }
+  async updateStoreStatus(storeId: string, status: string): Promise<Store | undefined> { return undefined; }
+  async getAllOrders(): Promise<Order[]> { return []; }
+  async getAdminDashboardStats(): Promise<{
+    totalUsers: number;
+    totalStores: number;
+    totalOrders: number;
+    pendingVerifications: number;
+    recentOrders: number;
+    totalRevenue: string;
+    activeUsers: number;
+    verifiedUsers: number;
+  }> {
+    return {
+      totalUsers: 0,
+      totalStores: 0,
+      totalOrders: 0,
+      pendingVerifications: 0,
+      recentOrders: 0,
+      totalRevenue: "0",
+      activeUsers: 0,
+      verifiedUsers: 0
+    };
+  }
+}
+
+// Use DatabaseStorage instead of MemStorage  
+export const storage = new DatabaseStorage();
