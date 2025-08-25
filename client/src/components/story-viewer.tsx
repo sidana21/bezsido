@@ -142,10 +142,14 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          if (onNext) {
-            // Move to next story automatically
-          } else {
-            onClose();
+          try {
+            if (onNext) {
+              // Move to next story automatically
+            } else {
+              onClose();
+            }
+          } catch (error) {
+            console.debug('Story navigation warning:', error);
           }
           return 100;
         }
@@ -153,7 +157,13 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
       });
     }, 50); // 5 second story duration (50ms * 100 = 5000ms)
 
-    return () => clearInterval(interval);
+    return () => {
+      try {
+        clearInterval(interval);
+      } catch (error) {
+        console.debug('Interval cleanup warning:', error);
+      }
+    };
   }, [isPlaying, onNext, onClose]);
 
   // Reset progress when story changes

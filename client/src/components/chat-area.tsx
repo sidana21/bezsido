@@ -408,19 +408,27 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     if (!isRecording) return;
 
     const handleMouseMove = (event: MouseEvent) => {
-      handleDragMove(event as any);
+      if (typeof handleDragMove === 'function') {
+        handleDragMove(event as any);
+      }
     };
 
     const handleTouchMove = (event: TouchEvent) => {
-      handleDragMove(event as any);
+      if (typeof handleDragMove === 'function') {
+        handleDragMove(event as any);
+      }
     };
 
     const handleMouseUp = () => {
-      stopRecording();
+      if (typeof stopRecording === 'function') {
+        stopRecording();
+      }
     };
 
     const handleTouchEnd = () => {
-      stopRecording();
+      if (typeof stopRecording === 'function') {
+        stopRecording();
+      }
     };
 
     // Add passive listeners for better performance
@@ -430,25 +438,42 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     window.addEventListener('touchend', handleTouchEnd);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('touchend', handleTouchEnd);
+      try {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('touchend', handleTouchEnd);
+      } catch (error) {
+        // Silent catch to prevent removeChild errors
+        console.debug('Event listener cleanup warning:', error);
+      }
     };
-  }, [isRecording]);
+  }, [isRecording, handleDragMove, stopRecording]);
 
   // Cleanup microphone stream on component unmount
   useEffect(() => {
     return () => {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-        mediaStreamRef.current = null;
-      }
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
+      try {
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach(track => {
+            try {
+              track.stop();
+            } catch (e) {
+              console.debug('Track stop warning:', e);
+            }
+          });
+          mediaStreamRef.current = null;
+        }
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = null;
+        }
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+      } catch (error) {
+        console.debug('Cleanup warning:', error);
       }
     };
   }, []);
