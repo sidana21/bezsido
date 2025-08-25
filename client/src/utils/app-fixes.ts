@@ -12,6 +12,10 @@ export * from './dom-cleanup';
 export * from './audio-recording';
 export * from './story-management';
 export * from './database-fixes';
+export * from './portal-safety';
+export * from './runtime-error-fixes';
+export * from './app-initializer';
+export * from './removeChild-fix';
 
 /**
  * Main fixes applied to the application:

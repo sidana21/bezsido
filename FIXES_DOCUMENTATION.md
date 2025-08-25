@@ -33,6 +33,15 @@
 - تطبيق secure OTP generation
 - تحسين error handling في قاعدة البيانات
 
+### 5. إصلاح شامل لخطأ removeChild
+**المشكلة:** runtime error overlay يسبب أخطاء removeChild مستمرة
+**الحل:**
+- إنشاء `client/src/utils/portal-safety.ts`
+- إنشاء `client/src/utils/runtime-error-fixes.ts`
+- إنشاء `client/src/utils/removeChild-fix.ts` - إصلاح مخصص للمشكلة
+- إنشاء `client/src/utils/app-initializer.ts` - نظام تهيئة شامل
+- تطبيق الحماية في `client/src/main.tsx`
+
 ## هيكل الملفات الجديدة
 
 ```
@@ -42,7 +51,11 @@ client/src/utils/
 ├── dom-cleanup.ts         # تنظيف آمن لـ DOM
 ├── audio-recording.ts     # إدارة آمنة للتسجيل الصوتي
 ├── story-management.ts    # إدارة آمنة للقصص
-└── database-fixes.ts      # إصلاحات قاعدة البيانات
+├── database-fixes.ts      # إصلاحات قاعدة البيانات
+├── portal-safety.ts       # حماية Radix UI portals
+├── runtime-error-fixes.ts # إصلاحات أخطاء وقت التشغيل
+├── removeChild-fix.ts     # إصلاح مخصص لخطأ removeChild
+└── app-initializer.ts     # نظام التهيئة الشامل
 ```
 
 ## إرشادات للمطورين
