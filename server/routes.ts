@@ -30,6 +30,7 @@ import {
   type Order
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { AdminManager } from "./admin-manager";
 
 // Configure multer for file uploads (images and videos)
 const upload = multer({
@@ -1534,136 +1535,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
-      // Read admin credentials from admin.json file
-      let adminData;
-      try {
-        const adminFilePath = path.join(process.cwd(), 'admin.json');
-        const adminFileContent = fs.readFileSync(adminFilePath, 'utf8');
-        adminData = JSON.parse(adminFileContent);
-      } catch (error) {
-        console.error('Error reading admin.json:', error);
-        return res.status(500).json({ message: "خطأ في قراءة بيانات الإدارة" });
-      }
+      // استخدام مدير الإدارة الجديد
+      const adminManager = new AdminManager(storage);
       
-      if (email !== adminData.email || password !== adminData.password) {
+      // التحقق من صحة بيانات الدخول
+      if (!adminManager.validateCredentials(email, password)) {
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
       console.log(`Admin login successful for: ${email}`);
       
-      // Find existing admin user - simplified approach
-      const existingUsers = await storage.getAllUsers();
-      let adminUser = existingUsers.find(user => user.phoneNumber === "+213123456789");
+      // العثور على مستخدم الإدارة أو إنشاؤه
+      const adminUser = await adminManager.ensureAdminUser();
       
-      if (adminUser) {
-        console.log('Found existing admin user:', adminUser.name);
-        // Make sure existing user is admin
-        if (!adminUser.isAdmin) {
-          adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
-        }
-      } else {
-        console.log('Admin user not found, creating new admin user...');
-        // Check if any admin user exists
-        const firstAdminUser = existingUsers.find(user => user.isAdmin);
-        if (firstAdminUser) {
-          adminUser = firstAdminUser;
-        } else {
-          // Create admin user if none exists
-          console.log('Creating admin user...');
-          adminUser = await storage.createUser({
-            name: adminData.name || "المدير العام",
-            phoneNumber: "+213123456789",
-            location: "الجزائر",
-            avatar: null,
-            isOnline: true,
-          });
-          // Make the user admin
-          adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
-          // Verify the user
-          await storage.updateUserVerificationStatus(adminUser.id, true);
-          console.log('Admin user created successfully:', adminUser.name);
-        }
-      }
-
       if (!adminUser) {
         return res.status(500).json({ message: "فشل في إنشاء أو العثور على مستخدم الإدارة" });
       }
       
-      // Add sample data if no users exist (first login)
-      const allUsers = await storage.getAllUsers();
-      if (allUsers.length <= 1) { // Only admin exists
-        // Create sample users
-        const user1 = await storage.createUser({
-          name: "أحمد محمد",
-          phoneNumber: "+213555123456",
-          location: "تندوف",
-          avatar: null,
-          isOnline: true,
-        });
-        await storage.updateUserVerificationStatus(user1.id, true);
-        await storage.createUser({
-          name: "فاطمة بن علي",
-          phoneNumber: "+213555234567",
-          location: "الجزائر",
-          avatar: null,
-          isOnline: false,
-        });
-        const user3 = await storage.createUser({
-          name: "يوسف الزهراني",
-          phoneNumber: "+213555345678",
-          location: "وهران",
-          avatar: null,
-          isOnline: true,
-        });
-        await storage.updateUserVerificationStatus(user3.id, true);
-        
-        // Create sample orders if none exist
-        const allOrders = await storage.getAllOrders();
-        if (allOrders.length === 0) {
-          const users = await storage.getAllUsers();
-          const customerUser = users.find(u => u.name === "أحمد محمد");
-          const sellerUser = users.find(u => u.name === "يوسف الزهراني");
-          
-          if (customerUser && sellerUser) {
-            await storage.createOrder({
-              buyerId: customerUser.id,
-              sellerId: sellerUser.id,
-              storeId: null,
-              totalAmount: "2500.00",
-              paymentMethod: "cash",
-              deliveryAddress: "تندوف، الحي الجديد، الشارع الأول",
-              customerPhone: customerUser.phoneNumber,
-              customerName: customerUser.name,
-              notes: "تسليم سريع من فضلك",
-              status: "pending"
-            }, []);
-            
-            await storage.createOrder({
-              buyerId: customerUser.id,
-              sellerId: sellerUser.id,
-              storeId: null,
-              totalAmount: "1800.50",
-              paymentMethod: "card",
-              deliveryAddress: "تندوف، المركز التجاري",
-              customerPhone: customerUser.phoneNumber,
-              customerName: customerUser.name,
-              status: "confirmed"
-            }, []);
-            
-            await storage.createOrder({
-              buyerId: customerUser.id,
-              sellerId: sellerUser.id,
-              storeId: null,
-              totalAmount: "3200.00",
-              paymentMethod: "cash",
-              deliveryAddress: "تندوف، الحي القديم",
-              customerPhone: customerUser.phoneNumber,
-              customerName: customerUser.name,
-              status: "delivered"
-            }, []);
-          }
-        }
-      }
+      // إنشاء البيانات التجريبية إذا لزم الأمر
+      await adminManager.createSampleDataIfNeeded();
+      
+      // تحديث وقت آخر تسجيل دخول
+      adminManager.updateLastLogin();
       
       // Create session
       const sessionData = {
