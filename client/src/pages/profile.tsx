@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck, Star, AlertCircle, Check, Clock, Upload, Image } from "lucide-react";
+import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck, Star, AlertCircle, Check, Clock, Upload, Image, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationReason, setVerificationReason] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -129,6 +130,31 @@ export default function Profile() {
       toast({
         title: "خطأ",
         description: "فشل في إرسال طلب التوثيق",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("/api/user/delete-account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم حذف الحساب",
+        description: "تم حذف حسابك بنجاح",
+      });
+      // Clear auth token and redirect to login
+      localStorage.removeItem("auth_token");
+      window.location.href = "/login";
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في حذف الحساب",
         variant: "destructive",
       });
     },
@@ -501,6 +527,67 @@ export default function Profile() {
                 </>
               )}
             </Button>
+          </div>
+        )}
+
+        {/* Delete Account Section */}
+        {!isEditing && (
+          <div className="pt-8 border-t border-gray-200 dark:border-gray-700">
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="w-full h-12 text-lg rounded-xl bg-red-500 hover:bg-red-600"
+                  data-testid="button-delete-account"
+                >
+                  <Trash2 className="w-5 h-5 ml-2" />
+                  حذف الحساب
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="text-red-600">حذف الحساب</DialogTitle>
+                  <DialogDescription>
+                    هل أنت متأكد من رغبتك في حذف حسابك نهائياً؟
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
+                      <div className="space-y-2 text-sm text-red-700 dark:text-red-400">
+                        <p className="font-medium">تحذير هام:</p>
+                        <ul className="space-y-1 text-xs">
+                          <li>• سيتم حذف جميع بياناتك نهائياً</li>
+                          <li>• سيتم حذف متجرك وجميع منتجاتك</li>
+                          <li>• سيتم حذف جميع محادثاتك ورسائلك</li>
+                          <li>• لن تتمكن من استرداد هذه البيانات</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowDeleteDialog(false)}
+                      className="flex-1"
+                      data-testid="button-cancel-delete"
+                    >
+                      إلغاء
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => deleteAccountMutation.mutate()}
+                      disabled={deleteAccountMutation.isPending}
+                      className="flex-1 bg-red-500 hover:bg-red-600"
+                      data-testid="button-confirm-delete"
+                    >
+                      {deleteAccountMutation.isPending ? "جاري الحذف..." : "حذف نهائياً"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>

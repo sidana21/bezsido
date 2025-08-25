@@ -1426,6 +1426,47 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
+  async deleteUser(userId: string): Promise<boolean> {
+    try {
+      // For now, we'll just use memory storage since DB operations are complex
+      // Remove from memory cache
+      this.users.delete(userId);
+      
+      // Remove user's stores from memory
+      this.stores.forEach((store, storeId) => {
+        if (store.userId === userId) {
+          this.stores.delete(storeId);
+        }
+      });
+      
+      // Remove user's products from memory
+      this.products.forEach((product, productId) => {
+        if (product.userId === userId) {
+          this.products.delete(productId);
+        }
+      });
+      
+      // Remove user's orders from memory
+      this.orders.forEach((order, orderId) => {
+        if (order.buyerId === userId) {
+          this.orders.delete(orderId);
+        }
+      });
+      
+      // Remove user's verification requests from memory
+      this.verificationRequests.forEach((req, reqId) => {
+        if (req.userId === userId) {
+          this.verificationRequests.delete(reqId);
+        }
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  }
+
   async getChat(id: string): Promise<Chat | undefined> {
     return this.chats.get(id);
   }

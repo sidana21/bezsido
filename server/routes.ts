@@ -395,6 +395,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete User Account
+  app.delete("/api/user/delete-account", requireAuth, async (req: any, res) => {
+    try {
+      const success = await storage.deleteUser(req.userId);
+      
+      if (!success) {
+        return res.status(500).json({ message: "فشل في حذف الحساب" });
+      }
+      
+      res.json({ message: "تم حذف الحساب بنجاح" });
+    } catch (error) {
+      console.error('Delete account error:', error);
+      res.status(500).json({ message: "فشل في حذف الحساب" });
+    }
+  });
+
   // Get user chats
   app.get("/api/chats", requireAuth, async (req: any, res) => {
     try {
