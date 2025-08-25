@@ -41,9 +41,11 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { db } from './db';
 import { adminCredentials, appFeatures } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+
+// Database connection will be imported conditionally when needed
+let db: any = null;
 
 export interface IStorage {
   // Users
@@ -2766,20 +2768,31 @@ export class MemStorage implements IStorage {
     ];
 
     try {
-      // Check if features already exist in database
-      const existingFeatures = await db.select().from(appFeatures);
-      
-      if (existingFeatures.length === 0) {
-        // Insert default features into database
-        await db.insert(appFeatures).values(defaultFeatures);
-        console.log('Default features initialized in database');
+      // Try to import database connection if available
+      if (process.env.DATABASE_URL && !db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
       }
-      
-      // Load features into memory
-      const allFeatures = await db.select().from(appFeatures);
-      allFeatures.forEach(feature => {
-        this.features.set(feature.id, feature);
-      });
+
+      if (db) {
+        // Check if features already exist in database
+        const existingFeatures = await db.select().from(appFeatures);
+        
+        if (existingFeatures.length === 0) {
+          // Insert default features into database
+          await db.insert(appFeatures).values(defaultFeatures);
+          console.log('Default features initialized in database');
+        }
+        
+        // Load features into memory
+        const allFeatures = await db.select().from(appFeatures);
+        allFeatures.forEach((feature: AppFeature) => {
+          this.features.set(feature.id, feature);
+        });
+      } else {
+        // No database available, use memory fallback
+        throw new Error('Database not available');
+      }
       
     } catch (error) {
       console.error('Error initializing features in database, using memory fallback:', error);
