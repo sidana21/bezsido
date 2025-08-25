@@ -2814,6 +2814,8 @@ export class MemStorage implements IStorage {
 
 // Use database storage by creating a class that extends the interface
 export class DatabaseStorage implements IStorage {
+  private otpCodes: Map<string, OtpCode> = new Map();
+  
   async getUser(id: string): Promise<User | undefined> {
     try {
       if (!db) {
@@ -3097,8 +3099,34 @@ export class DatabaseStorage implements IStorage {
 
   // For now, implement other methods as simple stubs to satisfy the interface
   // These can be fully implemented later when needed
-  async createOtpCode(otp: InsertOtp): Promise<OtpCode> { throw new Error('Not implemented'); }
-  async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> { return false; }
+  async createOtpCode(insertOtp: InsertOtp): Promise<OtpCode> {
+    const id = randomUUID();
+    const otp: OtpCode = {
+      ...insertOtp,
+      id,
+      isUsed: false,
+      createdAt: new Date(),
+    };
+    // For now, store in memory since OTP codes are temporary
+    this.otpCodes = this.otpCodes || new Map();
+    this.otpCodes.set(id, otp);
+    return otp;
+  }
+  async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> {
+    if (!this.otpCodes) return false;
+    
+    const otp = Array.from(this.otpCodes.values()).find(
+      (otp) => otp.phoneNumber === phoneNumber && otp.code === code && !otp.isUsed && otp.expiresAt > new Date()
+    );
+    
+    if (otp) {
+      otp.isUsed = true;
+      this.otpCodes.set(otp.id, otp);
+      return true;
+    }
+    
+    return false;
+  }
   async createSession(session: InsertSession): Promise<Session> {
     try {
       const [newSession] = await db.insert(sessions).values(session).returning();

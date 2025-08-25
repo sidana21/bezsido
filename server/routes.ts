@@ -179,6 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ success: true, message: "OTP sent successfully" });
     } catch (error) {
+      console.error('OTP sending error:', error);
       res.status(500).json({ message: "Failed to send OTP" });
     }
   });
