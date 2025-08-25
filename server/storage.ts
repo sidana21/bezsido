@@ -39,6 +39,9 @@ import {
   type InsertAdminCredentials
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from './db';
+import { adminCredentials } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 export interface IStorage {
   // Users
@@ -2538,19 +2541,54 @@ export class MemStorage implements IStorage {
 
   // Admin Credentials Implementation
   async getAdminCredentials(): Promise<AdminCredentials | undefined> {
-    return this.adminCredentials;
+    try {
+      const result = await db.select().from(adminCredentials).where(eq(adminCredentials.id, 'admin_settings')).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting admin credentials:', error);
+      return this.adminCredentials; // Fallback to memory if DB fails
+    }
   }
 
   async updateAdminCredentials(credentials: InsertAdminCredentials): Promise<AdminCredentials> {
-    const adminCreds: AdminCredentials = {
-      id: "admin_settings",
-      email: credentials.email,
-      password: credentials.password,
-      createdAt: this.adminCredentials?.createdAt || new Date(),
-      updatedAt: new Date(),
-    };
-    this.adminCredentials = adminCreds;
-    return adminCreds;
+    try {
+      const adminCreds = {
+        id: "admin_settings" as const,
+        email: credentials.email,
+        password: credentials.password,
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      };
+      
+      // Use upsert (insert or update)
+      const result = await db.insert(adminCredentials)
+        .values(adminCreds)
+        .onConflictDoUpdate({
+          target: adminCredentials.id,
+          set: {
+            email: credentials.email,
+            password: credentials.password,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      
+      // Also update memory cache
+      this.adminCredentials = result[0];
+      return result[0];
+    } catch (error) {
+      console.error('Error updating admin credentials:', error);
+      // Fallback to memory storage if DB fails
+      const adminCreds: AdminCredentials = {
+        id: "admin_settings",
+        email: credentials.email,
+        password: credentials.password,
+        createdAt: this.adminCredentials?.createdAt || new Date(),
+        updatedAt: new Date(),
+      };
+      this.adminCredentials = adminCreds;
+      return adminCreds;
+    }
   }
 }
 
