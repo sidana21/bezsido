@@ -34,7 +34,7 @@ export function BottomNavigation() {
       icon: Store,
       href: "/stores",
       isActive: location === "/stores" || location === "/my-store",
-      featureId: "marketplace",
+      featureId: "stores",
     },
     {
       label: "السلة",
