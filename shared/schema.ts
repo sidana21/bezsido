@@ -94,7 +94,6 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   isVerified: true,
   verifiedAt: true,
-  isAdmin: true,
   lastSeen: true,
   createdAt: true,
   updatedAt: true,
