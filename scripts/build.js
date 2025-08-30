@@ -13,9 +13,9 @@ try {
     fs.rmSync('dist', { recursive: true, force: true });
   }
 
-  // بناء الواجهة الأمامية
+  // بناء الواجهة الأمامية باستخدام إعداد النشر
   console.log('⚛️  بناء الواجهة الأمامية...');
-  execSync('vite build', { stdio: 'inherit' });
+  execSync('vite build --config vite.config.production.ts', { stdio: 'inherit' });
 
   // بناء الخادم
   console.log('🖥️  بناء الخادم...');
