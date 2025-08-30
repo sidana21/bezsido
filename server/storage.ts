@@ -3395,11 +3395,8 @@ async function initializeStorage(): Promise<IStorage> {
 // Initialize storage instance
 storage = new MemStorage(); // Default fallback
 
-// Try to initialize database storage async
-initializeStorage().then(storageInstance => {
-  storage = storageInstance;
-}).catch(error => {
-  console.error('Storage initialization error:', error);
-});
+// Use memory storage for stable operation
+console.log('Using memory storage for stable operation');
+storage = new MemStorage();
 
 export { storage };
