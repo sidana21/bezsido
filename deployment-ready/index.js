@@ -3668,7 +3668,13 @@ async function registerRoutes(app2) {
       await storage.createOtpCode(otpData);
       console.log(`OTP for ${phoneNumber}: ${code}`);
       global.lastOtp = { phoneNumber, code, timestamp: Date.now() };
-      res.json({ success: true, message: "OTP sent successfully" });
+      const shouldShowOTP = !process.env.SMS_SERVICE_ENABLED;
+      res.json({
+        success: true,
+        message: shouldShowOTP ? "\u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642: " + code : "\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642 \u0639\u0628\u0631 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0646\u0635\u064A\u0629",
+        code: shouldShowOTP ? code : void 0,
+        showDirectly: shouldShowOTP
+      });
     } catch (error) {
       console.error("OTP sending error:", error);
       res.status(500).json({ message: "Failed to send OTP" });

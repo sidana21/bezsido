@@ -62,25 +62,37 @@ export default function LoginPage() {
     setFullPhoneNumber(fullPhone);
 
     try {
-      await apiRequest("/api/auth/send-otp", {
+      const response = await apiRequest("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phoneNumber: fullPhone }),
       });
 
-      // Try to extract OTP from response if available in development
-      try {
-        const logs = await fetch('/api/dev/last-otp').then(r => r.json()).catch(() => null);
-        if (logs?.code) {
-          setLastGeneratedOtp(logs.code);
-          setCurrentOtp(logs.code);
-        }
-      } catch {}
-      
-      toast({
-        title: "تم الإرسال",
-        description: "تم إرسال رمز التحقق إلى هاتفك - تحقق من سجلات الخادم للحصول على الرمز",
-      });
+      // If OTP is returned directly (development mode)
+      if (response.showDirectly && response.code) {
+        setLastGeneratedOtp(response.code);
+        setCurrentOtp(response.code);
+        
+        toast({
+          title: "رمز التحقق",
+          description: response.message,
+          duration: 10000, // Show for 10 seconds
+        });
+      } else {
+        // Try to extract OTP from logs as fallback
+        try {
+          const logs = await fetch('/api/dev/last-otp').then(r => r.json()).catch(() => null);
+          if (logs?.code) {
+            setLastGeneratedOtp(logs.code);
+            setCurrentOtp(logs.code);
+          }
+        } catch {}
+        
+        toast({
+          title: "تم الإرسال",
+          description: response.message || "تم إرسال رمز التحقق إلى هاتفك",
+        });
+      }
       setStep("otp");
     } catch (error: any) {
       toast({

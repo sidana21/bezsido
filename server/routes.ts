@@ -172,13 +172,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.createOtpCode(otpData);
       
-      // In a real app, you would send the OTP via SMS
+      // In development or when SMS service is not configured, show OTP directly
       console.log(`OTP for ${phoneNumber}: ${code}`);
       
       // Store last OTP for development
       (global as any).lastOtp = { phoneNumber, code, timestamp: Date.now() };
       
-      res.json({ success: true, message: "OTP sent successfully" });
+      // Return OTP in response for testing (remove when SMS service is added)
+      const shouldShowOTP = !process.env.SMS_SERVICE_ENABLED;
+      
+      res.json({ 
+        success: true, 
+        message: shouldShowOTP ? "رمز التحقق: " + code : "تم إرسال رمز التحقق عبر الرسائل النصية",
+        code: shouldShowOTP ? code : undefined,
+        showDirectly: shouldShowOTP
+      });
     } catch (error) {
       console.error('OTP sending error:', error);
       res.status(500).json({ message: "Failed to send OTP" });
