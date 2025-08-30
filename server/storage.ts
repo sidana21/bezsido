@@ -41,7 +41,8 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import { eq } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
@@ -2898,9 +2899,46 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      // For now, implement as a simple database delete
-      // In production, you might want to implement cascade deletes or soft deletes
+      // Delete user data in correct order to avoid foreign key constraints
+      
+      // 1. Delete sessions first (they reference user_id)
+      await db.delete(sessions).where(eq(sessions.userId, userId));
+      
+      // 2. Delete OTP codes
+      await db.delete(otpCodes).where(eq(otpCodes.phoneNumber, 
+        (await db.select({ phoneNumber: users.phoneNumber }).from(users).where(eq(users.id, userId)).limit(1))[0]?.phoneNumber || ''
+      ));
+      
+      // 3. Delete user's messages
+      await db.delete(messages).where(eq(messages.userId, userId));
+      
+      // 4. Delete user's chats (where they are the only participant)
+      const userChats = await db.select().from(chats).where(
+        sql`JSON_ARRAY_LENGTH(${chats.participants}) = 1 AND JSON_EXTRACT(${chats.participants}, '$[0]') = ${userId}`
+      );
+      for (const chat of userChats) {
+        await db.delete(chats).where(eq(chats.id, chat.id));
+      }
+      
+      // 5. Remove user from group chats
+      const groupChats = await db.select().from(chats).where(
+        sql`JSON_SEARCH(${chats.participants}, 'one', ${userId}) IS NOT NULL`
+      );
+      for (const chat of groupChats) {
+        const participants = JSON.parse(chat.participants as string);
+        const updatedParticipants = participants.filter((p: string) => p !== userId);
+        if (updatedParticipants.length > 0) {
+          await db.update(chats).set({
+            participants: JSON.stringify(updatedParticipants)
+          }).where(eq(chats.id, chat.id));
+        } else {
+          await db.delete(chats).where(eq(chats.id, chat.id));
+        }
+      }
+      
+      // 6. Finally delete the user
       await db.delete(users).where(eq(users.id, userId));
+      
       return true;
     } catch (error) {
       console.error('Error deleting user:', error);
