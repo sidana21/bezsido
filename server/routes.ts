@@ -459,6 +459,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get unread messages count
+  app.get("/api/chats/unread-count", requireAuth, async (req: any, res) => {
+    try {
+      const chats = await storage.getUserChats(req.userId);
+      let totalUnreadCount = 0;
+      
+      for (const chat of chats) {
+        const messages = await storage.getChatMessages(chat.id);
+        const unreadCount = messages.filter(msg => 
+          !msg.isRead && msg.senderId !== req.userId
+        ).length;
+        totalUnreadCount += unreadCount;
+      }
+      
+      res.json({ unreadCount: totalUnreadCount });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get unread count" });
+    }
+  });
+
   // Create or get existing chat with another user
   app.post("/api/chats/start", requireAuth, async (req: any, res) => {
     try {

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { useFeatures } from "@/hooks/use-features";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export function BottomNavigation() {
   const [location] = useLocation();
@@ -14,6 +15,13 @@ export function BottomNavigation() {
     queryKey: ["/api/cart"],
   });
 
+  // استخدام نظام الإشعارات الجديد
+  const { unreadCount } = useNotifications({
+    enableSound: true,
+    enableBrowserNotifications: true,
+    soundVolume: 0.6
+  });
+
   const allNavItems = [
     {
       label: "المحدثات",
@@ -21,6 +29,7 @@ export function BottomNavigation() {
       href: "/",
       isActive: location === "/",
       featureId: "messaging",
+      badge: unreadCount > 0 ? unreadCount : undefined,
     },
     {
       label: "الحالات", 

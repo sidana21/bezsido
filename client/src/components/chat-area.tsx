@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { safeExecute } from "@/utils/error-handling";
 import { safeAddEventListener, createSafeCleanup } from "@/utils/dom-cleanup";
 import { safeStopMediaStream, safeInitMicrophone, safeCreateMediaRecorder, createRecordingTimer } from "@/utils/audio-recording";
+import { useNotifications } from "@/hooks/use-notifications";
 
 interface ChatAreaProps {
   chatId: string | null;
@@ -38,7 +39,6 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
   const startPositionRef = useRef<{ x: number; y: number } | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -90,6 +90,8 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       console.log("تحديث قائمة الرسائل...");
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      // تحديث عدد الرسائل غير المقروءة
+      refreshUnreadCount();
       setMessageText("");
       setReplyingTo(null);
     },
@@ -122,37 +124,34 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     },
   });
 
-  // إعداد الصوت للتنبيه
-  useEffect(() => {
-    // إنشاء صوت التنبيه (بسيط للغاية)
-    notificationSoundRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjibzvPfiTcIG2m98OScTQwNUarm7blsGws5n9P1vmocBjiAyfTakTsIGGm98OScTQwNUarm7bhkHA=');
-    notificationSoundRef.current.volume = 0.5;
-  }, []);
+  // استخدام نظام الإشعارات الجديد
+  const { refreshUnreadCount } = useNotifications({
+    enableSound: true,
+    enableBrowserNotifications: true,
+    soundVolume: 0.7
+  });
 
-  // تشغيل صوت التنبيه عند استلام رسائل جديدة غير مقروءة
-  useEffect(() => {
-    if (isSuccess && messages.length > 0) {
-      const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== (currentUser as any)?.id);
-      if (unreadMessages.length > 0) {
-        // تشغيل صوت التنبيه
-        notificationSoundRef.current?.play().catch(err => console.log('Cannot play notification sound:', err));
-      }
-    }
-  }, [messages, isSuccess, currentUser]);
 
   // تمييز الرسائل كمقروءة عند دخول المحادثة
   useEffect(() => {
     if (chatId && messages.length > 0 && currentUser) {
       const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== (currentUser as any)?.id);
-      unreadMessages.forEach(message => {
-        // استدعاء API لتمييز الرسالة كمقروءة
-        fetch(`/api/messages/${message.id}/read`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' }
-        }).catch(err => console.log('Failed to mark message as read:', err));
-      });
+      if (unreadMessages.length > 0) {
+        unreadMessages.forEach(message => {
+          // استدعاء API لتمييز الرسالة كمقروءة
+          fetch(`/api/messages/${message.id}/read`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' }
+          }).catch(err => console.log('Failed to mark message as read:', err));
+        });
+        
+        // تحديث عدد الرسائل غير المقروءة بعد قراءة الرسائل
+        setTimeout(() => {
+          refreshUnreadCount();
+        }, 500);
+      }
     }
-  }, [chatId, messages, currentUser]);
+  }, [chatId, messages, currentUser, refreshUnreadCount]);
 
   // Initialize microphone stream (cached for better performance)
   const initMicrophone = async () => {
@@ -357,6 +356,8 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       console.log('Audio message sent successfully');
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      // تحديث عدد الرسائل غير المقروءة
+      refreshUnreadCount();
       setReplyingTo(null);
     } catch (error) {
       console.error('Error sending audio message:', error);
@@ -391,6 +392,8 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       console.log("تم إرسال الملصق بنجاح:", result);
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      // تحديث عدد الرسائل غير المقروءة
+      refreshUnreadCount();
       setReplyingTo(null);
       setShowStickers(false);
     } catch (error) {
