@@ -2904,10 +2904,11 @@ export class DatabaseStorage implements IStorage {
       // 1. Delete sessions first (they reference user_id)
       await db.delete(sessions).where(eq(sessions.userId, userId));
       
-      // 2. Delete OTP codes
-      await db.delete(otpCodes).where(eq(otpCodes.phoneNumber, 
-        (await db.select({ phoneNumber: users.phoneNumber }).from(users).where(eq(users.id, userId)).limit(1))[0]?.phoneNumber || ''
-      ));
+      // 2. Delete OTP codes - get user phone first
+      const userInfo = await db.select({ phoneNumber: users.phoneNumber }).from(users).where(eq(users.id, userId)).limit(1);
+      if (userInfo.length > 0) {
+        await db.delete(otpCodes).where(eq(otpCodes.phoneNumber, userInfo[0].phoneNumber));
+      }
       
       // 3. Delete user's messages
       await db.delete(messages).where(eq(messages.userId, userId));

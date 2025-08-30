@@ -490,6 +490,7 @@ import { createServer } from "http";
 // server/storage.ts
 init_schema();
 import { randomUUID } from "crypto";
+import { sql as sql2 } from "drizzle-orm";
 import { eq } from "drizzle-orm";
 var db2 = null;
 var MemStorage = class {
@@ -2898,6 +2899,32 @@ var DatabaseStorage = class {
       if (!db2) {
         const dbModule = await Promise.resolve().then(() => (init_db(), db_exports));
         db2 = dbModule.db;
+      }
+      await db2.delete(sessions).where(eq(sessions.userId, userId));
+      const userInfo = await db2.select({ phoneNumber: users.phoneNumber }).from(users).where(eq(users.id, userId)).limit(1);
+      if (userInfo.length > 0) {
+        await db2.delete(otpCodes).where(eq(otpCodes.phoneNumber, userInfo[0].phoneNumber));
+      }
+      await db2.delete(messages).where(eq(messages.userId, userId));
+      const userChats = await db2.select().from(chats).where(
+        sql2`JSON_ARRAY_LENGTH(${chats.participants}) = 1 AND JSON_EXTRACT(${chats.participants}, '$[0]') = ${userId}`
+      );
+      for (const chat of userChats) {
+        await db2.delete(chats).where(eq(chats.id, chat.id));
+      }
+      const groupChats = await db2.select().from(chats).where(
+        sql2`JSON_SEARCH(${chats.participants}, 'one', ${userId}) IS NOT NULL`
+      );
+      for (const chat of groupChats) {
+        const participants = JSON.parse(chat.participants);
+        const updatedParticipants = participants.filter((p) => p !== userId);
+        if (updatedParticipants.length > 0) {
+          await db2.update(chats).set({
+            participants: JSON.stringify(updatedParticipants)
+          }).where(eq(chats.id, chat.id));
+        } else {
+          await db2.delete(chats).where(eq(chats.id, chat.id));
+        }
       }
       await db2.delete(users).where(eq(users.id, userId));
       return true;
