@@ -167,6 +167,7 @@ export interface IStorage {
   getAllVerificationRequests(status?: string): Promise<VerificationRequest[]>;
   updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined>;
   updateUserVerificationStatus(userId: string, isVerified: boolean): Promise<User | undefined>;
+  deleteUser(userId: string): Promise<boolean>;
   getAllStores(): Promise<Store[]>;
   updateStoreStatus(storeId: string, status: string, adminId?: string, rejectionReason?: string): Promise<Store | undefined>;
   getAllOrders(): Promise<Order[]>;
@@ -2792,7 +2793,20 @@ export class MemStorage implements IStorage {
         });
       } else {
         // No database available, use memory fallback
-        throw new Error('Database not available');
+        console.log('ℹ️ No database available, initializing features in memory');
+        // Fallback to memory storage
+        defaultFeatures.forEach(feature => {
+          const fullFeature: AppFeature = {
+            ...feature,
+            category: feature.category || "general",
+            isEnabled: feature.isEnabled ?? true,
+            priority: feature.priority ?? 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+          this.features.set(feature.id, fullFeature);
+        });
+        return;
       }
       
     } catch (error) {
@@ -2911,7 +2925,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       // 3. Delete user's messages
-      await db.delete(messages).where(eq(messages.userId, userId));
+      await db.delete(messages).where(eq(messages.senderId, userId));
       
       // 4. Delete user's chats (where they are the only participant)
       const userChats = await db.select().from(chats).where(
@@ -3358,7 +3372,34 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use DatabaseStorage if DATABASE_URL is available, otherwise fallback to MemStorage
-export const storage = process.env.DATABASE_URL 
-  ? new DatabaseStorage() 
-  : new MemStorage();
+// Initialize storage with proper error handling
+let storage: IStorage;
+
+async function initializeStorage(): Promise<IStorage> {
+  if (process.env.DATABASE_URL) {
+    try {
+      const dbModule = await import('./db');
+      if (dbModule.db) {
+        console.log('✅ Using database storage');
+        return new DatabaseStorage();
+      }
+    } catch (error) {
+      console.warn('⚠️ Database connection failed, falling back to memory storage:', error);
+    }
+  }
+  
+  console.log('ℹ️ Using in-memory storage');
+  return new MemStorage();
+}
+
+// Initialize storage instance
+storage = new MemStorage(); // Default fallback
+
+// Try to initialize database storage async
+initializeStorage().then(storageInstance => {
+  storage = storageInstance;
+}).catch(error => {
+  console.error('Storage initialization error:', error);
+});
+
+export { storage };
