@@ -212,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user) {
         if (!name || !location) {
-          return res.status(400).json({ message: "Name and location are required for new users" });
+          return res.status(400).json({ message: "Name and location are required" });
         }
         
         const userData = insertUserSchema.parse({
