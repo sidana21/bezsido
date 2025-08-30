@@ -195,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/auth/verify-otp", async (req, res) => {
     try {
-      const { phoneNumber, code, name, location } = req.body;
+      const { phoneNumber, code } = req.body;
       
       if (!phoneNumber || !code) {
         return res.status(400).json({ message: "Phone number and code are required" });
@@ -207,46 +207,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid or expired OTP" });
       }
       
-      // Find or create user
+      // Check if user exists
       let user = await storage.getUserByPhoneNumber(phoneNumber);
       
       if (!user) {
-        if (!name || !location) {
-          return res.status(400).json({ message: "Name and location are required" });
-        }
+        // OTP is valid but user doesn't exist - need profile setup
+        return res.status(400).json({ message: "Name and location are required" });
+      } else {
+        // Existing user - update online status and create session
+        await storage.updateUserOnlineStatus(user.id, true);
         
-        const userData = insertUserSchema.parse({
-          phoneNumber,
-          name,
-          location,
-          avatar: null,
-          isOnline: true,
-          isAdmin: process.env.NODE_ENV === 'development', // Make users admin in development
+        // Create session
+        const token = randomUUID();
+        const sessionData = insertSessionSchema.parse({
+          userId: user.id,
+          token,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         });
         
-        user = await storage.createUser(userData);
-      } else {
-        // Update online status
-        await storage.updateUserOnlineStatus(user.id, true);
+        await storage.createSession(sessionData);
+        
+        res.json({ 
+          success: true, 
+          user, 
+          token,
+          message: "Authentication successful" 
+        });
       }
-      
-      // Create session
-      const token = randomUUID();
-      const sessionData = insertSessionSchema.parse({
-        userId: user.id,
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      });
-      
-      await storage.createSession(sessionData);
-      
-      res.json({ 
-        success: true, 
-        user, 
-        token,
-        message: "Authentication successful" 
-      });
     } catch (error) {
+      console.error('OTP verification error:', error);
       res.status(500).json({ message: "Failed to verify OTP" });
     }
   });
@@ -296,6 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "User created successfully" 
       });
     } catch (error) {
+      console.error('User creation error:', error);
       res.status(500).json({ message: "Failed to create user" });
     }
   });
