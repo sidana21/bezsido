@@ -1399,7 +1399,7 @@ export class MemStorage implements IStorage {
       isOnline: insertUser.isOnline ?? false,
       isVerified: false, // New users start unverified
       verifiedAt: null,  // No verification date until verified
-      isAdmin: false, // New users start as non-admin
+      isAdmin: insertUser.isAdmin ?? false, // Use provided isAdmin value or default to false
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
