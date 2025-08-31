@@ -41,7 +41,7 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -3237,7 +3237,15 @@ export class DatabaseStorage implements IStorage {
   async getStores(location?: string, category?: string): Promise<(Store & { owner: User })[]> { return []; }
   async getStore(id: string): Promise<Store | undefined> { return undefined; }
   async getUserStore(userId: string): Promise<Store | undefined> { return undefined; }
-  async createStore(store: InsertStore): Promise<Store> { throw new Error('Not implemented'); }
+  async createStore(store: InsertStore): Promise<Store> {
+    try {
+      const [created] = await db.insert(stores).values(store).returning();
+      return created;
+    } catch (error) {
+      console.error('Error creating store:', error);
+      throw error;
+    }
+  }
   async updateStore(id: string, store: Partial<InsertStore>): Promise<Store | undefined> { return undefined; }
   async deleteStore(id: string): Promise<boolean> { return false; }
 
