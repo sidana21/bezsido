@@ -361,18 +361,24 @@ export default function LoginPage() {
                 </InputOTP>
               </div>
 
-              {process.env.NODE_ENV === 'development' && lastGeneratedOtp && (
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    الرمز الحالي من السجلات: <strong>{lastGeneratedOtp}</strong>
+              {lastGeneratedOtp && (
+                <div className="text-center p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <p className="text-lg font-bold text-green-800">
+                      رمز التحقق: <span className="text-2xl font-mono">{lastGeneratedOtp}</span>
+                    </p>
+                  </div>
+                  <p className="text-sm text-green-600 mb-2">
+                    استخدم هذا الرمز للتحقق من هاتفك
                   </p>
                   <Button 
                     variant="outline" 
                     onClick={() => setOtp(lastGeneratedOtp)}
-                    className="text-sm"
+                    className="text-sm bg-green-100 hover:bg-green-200 border-green-300"
                     data-testid="button-auto-fill"
                   >
-                    ملء تلقائي
+                    📝 ملء تلقائي
                   </Button>
                 </div>
               )}

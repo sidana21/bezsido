@@ -179,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       (global as any).lastOtp = { phoneNumber, code, timestamp: Date.now() };
       
       // Return OTP in response for testing (remove when SMS service is added)
-      const shouldShowOTP = !process.env.SMS_SERVICE_ENABLED;
+      const shouldShowOTP = !process.env.SMS_SERVICE_ENABLED || process.env.NODE_ENV === 'development';
       
       res.json({ 
         success: true, 
@@ -382,7 +382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Development endpoint to get last OTP
   app.get("/api/dev/last-otp", (req, res) => {
-    if (process.env.NODE_ENV !== 'development') {
+    if (process.env.NODE_ENV && process.env.NODE_ENV !== 'development') {
       return res.status(404).json({ message: "Not found" });
     }
     const lastOtp = (global as any).lastOtp;
