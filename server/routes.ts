@@ -249,18 +249,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { phoneNumber, name, location } = req.body;
       
-      console.log("Creating user with:", { phoneNumber, name, location });
+      console.log("📱 Creating user with:", { phoneNumber, name, location });
       
-      if (!phoneNumber || !name || !location) {
-        console.log("Missing required fields:", { phoneNumber: !!phoneNumber, name: !!name, location: !!location });
-        return res.status(400).json({ message: "Phone number, name and location are required" });
+      // Validate input data
+      if (!phoneNumber || typeof phoneNumber !== 'string' || !phoneNumber.trim()) {
+        console.log("❌ Missing or invalid phone number:", phoneNumber);
+        return res.status(400).json({ 
+          success: false,
+          message: "رقم الهاتف مطلوب وصالح" 
+        });
       }
       
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        console.log("❌ Missing or invalid name:", name);
+        return res.status(400).json({ 
+          success: false,
+          message: "الاسم مطلوب" 
+        });
+      }
+      
+      if (!location || typeof location !== 'string' || !location.trim()) {
+        console.log("❌ Missing or invalid location:", location);
+        return res.status(400).json({ 
+          success: false,
+          message: "المنطقة مطلوبة" 
+        });
+      }
+      
+      const cleanPhoneNumber = phoneNumber.trim();
+      const cleanName = name.trim();
+      const cleanLocation = location.trim();
+      
       // Check if user already exists
-      let user = await storage.getUserByPhoneNumber(phoneNumber);
+      let user = await storage.getUserByPhoneNumber(cleanPhoneNumber);
       
       if (user) {
-        console.log("User already exists, logging them in:", user.id);
+        console.log("👤 User already exists, logging them in:", user.id);
         
         // User exists, so log them in instead
         await storage.updateUserOnlineStatus(user.id, true);
@@ -275,28 +299,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         await storage.createSession(sessionData);
         
+        console.log("✅ Existing user logged in successfully:", user.id);
         return res.json({ 
           success: true, 
           user, 
           token,
-          message: "تم تسجيل الدخول بنجاح - الحساب موجود مسبقاً" 
+          message: "مرحباً بعودتك! تم تسجيل الدخول بنجاح" 
         });
       }
       
-      // Create user
-      const userData = insertUserSchema.parse({
-        phoneNumber: phoneNumber.trim(),
-        name: name.trim(),
-        location: location.trim(),
+      // Create new user
+      const userData = {
+        phoneNumber: cleanPhoneNumber,
+        name: cleanName,
+        location: cleanLocation,
         avatar: null,
         isOnline: true,
         isAdmin: process.env.NODE_ENV === 'development', // Make users admin in development
-      });
+      };
       
-      console.log("Creating user with parsed data:", userData);
+      console.log("📋 Creating new user with parsed data:", userData);
       
-      user = await storage.createUser(userData);
-      console.log("User created successfully:", user.id);
+      // Validate with schema
+      const validatedUserData = insertUserSchema.parse(userData);
+      
+      user = await storage.createUser(validatedUserData);
+      console.log("✅ User created successfully:", user.id);
       
       // Create session
       const token = randomUUID();
@@ -307,26 +335,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       await storage.createSession(sessionData);
-      console.log("Session created for user:", user.id);
+      console.log("🔑 Session created for new user:", user.id);
       
       res.json({ 
         success: true, 
         user, 
         token,
-        message: "تم إنشاء الحساب بنجاح" 
+        message: "تم إنشاء حسابك بنجاح! مرحباً بك في BizChat" 
       });
     } catch (error: any) {
-      console.error('User creation error:', error);
+      console.error('❌ User creation error details:', {
+        error: error.message,
+        stack: error.stack,
+        code: error.code,
+        constraint: error.constraint,
+        phoneNumber: req.body?.phoneNumber
+      });
       
       // Handle specific database errors
-      if (error.code === '23505' && error.constraint?.includes('phone_number')) {
+      if (error.code === '23505') {
+        if (error.constraint?.includes('phone_number') || error.constraint?.includes('phoneNumber')) {
+          return res.status(400).json({ 
+            success: false,
+            message: "رقم الهاتف مستخدم بالفعل" 
+          });
+        }
+      }
+      
+      // Handle validation errors
+      if (error.name === 'ZodError') {
         return res.status(400).json({ 
-          message: "رقم الهاتف مستخدم بالفعل" 
+          success: false,
+          message: "البيانات المدخلة غير صحيحة",
+          error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
       }
       
+      // Generic error response
       res.status(500).json({ 
-        message: "فشل في إنشاء الحساب",
+        success: false,
+        message: "حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة مرة أخرى",
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }

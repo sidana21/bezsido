@@ -167,16 +167,7 @@ export default function LoginPage() {
     if (!name.trim() || !location) {
       toast({
         title: "خطأ",
-        description: "يرجى إكمال جميع البيانات",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!otpVerified) {
-      toast({
-        title: "خطأ",
-        description: "يجب التحقق من رمز OTP أولاً",
+        description: "يرجى إكمال جميع البيانات المطلوبة",
         variant: "destructive",
       });
       return;
@@ -185,9 +176,10 @@ export default function LoginPage() {
     if (!fullPhoneNumber) {
       toast({
         title: "خطأ",
-        description: "رقم الهاتف مطلوب",
+        description: "رقم الهاتف مطلوب - يرجى البدء من جديد",
         variant: "destructive",
       });
+      setStep("phone");
       return;
     }
 
@@ -196,7 +188,8 @@ export default function LoginPage() {
       console.log("Creating user with data:", { 
         phoneNumber: fullPhoneNumber, 
         name: name.trim(),
-        location
+        location,
+        otpVerified
       });
 
       const response = await apiRequest("/api/auth/create-user", {
@@ -211,20 +204,39 @@ export default function LoginPage() {
 
       console.log("User creation response:", response);
 
-      if (response.success && response.user && response.token) {
+      if (response && response.success && response.user && response.token) {
         login(response.user, response.token);
         toast({
-          title: "مرحباً " + response.user.name + "!",
-          description: response.message || "تم تسجيل الدخول بنجاح",
+          title: "مرحباً " + response.user.name + "! 🎉",
+          description: response.message || "تم إنشاء حسابك وتسجيل دخولك بنجاح",
         });
       } else {
-        throw new Error("Invalid response from server");
+        console.error("Invalid server response:", response);
+        throw new Error(response?.message || "استجابة غير صالحة من الخادم");
       }
     } catch (error: any) {
-      console.error("User creation error:", error);
+      console.error("User creation error details:", {
+        error,
+        message: error.message,
+        status: error.status,
+        phoneNumber: fullPhoneNumber,
+        name: name.trim(),
+        location
+      });
+      
+      let errorMessage = "فشل في إنشاء الحساب";
+      
+      if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      } else if (error.status === 400) {
+        errorMessage = "بيانات غير صحيحة - يرجى المحاولة مرة أخرى";
+      } else if (error.status === 500) {
+        errorMessage = "خطأ في الخادم - يرجى المحاولة لاحقاً";
+      }
+      
       toast({
-        title: "خطأ",
-        description: error.message || "فشل في إنشاء الحساب",
+        title: "خطأ في إنشاء الحساب",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
