@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { MessageCircle, Shield } from "lucide-react";
+import { MessageCircle, Shield, KeyRound } from "lucide-react";
 
 const countries = [
   { code: "+213", name: "Algeria", flag: "🇩🇿" },
@@ -24,8 +24,11 @@ export default function LoginPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [name, setName] = useState("");
   const [location, setLocation] = useState("الجزائر");
+  const [otpCode, setOtpCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState("");
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -33,7 +36,7 @@ export default function LoginPage() {
     "تندوف", "الجزائر", "وهران", "قسنطينة", "عنابة", "سطيف", "باتنة", "تيزي وزو", "بجاية", "مستغانم"
   ];
 
-  const handleLogin = async () => {
+  const handleSendOTP = async () => {
     if (!phoneNumber.trim()) {
       toast({
         title: "خطأ",
@@ -47,67 +50,83 @@ export default function LoginPage() {
     const fullPhone = countryCode + phoneNumber.trim();
 
     try {
-      // محاولة تسجيل الدخول المباشر أولاً
-      const response = await apiRequest("/api/auth/direct-login", {
+      const response = await apiRequest("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phoneNumber: fullPhone }),
       });
 
-      if (response.success && response.user && response.token) {
-        // مستخدم موجود - تسجيل دخول مباشر
-        login(response.user, response.token);
-        toast({
-          title: "مرحباً " + response.user.name + "!",
-          description: "تم تسجيل الدخول بنجاح",
-        });
-      } else if (response.needsProfile) {
-        // مستخدم جديد - عرض نموذج الملف الشخصي
-        console.log("New user needs profile, showing form");
-        setShowProfile(true);
-        toast({
-          title: "مستخدم جديد",
-          description: "يرجى إكمال بياناتك الشخصية",
-        });
-      }
-    } catch (error: any) {
-      console.log("Login error:", error);
-      
-      // التحقق من كون المستخدم جديد بناءً على رسالة الخطأ
-      try {
-        const errorData = JSON.parse(error.message.split(': ')[1] || '{}');
-        if (errorData.needsProfile || errorData.message?.includes("مستخدم جديد")) {
-          console.log("New user detected from error response");
-          setShowProfile(true);
-          toast({
-            title: "مستخدم جديد",
-            description: "يرجى إكمال بياناتك الشخصية",
-          });
-          return;
+      if (response.success) {
+        setShowOtpInput(true);
+        if (response.code) {
+          setGeneratedOtp(response.code);
         }
-      } catch {
-        // إذا فشل parsing، تحقق من النص المباشر
-      }
-      
-      // التحقق من كون المستخدم جديد
-      if (error.message.includes("404") || 
-          error.message.includes("needsProfile") || 
-          error.message.includes("مستخدم جديد") ||
-          (error.status && error.status === 404)) {
-        // مستخدم جديد - عرض نموذج الملف الشخصي
-        console.log("New user detected, showing profile form");
-        setShowProfile(true);
         toast({
-          title: "مستخدم جديد",
-          description: "يرجى إكمال بياناتك الشخصية",
+          title: "تم إرسال رمز التحقق",
+          description: response.message || "يرجى إدخال رمز التحقق المرسل",
         });
       } else {
-        toast({
-          title: "خطأ",
-          description: error.message || "فشل في تسجيل الدخول",
-          variant: "destructive",
-        });
+        throw new Error(response.message || "فشل في إرسال رمز التحقق");
       }
+    } catch (error: any) {
+      console.error("OTP sending error:", error);
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في إرسال رمز التحقق",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otpCode.trim() || otpCode.length !== 6) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال رمز التحقق (6 أرقام)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const fullPhone = countryCode + phoneNumber.trim();
+
+    try {
+      const response = await apiRequest("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: fullPhone, code: otpCode }),
+      });
+
+      if (response.success) {
+        if (response.needsProfile) {
+          // مستخدم جديد - عرض نموذج الملف الشخصي
+          setShowProfile(true);
+          setShowOtpInput(false);
+          toast({
+            title: "تم التحقق بنجاح",
+            description: "يرجى إكمال بياناتك الشخصية",
+          });
+        } else if (response.user && response.token) {
+          // مستخدم موجود - تسجيل دخول
+          login(response.user, response.token);
+          toast({
+            title: "مرحباً " + response.user.name + "!",
+            description: "تم تسجيل الدخول بنجاح",
+          });
+        }
+      } else {
+        throw new Error(response.message || "فشل في التحقق من الرمز");
+      }
+    } catch (error: any) {
+      console.error("OTP verification error:", error);
+      toast({
+        title: "خطأ",
+        description: error.message || "رمز التحقق غير صحيح أو منتهي الصلاحية",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -138,79 +157,119 @@ export default function LoginPage() {
     try {
       console.log("Creating account with data:", { phoneNumber: fullPhone, name: name.trim(), location });
       
-      // إضافة مهلة زمنية أطول لإنشاء الحساب
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 ثانية
-      
-      const response = await fetch("/api/auth/create-user", {
+      const response = await apiRequest("/api/auth/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           phoneNumber: fullPhone,
           name: name.trim(),
           location
-        }),
-        signal: controller.signal
+        })
       });
-      
-      clearTimeout(timeoutId);
 
-      console.log("Account creation HTTP status:", response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Account creation HTTP error:", response.status, errorText);
-        
-        let errorMessage = `خطأ في الشبكة: ${response.status}`;
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          // If parsing fails, use the raw text or default message
-          if (errorText && errorText.trim()) {
-            errorMessage = errorText;
-          }
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      const responseData = await response.json();
-      console.log("Account creation response:", responseData);
-
-      if (responseData.success && responseData.user && responseData.token) {
+      if (response.success && response.user && response.token) {
         console.log("Account created successfully, logging in user");
-        login(responseData.user, responseData.token);
-        setShowProfile(false); // إخفاء نموذج الملف الشخصي
+        login(response.user, response.token);
+        setShowProfile(false);
+        setShowOtpInput(false);
         toast({
-          title: "مرحباً " + responseData.user.name + "! 🎉",
+          title: "مرحباً " + response.user.name + "! 🎉",
           description: "تم إنشاء حسابك وتسجيل دخولك بنجاح",
         });
       } else {
-        console.error("Account creation failed:", responseData);
-        throw new Error(responseData?.message || "فشل في إنشاء الحساب");
+        console.error("Account creation failed:", response);
+        throw new Error(response?.message || "فشل في إنشاء الحساب");
       }
     } catch (error: any) {
       console.error("Account creation error:", error);
-      
-      let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
-      
-      if (error.name === 'AbortError') {
-        errorMessage = "انتهت المهلة الزمنية، يرجى المحاولة مرة أخرى";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
       toast({
         title: "خطأ في إنشاء الحساب",
-        description: errorMessage,
+        description: error.message || "حدث خطأ أثناء إنشاء الحساب",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // شاشة إدخال رمز التحقق
+  if (showOtpInput) {
+    return (
+      <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4">
+              <KeyRound className="w-10 h-10 text-[#075e54]" />
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">رمز التحقق</h1>
+            <p className="text-green-100 text-sm">
+              أدخل رمز التحقق المرسل إليك
+            </p>
+          </div>
+
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="text-center pb-4">
+              <CardTitle className="text-lg font-semibold">التحقق من الهاتف</CardTitle>
+              <CardDescription>
+                رمز التحقق مكون من 6 أرقام
+                {generatedOtp && (
+                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-green-800 font-mono text-lg">
+                      {generatedOtp}
+                    </p>
+                    <p className="text-green-600 text-xs mt-1">
+                      (اكتب هذا الرمز في الحقل أدناه)
+                    </p>
+                  </div>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp">رمز التحقق</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').substring(0, 6))}
+                  placeholder="123456"
+                  className="text-center text-xl font-mono tracking-widest"
+                  maxLength={6}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && otpCode.length === 6) {
+                      handleVerifyOTP();
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <Button 
+                  onClick={handleVerifyOTP} 
+                  className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white"
+                  disabled={isLoading || otpCode.length !== 6}
+                >
+                  {isLoading ? "جارِ التحقق..." : "تحقق من الرمز"}
+                </Button>
+
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setShowOtpInput(false);
+                    setOtpCode("");
+                    setGeneratedOtp("");
+                  }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground"
+                >
+                  العودة لإدخال رقم الهاتف
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   if (showProfile) {
     return (
@@ -302,7 +361,7 @@ export default function LoginPage() {
         <Card className="border-0 shadow-lg" data-testid="card-phone-login">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl font-semibold">تسجيل الدخول</CardTitle>
-            <CardDescription>أدخل رقم هاتفك للدخول مباشرة إلى التطبيق</CardDescription>
+            <CardDescription>أدخل رقم هاتفك وسنرسل لك رمز التحقق</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -341,28 +400,28 @@ export default function LoginPage() {
                   data-testid="input-phone-number"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && phoneNumber.trim()) {
-                      handleLogin();
+                      handleSendOTP();
                     }
                   }}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                لا نحتاج رموز تحقق - ادخل رقمك واضغط دخول فقط
+                سيتم إرسال رمز التحقق وعرضه على الشاشة للأمان
               </p>
             </div>
 
             <Button 
-              onClick={handleLogin} 
+              onClick={handleSendOTP} 
               className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white text-lg py-3"
               disabled={isLoading || !phoneNumber.trim()}
               data-testid="button-login"
             >
-              {isLoading ? "جارِ الدخول..." : "دخول إلى التطبيق"}
+              {isLoading ? "جارِ الإرسال..." : "إرسال رمز التحقق"}
             </Button>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-6">
               <Shield className="w-4 h-4" />
-              <span>محمي بتشفير تام - دخول بدون رموز تحقق</span>
+              <span>محمي بتشفير تام - التحقق برمز آمن</span>
             </div>
           </CardContent>
         </Card>
