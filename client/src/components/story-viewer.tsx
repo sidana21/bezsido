@@ -160,6 +160,18 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
     setIsPlaying(true);
   }, [storyId]);
 
+  // Handle video play/pause when isPlaying state changes
+  useEffect(() => {
+    const video = document.querySelector('[data-testid="story-video"]') as HTMLVideoElement;
+    if (video) {
+      if (isPlaying) {
+        video.play().catch(console.error);
+      } else {
+        video.pause();
+      }
+    }
+  }, [isPlaying]);
+
   const formatTimeAgo = (date: Date | null) => {
     if (!date) return '';
     
@@ -269,7 +281,26 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
           }}
           onClick={() => setIsPlaying(!isPlaying)}
         >
-          {story.imageUrl ? (
+          {story.videoUrl ? (
+            <video 
+              src={story.videoUrl} 
+              className="w-full h-full object-cover"
+              autoPlay={isPlaying}
+              loop
+              muted
+              playsInline
+              data-testid="story-video"
+              onLoadedData={(e) => {
+                // Ensure video plays/pauses based on isPlaying state
+                const video = e.target as HTMLVideoElement;
+                if (isPlaying) {
+                  video.play().catch(console.error);
+                } else {
+                  video.pause();
+                }
+              }}
+            />
+          ) : story.imageUrl ? (
             <img 
               src={story.imageUrl} 
               alt="Story" 
