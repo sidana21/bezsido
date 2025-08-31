@@ -117,7 +117,6 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      // First, just verify the OTP without name and location
       const response = await apiRequest("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,15 +126,7 @@ export default function LoginPage() {
         }),
       });
 
-      if (response.user && response.token) {
-        login(response.user, response.token);
-        toast({
-          title: "مرحباً!",
-          description: "تم تسجيل الدخول بنجاح",
-        });
-      }
-    } catch (error: any) {
-      if (error.message?.includes("Name and location are required")) {
+      if (response.needsProfile) {
         // OTP verified but new user needs profile setup
         setOtpVerified(true);
         toast({
@@ -143,13 +134,20 @@ export default function LoginPage() {
           description: "يرجى إكمال بياناتك الشخصية",
         });
         setNeedsProfile(true);
-      } else {
+      } else if (response.user && response.token) {
+        // Existing user login successful
+        login(response.user, response.token);
         toast({
-          title: "خطأ",
-          description: error.message || "رمز التحقق غير صحيح",
-          variant: "destructive",
+          title: "مرحباً!",
+          description: "تم تسجيل الدخول بنجاح",
         });
       }
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: error.message || "رمز التحقق غير صحيح",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -184,8 +182,23 @@ export default function LoginPage() {
       return;
     }
 
+    if (!fullPhoneNumber) {
+      toast({
+        title: "خطأ",
+        description: "رقم الهاتف مطلوب",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
+      console.log("Creating user with data:", { 
+        phoneNumber: fullPhoneNumber, 
+        name: name.trim(),
+        location
+      });
+
       const response = await apiRequest("/api/auth/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -196,12 +209,19 @@ export default function LoginPage() {
         }),
       });
 
-      login(response.user, response.token);
-      toast({
-        title: "مرحباً!",
-        description: "تم إنشاء حسابك بنجاح",
-      });
+      console.log("User creation response:", response);
+
+      if (response.success && response.user && response.token) {
+        login(response.user, response.token);
+        toast({
+          title: "مرحباً " + response.user.name + "!",
+          description: "تم إنشاء حسابك بنجاح",
+        });
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (error: any) {
+      console.error("User creation error:", error);
       toast({
         title: "خطأ",
         description: error.message || "فشل في إنشاء الحساب",

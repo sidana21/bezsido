@@ -212,7 +212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user) {
         // OTP is valid but user doesn't exist - need profile setup
-        return res.status(400).json({ message: "Name and location are required" });
+        return res.json({ 
+          success: true, 
+          needsProfile: true,
+          message: "OTP verified successfully. Please complete your profile." 
+        });
       } else {
         // Existing user - update online status and create session
         await storage.updateUserOnlineStatus(user.id, true);
@@ -245,7 +249,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { phoneNumber, name, location } = req.body;
       
+      console.log("Creating user with:", { phoneNumber, name, location });
+      
       if (!phoneNumber || !name || !location) {
+        console.log("Missing required fields:", { phoneNumber: !!phoneNumber, name: !!name, location: !!location });
         return res.status(400).json({ message: "Phone number, name and location are required" });
       }
       
@@ -253,20 +260,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByPhoneNumber(phoneNumber);
       
       if (user) {
+        console.log("User already exists:", user.id);
         return res.status(400).json({ message: "User already exists" });
       }
       
       // Create user
       const userData = insertUserSchema.parse({
-        phoneNumber,
-        name,
-        location,
+        phoneNumber: phoneNumber.trim(),
+        name: name.trim(),
+        location: location.trim(),
         avatar: null,
         isOnline: true,
         isAdmin: process.env.NODE_ENV === 'development', // Make users admin in development
       });
       
+      console.log("Creating user with parsed data:", userData);
+      
       user = await storage.createUser(userData);
+      console.log("User created successfully:", user.id);
       
       // Create session
       const token = randomUUID();
@@ -277,6 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       await storage.createSession(sessionData);
+      console.log("Session created for user:", user.id);
       
       res.json({ 
         success: true, 
@@ -284,9 +296,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         token,
         message: "User created successfully" 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('User creation error:', error);
-      res.status(500).json({ message: "Failed to create user" });
+      res.status(500).json({ 
+        message: "Failed to create user",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
