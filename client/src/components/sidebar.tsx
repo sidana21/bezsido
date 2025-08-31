@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
 import { useTheme } from "@/components/theme-provider";
+import appIconUrl from '@/assets/app-icon.png';
 import { StoriesRing } from "./stories-ring";
 import { StoryViewer } from "./story-viewer";
 import { CreateStoryModal } from "./create-story-modal";
@@ -194,13 +195,16 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
     <div className="w-full sm:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
       {/* Header */}
       <div className="bg-[var(--whatsapp-secondary)] dark:bg-gray-700 p-4 flex items-center justify-between">
-        <Avatar className="w-10 h-10 border-2 border-white" data-testid="user-avatar">
-          <AvatarImage 
-            src={currentUser?.avatar} 
-            alt={currentUser?.name || "المستخدم"} 
-          />
-          <AvatarFallback>{currentUser?.name?.[0] || "أ"}</AvatarFallback>
-        </Avatar>
+        <div className="flex items-center gap-3">
+          <img src={appIconUrl} alt="BizChat" className="w-8 h-8 object-contain bg-white rounded-full p-1" />
+          <Avatar className="w-10 h-10 border-2 border-white" data-testid="user-avatar">
+            <AvatarImage 
+              src={currentUser?.avatar} 
+              alt={currentUser?.name || "المستخدم"} 
+            />
+            <AvatarFallback>{currentUser?.name?.[0] || "أ"}</AvatarFallback>
+          </Avatar>
+        </div>
         
         <div className="flex items-center space-x-3 space-x-reverse">
           <Button
