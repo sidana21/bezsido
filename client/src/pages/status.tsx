@@ -395,28 +395,31 @@ export default function Status() {
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/50 to-transparent">
+      {/* Header - Enhanced */}
+      <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/70 via-black/40 to-transparent backdrop-blur-sm">
         <div className="flex items-center justify-between p-4 pt-12">
           <Link href="/">
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/20 w-10 h-10 rounded-full"
+              className="text-white hover:bg-white/20 w-12 h-12 rounded-full backdrop-blur-sm border border-white/10 shadow-lg transition-all duration-300 transform hover:scale-110 active:scale-95"
               data-testid="button-back"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-6 h-6 drop-shadow-sm" />
             </Button>
           </Link>
-          <h1 className="text-white text-lg font-semibold">الحالات</h1>
+          <div className="text-center">
+            <h1 className="text-white text-xl font-bold drop-shadow-lg bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">الحالات</h1>
+            <div className="w-16 h-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full mx-auto mt-1 animate-pulse"></div>
+          </div>
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/20 w-10 h-10 rounded-full"
+            className="text-white hover:bg-gradient-to-br hover:from-emerald-500/20 hover:to-green-600/20 w-12 h-12 rounded-full backdrop-blur-sm border border-white/10 shadow-lg transition-all duration-300 transform hover:scale-110 active:scale-95 hover:rotate-90"
             data-testid="button-add-status"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-6 h-6 drop-shadow-sm" />
           </Button>
         </div>
       </div>
@@ -432,6 +435,39 @@ export default function Status() {
           div::-webkit-scrollbar {
             display: none;
           }
+          
+          /* TikTok-style animations */
+          @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+          }
+          
+          @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.4), 0 0 40px rgba(255, 255, 255, 0.2); }
+          }
+          
+          @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+          }
+          
+          @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1) rotate(180deg); }
+          }
+          
+          @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          
+          .animate-float { animation: float 3s ease-in-out infinite; }
+          .animate-glow { animation: glow 2s ease-in-out infinite; }
+          .animate-heartbeat { animation: heartbeat 1.5s ease-in-out infinite; }
+          .animate-sparkle { animation: sparkle 1.5s ease-in-out infinite; }
+          .animate-gradient { animation: gradientShift 3s ease infinite; background-size: 200% 200%; }
         `}</style>
         
         {displayStories.map((story, index) => (
@@ -475,8 +511,9 @@ export default function Status() {
               </div>
             )}
 
-            {/* Dark overlay for better text visibility */}
-            <div className="absolute inset-0 bg-black/20" />
+            {/* Enhanced overlay with gradient effects */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
+            <div className="absolute inset-0 bg-gradient-radial from-transparent via-transparent to-black/20" />
 
             {/* Story content overlay */}
             {(story.imageUrl || story.videoUrl) && story.content && (
@@ -489,53 +526,79 @@ export default function Status() {
               </div>
             )}
 
-            {/* User Info */}
-            <div className="absolute bottom-20 left-4 flex items-center gap-3 z-10">
-              <Avatar className="w-12 h-12 border-2 border-white">
-                <AvatarImage src={story.user.avatar || undefined} />
-                <AvatarFallback className="bg-gray-600 text-white">
-                  {story.user.name[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div>
+            {/* User Info - Enhanced */}
+            <div className="absolute bottom-24 left-4 flex items-center gap-3 z-10">
+              <div className="relative">
+                {/* تأثير الهالة النابضة */}
+                {story.user.isOnline && (
+                  <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-30 scale-110" />
+                )}
+                <Avatar className="w-14 h-14 border-3 border-white shadow-xl ring-2 ring-white/20">
+                  <AvatarImage src={story.user.avatar || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg">
+                    {story.user.name[0]}
+                  </AvatarFallback>
+                </Avatar>
+                {/* مؤشر الاتصال المحسن */}
+                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-3 border-white shadow-lg transition-all duration-300 ${
+                  story.user.isOnline 
+                    ? 'bg-gradient-to-r from-green-400 to-emerald-500 animate-pulse' 
+                    : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                }`}>
+                  {story.user.isOnline && (
+                    <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-50" />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-white font-semibold" data-testid={`text-username-${index}`}>
+                  <p className="text-white font-bold text-lg drop-shadow-lg" data-testid={`text-username-${index}`}>
                     {story.user.name}
                   </p>
                   {story.user.isVerified && (
-                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs">✓</span>
+                    <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                      <span className="text-white text-xs font-bold drop-shadow-sm">✓</span>
                     </div>
                   )}
                 </div>
-                <p className="text-white/80 text-sm">{story.location}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-white/90 text-sm font-medium drop-shadow-md">{story.location}</p>
+                  <span className="text-white/70 text-xs">•</span>
+                  <span className="text-white/70 text-xs font-medium">{formatTimeAgo(story.timestamp)}</span>
+                </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="absolute bottom-32 right-4 flex flex-col gap-4 z-10">
-              <div className="flex flex-col items-center">
+            {/* Action Buttons - TikTok Style */}
+            <div className="absolute bottom-20 right-3 flex flex-col gap-6 z-10">
+              <div className="flex flex-col items-center relative">
+                {/* تأثير النبضة للإعجاب */}
+                {interactions[story.id]?.isLiked && (
+                  <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-40 scale-150 pointer-events-none" />
+                )}
                 <Button
                   onClick={() => handleLike(story.id)}
                   variant="ghost"
                   size="icon"
-                  className={`w-12 h-12 rounded-full transition-all duration-200 ${
+                  className={`w-14 h-14 rounded-full transition-all duration-300 transform hover:scale-110 active:scale-95 backdrop-blur-sm border border-white/20 shadow-lg ${
                     interactions[story.id]?.isLiked 
-                      ? 'bg-red-500/80 text-white hover:bg-red-500' 
-                      : 'bg-white/20 text-white hover:bg-white/30'
+                      ? 'bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-red-500/50 animate-pulse' 
+                      : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                   data-testid={`button-like-${index}`}
                 >
-                  <Heart className={`w-6 h-6 ${
-                    interactions[story.id]?.isLiked ? 'fill-current' : ''
+                  <Heart className={`w-7 h-7 transition-all duration-300 ${
+                    interactions[story.id]?.isLiked ? 'fill-current drop-shadow-sm' : ''
                   }`} />
                 </Button>
-                <span className="text-white text-xs mt-1 font-medium">
+                <span className="text-white text-sm mt-2 font-bold drop-shadow-lg">
                   {interactions[story.id]?.likes || 0}
                 </span>
               </div>
               
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center relative">
+                {/* تأثير دوران للتعليقات */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full opacity-0 hover:opacity-20 animate-spin-slow transition-opacity" />
                 <Button
                   onClick={() => {
                     setCurrentVideoIndex(index);
@@ -543,86 +606,120 @@ export default function Status() {
                   }}
                   variant="ghost"
                   size="icon"
-                  className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
+                  className="w-14 h-14 rounded-full bg-white/10 text-white hover:bg-gradient-to-br hover:from-blue-500/20 hover:to-purple-600/20 backdrop-blur-sm border border-white/20 shadow-lg transition-all duration-300 transform hover:scale-110 active:scale-95"
                   data-testid={`button-comment-${index}`}
                 >
-                  <MessageCircle className="w-6 h-6" />
+                  <MessageCircle className="w-7 h-7 drop-shadow-sm" />
                 </Button>
-                <span className="text-white text-xs mt-1 font-medium">
+                <span className="text-white text-sm mt-2 font-bold drop-shadow-lg">
                   {interactions[story.id]?.comments?.length || 0}
                 </span>
               </div>
               
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center relative">
+                {/* تأثير الموجة للمشاركة */}
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-teal-600 rounded-full opacity-0 hover:opacity-20 scale-0 hover:scale-150 transition-all duration-500" />
                 <Button
                   onClick={() => handleShare(story.id)}
                   variant="ghost"
                   size="icon"
-                  className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
+                  className="w-14 h-14 rounded-full bg-white/10 text-white hover:bg-gradient-to-br hover:from-green-500/20 hover:to-teal-600/20 backdrop-blur-sm border border-white/20 shadow-lg transition-all duration-300 transform hover:scale-110 active:scale-95 hover:rotate-12"
                   data-testid={`button-share-${index}`}
                 >
-                  <Share className="w-6 h-6" />
+                  <Share className="w-7 h-7 drop-shadow-sm" />
                 </Button>
-                <span className="text-white text-xs mt-1 font-medium">
+                <span className="text-white text-sm mt-2 font-bold drop-shadow-lg">
                   {interactions[story.id]?.shares || 0}
                 </span>
               </div>
 
               {/* Sound control for videos */}
               {story.videoUrl && (
-                <Button
-                  onClick={toggleMute}
-                  variant="ghost"
-                  size="icon"
-                  className="w-12 h-12 rounded-full bg-white/20 text-white hover:bg-white/30"
-                  data-testid={`button-sound-${index}`}
-                >
-                  {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
-                </Button>
+                <div className="flex flex-col items-center relative">
+                  {/* تأثير الصوت النابض */}
+                  {!isMuted && (
+                    <div className="absolute inset-0 bg-yellow-500 rounded-full animate-pulse opacity-30 scale-125 pointer-events-none" />
+                  )}
+                  <Button
+                    onClick={toggleMute}
+                    variant="ghost"
+                    size="icon"
+                    className={`w-14 h-14 rounded-full backdrop-blur-sm border border-white/20 shadow-lg transition-all duration-300 transform hover:scale-110 active:scale-95 ${
+                      isMuted 
+                        ? 'bg-white/10 text-white hover:bg-white/20' 
+                        : 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20 text-white animate-pulse'
+                    }`}
+                    data-testid={`button-sound-${index}`}
+                  >
+                    {isMuted ? <VolumeX className="w-7 h-7 drop-shadow-sm" /> : <Volume2 className="w-7 h-7 drop-shadow-sm" />}
+                  </Button>
+                </div>
               )}
             </div>
 
-            {/* Video Controls */}
+            {/* Video Controls - Enhanced */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
               {index === currentVideoIndex && (
-                <Button
-                  onClick={togglePlayPause}
-                  variant="ghost"
-                  size="icon"
-                  className="w-16 h-16 rounded-full bg-black/20 text-white hover:bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
-                  data-testid={`button-play-pause-${index}`}
-                >
-                  {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
-                </Button>
+                <div className="relative">
+                  {/* تأثير النبضة الخارجية */}
+                  <div className="absolute inset-0 bg-white rounded-full animate-ping opacity-20 scale-150" />
+                  <Button
+                    onClick={togglePlayPause}
+                    variant="ghost"
+                    size="icon"
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-black/40 to-black/60 backdrop-blur-sm border-2 border-white/30 text-white hover:bg-black/50 opacity-0 hover:opacity-100 transition-all duration-300 transform hover:scale-110 active:scale-95 shadow-2xl"
+                    data-testid={`button-play-pause-${index}`}
+                  >
+                    {isPlaying ? (
+                      <Pause className="w-10 h-10 drop-shadow-lg" />
+                    ) : (
+                      <Play className="w-10 h-10 drop-shadow-lg ml-1" />
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
 
-            {/* View Count */}
-            <div className="absolute top-20 right-4 bg-black/40 rounded-full px-3 py-1">
-              <p className="text-white text-sm" data-testid={`text-views-${index}`}>
-                {story.viewCount} مشاهدة
-              </p>
+            {/* View Count - Enhanced */}
+            <div className="absolute top-28 right-4 bg-gradient-to-r from-black/60 to-black/40 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10 shadow-lg">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full animate-pulse" />
+                <p className="text-white text-sm font-bold drop-shadow-sm" data-testid={`text-views-${index}`}>
+                  {story.viewCount} مشاهدة
+                </p>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Story Progress Indicators */}
-      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 flex gap-1 z-20">
+      {/* Story Progress Indicators - Enhanced */}
+      <div className="absolute top-24 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
         {displayStories.map((_, index) => (
           <div
             key={index}
-            className={`w-8 h-1 rounded-full transition-all duration-300 ${
-              index === currentVideoIndex ? 'bg-white' : 'bg-white/40'
+            className={`h-1.5 rounded-full transition-all duration-500 transform hover:scale-110 cursor-pointer ${
+              index === currentVideoIndex 
+                ? 'w-10 bg-gradient-to-r from-white to-gray-200 shadow-lg animate-pulse' 
+                : index < currentVideoIndex
+                ? 'w-8 bg-white/60'
+                : 'w-6 bg-white/30'
             }`}
+            onClick={() => scrollToVideo(index)}
             data-testid={`progress-indicator-${index}`}
           />
         ))}
       </div>
 
-      {/* Navigation Hints */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white/60 text-sm text-center">
-        <p>اسحب لأعلى أو لأسفل للتنقل</p>
+      {/* Navigation Hints - Enhanced */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20">
+        <div className="bg-gradient-to-r from-black/60 to-black/40 backdrop-blur-sm rounded-full px-6 py-3 border border-white/10 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-gradient-to-b from-transparent via-white to-transparent rounded-full animate-pulse" />
+            <p className="text-white/90 text-sm font-medium drop-shadow-sm">اسحب للتنقل</p>
+            <div className="w-1 h-8 bg-gradient-to-b from-transparent via-white to-transparent rounded-full animate-pulse" />
+          </div>
+        </div>
       </div>
 
       <CreateStoryModal
@@ -630,20 +727,28 @@ export default function Status() {
         onClose={() => setIsCreateModalOpen(false)}
       />
       
-      {/* Comments Modal */}
+      {/* Comments Modal - Enhanced TikTok Style */}
       <Dialog open={commentsModalOpen} onOpenChange={setCommentsModalOpen}>
-        <DialogContent className="max-w-md mx-auto h-[80vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-4 border-b">
+        <DialogContent className="max-w-md mx-auto h-[85vh] flex flex-col p-0 gap-0 bg-gradient-to-br from-gray-900 via-black to-gray-900 border-2 border-white/20 shadow-2xl backdrop-blur-xl">
+          <DialogHeader className="p-6 border-b border-white/10 bg-gradient-to-r from-purple-600/20 to-pink-600/20">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg font-semibold">التعليقات</DialogTitle>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center animate-pulse">
+                  <MessageCircle className="w-4 h-4 text-white" />
+                </div>
+                <DialogTitle className="text-xl font-bold text-white drop-shadow-lg">التعليقات</DialogTitle>
+                <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full">
+                  <span className="text-white text-xs font-bold">{currentInteraction.comments?.length || 0}</span>
+                </div>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setCommentsModalOpen(false)}
-                className="w-8 h-8"
+                className="text-white hover:bg-white/10 w-10 h-10 rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-110 active:scale-95"
                 data-testid="button-close-comments"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5 drop-shadow-sm" />
               </Button>
             </div>
           </DialogHeader>
