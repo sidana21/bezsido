@@ -3271,7 +3271,52 @@ export class DatabaseStorage implements IStorage {
   async updateMessage(messageId: string, content: string): Promise<Message | undefined> { return undefined; }
   async deleteMessage(messageId: string): Promise<void> {}
   
-  async getActiveStories(): Promise<(Story & { user: User })[]> { return []; }
+  async getActiveStories(): Promise<(Story & { user: User })[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const activeStories = await db.select({
+        id: stories.id,
+        userId: stories.userId,
+        content: stories.content,
+        imageUrl: stories.imageUrl,
+        videoUrl: stories.videoUrl,
+        backgroundColor: stories.backgroundColor,
+        textColor: stories.textColor,
+        location: stories.location,
+        timestamp: stories.timestamp,
+        expiresAt: stories.expiresAt,
+        viewCount: stories.viewCount,
+        viewers: stories.viewers,
+        user: {
+          id: users.id,
+          name: users.name,
+          avatar: users.avatar,
+          phoneNumber: users.phoneNumber,
+          location: users.location,
+          isOnline: users.isOnline,
+          isVerified: users.isVerified,
+          verifiedAt: users.verifiedAt,
+          isAdmin: users.isAdmin,
+          lastSeen: users.lastSeen,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        }
+      })
+      .from(stories)
+      .innerJoin(users, eq(stories.userId, users.id))
+      .where(sql`${stories.expiresAt} > NOW()`)
+      .orderBy(sql`${stories.timestamp} DESC`);
+
+      return activeStories;
+    } catch (error) {
+      console.error('Error getting active stories:', error);
+      return [];
+    }
+  }
   async getUserStories(userId: string): Promise<Story[]> { return []; }
   async createStory(story: InsertStory): Promise<Story> { throw new Error('Not implemented'); }
   async viewStory(storyId: string, viewerId: string): Promise<void> {}

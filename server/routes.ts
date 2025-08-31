@@ -918,12 +918,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get active stories
-  app.get("/api/stories", requireAuth, async (req: any, res) => {
+  // Get active stories (public access)
+  app.get("/api/stories", async (req: any, res) => {
     try {
       const stories = await storage.getActiveStories();
       res.json(stories);
     } catch (error) {
+      console.error('Error getting stories:', error);
       res.status(500).json({ message: "Failed to get stories" });
     }
   });
