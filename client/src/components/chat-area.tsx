@@ -137,12 +137,16 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     if (chatId && messages.length > 0 && currentUser) {
       const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== (currentUser as any)?.id);
       if (unreadMessages.length > 0) {
-        unreadMessages.forEach(message => {
-          // استدعاء API لتمييز الرسالة كمقروءة
-          fetch(`/api/messages/${message.id}/read`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' }
-          }).catch(err => console.log('Failed to mark message as read:', err));
+        unreadMessages.forEach(async (message) => {
+          try {
+            // استدعاء API لتمييز الرسالة كمقروءة مع التوثيق
+            await apiRequest(`/api/messages/${message.id}/read`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' }
+            });
+          } catch (err) {
+            console.log('Failed to mark message as read:', err);
+          }
         });
         
         // تحديث عدد الرسائل غير المقروءة بعد قراءة الرسائل

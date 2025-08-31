@@ -469,6 +469,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get recent unread messages with sender details for notifications
+  app.get("/api/chats/recent-messages", requireAuth, async (req: any, res) => {
+    try {
+      const chats = await storage.getUserChats(req.userId);
+      const recentMessages: Array<{id: string, senderId: string, senderName: string, content: string, chatId: string}> = [];
+      
+      for (const chat of chats) {
+        const messages = await storage.getChatMessages(chat.id);
+        const unreadMessages = messages.filter(msg => 
+          !msg.isRead && msg.senderId !== req.userId
+        );
+        
+        // أخذ آخر 3 رسائل غير مقروءة من كل محادثة
+        const recentUnread = unreadMessages.slice(-3);
+        
+        for (const message of recentUnread) {
+          const sender = await storage.getUser(message.senderId);
+          if (sender) {
+            recentMessages.push({
+              id: message.id,
+              senderId: message.senderId,
+              senderName: sender.name,
+              content: message.content || (message.messageType === 'image' ? 'صورة' : 
+                       message.messageType === 'audio' ? 'رسالة صوتية' : 'رسالة'),
+              chatId: message.chatId
+            });
+          }
+        }
+      }
+      
+      // ترتيب حسب الأحدث وأخذ آخر 5 رسائل
+      const sortedMessages = recentMessages.slice(-5);
+      
+      res.json(sortedMessages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get recent messages" });
+    }
+  });
+
   // Create or get existing chat with another user
   app.post("/api/chats/start", requireAuth, async (req: any, res) => {
     try {
