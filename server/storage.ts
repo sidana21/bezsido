@@ -41,9 +41,9 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments } from '@shared/schema';
 import { sql } from 'drizzle-orm';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
 let db: any = null;
@@ -3282,17 +3282,228 @@ export class DatabaseStorage implements IStorage {
   async getVerificationRequest(id: string): Promise<VerificationRequest | undefined> { return undefined; }
   async updateVerificationRequestStatus(id: string, status: string, adminNote?: string, reviewedBy?: string): Promise<VerificationRequest | undefined> { return undefined; }
 
-  async likeStory(storyId: string, userId: string, reactionType?: string): Promise<StoryLike> { throw new Error('Not implemented'); }
-  async unlikeStory(storyId: string, userId: string): Promise<void> {}
-  async getStoryLikes(storyId: string): Promise<(StoryLike & { user: User })[]> { return []; }
-  async getStoryLikeCount(storyId: string): Promise<number> { return 0; }
-  async hasUserLikedStory(storyId: string, userId: string): Promise<boolean> { return false; }
+  async likeStory(storyId: string, userId: string, reactionType: string = 'like'): Promise<StoryLike> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // إزالة الإعجاب الموجود إن وجد
+      await db.delete(storyLikes).where(
+        and(eq(storyLikes.storyId, storyId), eq(storyLikes.userId, userId))
+      );
+      
+      // إضافة الإعجاب الجديد
+      const [newLike] = await db.insert(storyLikes).values({
+        storyId,
+        userId,
+        reactionType,
+      }).returning();
+      
+      return newLike;
+    } catch (error) {
+      console.error('Error liking story:', error);
+      throw error;
+    }
+  }
+
+  async unlikeStory(storyId: string, userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(storyLikes).where(
+        and(eq(storyLikes.storyId, storyId), eq(storyLikes.userId, userId))
+      );
+    } catch (error) {
+      console.error('Error unliking story:', error);
+    }
+  }
+
+  async getStoryLikes(storyId: string): Promise<(StoryLike & { user: User })[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const likes = await db.select({
+        id: storyLikes.id,
+        storyId: storyLikes.storyId,
+        userId: storyLikes.userId,
+        reactionType: storyLikes.reactionType,
+        createdAt: storyLikes.createdAt,
+        user: {
+          id: users.id,
+          phoneNumber: users.phoneNumber,
+          name: users.name,
+          avatar: users.avatar,
+          location: users.location,
+          isOnline: users.isOnline,
+          isVerified: users.isVerified,
+          verifiedAt: users.verifiedAt,
+          isAdmin: users.isAdmin,
+          lastSeen: users.lastSeen,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        }
+      })
+      .from(storyLikes)
+      .innerJoin(users, eq(storyLikes.userId, users.id))
+      .where(eq(storyLikes.storyId, storyId));
+      
+      return likes;
+    } catch (error) {
+      console.error('Error getting story likes:', error);
+      return [];
+    }
+  }
+
+  async getStoryLikeCount(storyId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({ count: sql`COUNT(*)` })
+        .from(storyLikes)
+        .where(eq(storyLikes.storyId, storyId));
+      
+      return Number(result[0]?.count) || 0;
+    } catch (error) {
+      console.error('Error getting story like count:', error);
+      return 0;
+    }
+  }
+
+  async hasUserLikedStory(storyId: string, userId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({ id: storyLikes.id })
+        .from(storyLikes)
+        .where(and(eq(storyLikes.storyId, storyId), eq(storyLikes.userId, userId)))
+        .limit(1);
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error checking if user liked story:', error);
+      return false;
+    }
+  }
   
-  async addStoryComment(comment: InsertStoryComment): Promise<StoryComment> { throw new Error('Not implemented'); }
-  async getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]> { return []; }
-  async updateStoryComment(commentId: string, content: string): Promise<StoryComment | undefined> { return undefined; }
-  async deleteStoryComment(commentId: string): Promise<void> {}
-  async getStoryCommentCount(storyId: string): Promise<number> { return 0; }
+  async addStoryComment(comment: InsertStoryComment): Promise<StoryComment> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const [newComment] = await db.insert(storyComments).values(comment).returning();
+      return newComment;
+    } catch (error) {
+      console.error('Error adding story comment:', error);
+      throw error;
+    }
+  }
+
+  async getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const comments = await db.select({
+        id: storyComments.id,
+        storyId: storyComments.storyId,
+        userId: storyComments.userId,
+        content: storyComments.content,
+        createdAt: storyComments.createdAt,
+        updatedAt: storyComments.updatedAt,
+        user: {
+          id: users.id,
+          phoneNumber: users.phoneNumber,
+          name: users.name,
+          avatar: users.avatar,
+          location: users.location,
+          isOnline: users.isOnline,
+          isVerified: users.isVerified,
+          verifiedAt: users.verifiedAt,
+          isAdmin: users.isAdmin,
+          lastSeen: users.lastSeen,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        }
+      })
+      .from(storyComments)
+      .innerJoin(users, eq(storyComments.userId, users.id))
+      .where(eq(storyComments.storyId, storyId))
+      .orderBy(storyComments.createdAt);
+      
+      return comments;
+    } catch (error) {
+      console.error('Error getting story comments:', error);
+      return [];
+    }
+  }
+
+  async updateStoryComment(commentId: string, content: string): Promise<StoryComment | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const [updatedComment] = await db.update(storyComments)
+        .set({ content, updatedAt: new Date() })
+        .where(eq(storyComments.id, commentId))
+        .returning();
+      
+      return updatedComment || undefined;
+    } catch (error) {
+      console.error('Error updating story comment:', error);
+      return undefined;
+    }
+  }
+
+  async deleteStoryComment(commentId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(storyComments).where(eq(storyComments.id, commentId));
+    } catch (error) {
+      console.error('Error deleting story comment:', error);
+    }
+  }
+
+  async getStoryCommentCount(storyId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({ count: sql`COUNT(*)` })
+        .from(storyComments)
+        .where(eq(storyComments.storyId, storyId));
+      
+      return Number(result[0]?.count) || 0;
+    } catch (error) {
+      console.error('Error getting story comment count:', error);
+      return 0;
+    }
+  }
 
   async getAllStickers(): Promise<Sticker[]> { return []; }
   async getStickersByCategory(category: string): Promise<Sticker[]> { return []; }
@@ -3392,11 +3603,18 @@ async function initializeStorage(): Promise<IStorage> {
   return new MemStorage();
 }
 
-// Initialize storage instance
-storage = new MemStorage(); // Default fallback
+// Initialize storage instance with synchronous fallback
+storage = new MemStorage(); // Immediate fallback
 
-// Use memory storage for stable operation
-console.log('Using memory storage for stable operation');
-storage = new MemStorage();
+// Asynchronously try to upgrade to database storage
+(async () => {
+  try {
+    const dbStorage = await initializeStorage();
+    storage = dbStorage;
+    console.log('✅ Storage successfully initialized');
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize storage, using memory fallback:', error);
+  }
+})();
 
 export { storage };
