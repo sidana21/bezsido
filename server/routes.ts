@@ -235,17 +235,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Phone number and code are required" });
       }
       
+      console.log(`🔍 Verifying OTP for phone: ${phoneNumber}, code: ${code}`);
+      
       const isValidOtp = await storage.verifyOtpCode(phoneNumber, code);
       
       if (!isValidOtp) {
+        console.log(`❌ Invalid OTP for ${phoneNumber}`);
         return res.status(400).json({ message: "Invalid or expired OTP" });
       }
       
+      console.log(`✅ OTP verified for ${phoneNumber}`);
+      
       // Check if user exists
       let user = await storage.getUserByPhoneNumber(phoneNumber);
+      console.log(`🔍 User search result for ${phoneNumber}:`, user ? `Found: ${user.name} (${user.id})` : 'Not found');
       
       if (!user) {
         // OTP is valid but user doesn't exist - need profile setup
+        console.log(`📝 User ${phoneNumber} needs profile setup`);
         return res.json({ 
           success: true, 
           needsProfile: true,
@@ -253,6 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Existing user - update online status and create session
+        console.log(`👤 Logging in existing user: ${user.name} (${user.id})`);
         await storage.updateUserOnlineStatus(user.id, true);
         
         // Create session
@@ -264,6 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         await storage.createSession(sessionData);
+        console.log(`🔑 Session created for user ${user.id}`);
         
         res.json({ 
           success: true, 
