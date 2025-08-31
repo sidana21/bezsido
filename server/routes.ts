@@ -172,20 +172,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.createOtpCode(otpData);
       
-      // In development or when SMS service is not configured, show OTP directly
-      console.log(`OTP for ${phoneNumber}: ${code}`);
-      
       // Store last OTP for development
       (global as any).lastOtp = { phoneNumber, code, timestamp: Date.now() };
       
-      // Return OTP in response for testing (remove when SMS service is added)
-      const shouldShowOTP = !process.env.SMS_SERVICE_ENABLED || process.env.NODE_ENV === 'development';
+      let smsDelivered = false;
+      let smsError = null;
+      
+      // Try to send SMS via Twilio if credentials are available
+      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+        try {
+          const { default: twilio } = await import('twilio');
+          const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          
+          await client.messages.create({
+            body: `رمز التحقق الخاص بك في BizChat هو: ${code}`,
+            from: process.env.TWILIO_PHONE_NUMBER,
+            to: phoneNumber
+          });
+          
+          smsDelivered = true;
+          console.log(`✅ SMS sent successfully to ${phoneNumber}: ${code}`);
+        } catch (twilioError: any) {
+          smsError = twilioError.message;
+          console.error('❌ Twilio SMS error:', twilioError);
+        }
+      } else {
+        console.log('ℹ️ Twilio credentials not configured, showing OTP directly');
+      }
+      
+      // Show OTP directly in development or if SMS failed
+      const shouldShowOTP = !smsDelivered || process.env.NODE_ENV === 'development';
+      
+      let message = "تم إرسال رمز التحقق عبر الرسائل النصية";
+      if (shouldShowOTP) {
+        message = smsDelivered ? 
+          `تم إرسال الرمز عبر SMS وهو: ${code}` : 
+          `رمز التحقق: ${code}`;
+      }
+      
+      // Log for debugging
+      console.log(`OTP for ${phoneNumber}: ${code} (SMS delivered: ${smsDelivered})`);
       
       res.json({ 
         success: true, 
-        message: shouldShowOTP ? "رمز التحقق: " + code : "تم إرسال رمز التحقق عبر الرسائل النصية",
+        message,
         code: shouldShowOTP ? code : undefined,
-        showDirectly: shouldShowOTP
+        showDirectly: shouldShowOTP,
+        smsDelivered,
+        smsError: process.env.NODE_ENV === 'development' ? smsError : undefined
       });
     } catch (error) {
       console.error('OTP sending error:', error);

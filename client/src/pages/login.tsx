@@ -68,17 +68,37 @@ export default function LoginPage() {
         body: JSON.stringify({ phoneNumber: fullPhone }),
       });
 
-      // If OTP is returned directly (development mode)
-      if (response.showDirectly && response.code) {
+      // Handle SMS delivery status
+      if (response.smsDelivered) {
+        toast({
+          title: "✅ تم الإرسال عبر SMS",
+          description: response.message,
+          duration: 8000,
+        });
+        
+        // If code is also shown (development mode)
+        if (response.showDirectly && response.code) {
+          setLastGeneratedOtp(response.code);
+          setCurrentOtp(response.code);
+        }
+      } else if (response.showDirectly && response.code) {
+        // OTP shown directly (fallback or development)
         setLastGeneratedOtp(response.code);
         setCurrentOtp(response.code);
         
         toast({
-          title: "رمز التحقق",
+          title: response.smsError ? "⚠️ SMS فشل - الرمز معروض هنا" : "رمز التحقق",
           description: response.message,
-          duration: 10000, // Show for 10 seconds
+          duration: 10000,
         });
       } else {
+        // Standard SMS sent message
+        toast({
+          title: "تم الإرسال",
+          description: response.message || "تم إرسال رمز التحقق إلى هاتفك",
+          duration: 6000,
+        });
+        
         // Try to extract OTP from logs as fallback
         try {
           const logs = await fetch('/api/dev/last-otp').then(r => r.json()).catch(() => null);
@@ -87,11 +107,6 @@ export default function LoginPage() {
             setCurrentOtp(logs.code);
           }
         } catch {}
-        
-        toast({
-          title: "تم الإرسال",
-          description: response.message || "تم إرسال رمز التحقق إلى هاتفك",
-        });
       }
       setStep("otp");
     } catch (error: any) {
