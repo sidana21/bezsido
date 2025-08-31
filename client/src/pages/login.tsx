@@ -167,7 +167,14 @@ export default function LoginPage() {
       return;
     }
 
-    if (!fullPhoneNumber) {
+    // تأكد من وجود رقم الهاتف الكامل، إذا لم يكن موجود قم بتكوينه
+    let phoneToUse = fullPhoneNumber;
+    if (!phoneToUse && phoneNumber.trim()) {
+      phoneToUse = countryCode + phoneNumber.trim();
+      setFullPhoneNumber(phoneToUse);
+    }
+
+    if (!phoneToUse || !phoneToUse.trim()) {
       toast({
         title: "خطأ",
         description: "رقم الهاتف مطلوب - يرجى البدء من جديد",
@@ -180,7 +187,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       console.log("Creating user with data:", { 
-        phoneNumber: fullPhoneNumber, 
+        phoneNumber: phoneToUse, 
         name: name.trim(),
         location,
         otpVerified
@@ -190,7 +197,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          phoneNumber: fullPhoneNumber, 
+          phoneNumber: phoneToUse, 
           name: name.trim(),
           location
         }),
@@ -213,7 +220,7 @@ export default function LoginPage() {
         error,
         message: error.message,
         status: error.status,
-        phoneNumber: fullPhoneNumber,
+        phoneNumber: phoneToUse,
         name: name.trim(),
         location
       });
