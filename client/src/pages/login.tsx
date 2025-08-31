@@ -63,6 +63,7 @@ export default function LoginPage() {
         });
       } else if (response.needsProfile) {
         // مستخدم جديد - عرض نموذج الملف الشخصي
+        console.log("New user needs profile, showing form");
         setShowProfile(true);
         toast({
           title: "مستخدم جديد",
@@ -70,8 +71,31 @@ export default function LoginPage() {
         });
       }
     } catch (error: any) {
-      if (error.message.includes("404")) {
+      console.log("Login error:", error);
+      
+      // التحقق من كون المستخدم جديد بناءً على رسالة الخطأ
+      try {
+        const errorData = JSON.parse(error.message.split(': ')[1] || '{}');
+        if (errorData.needsProfile || errorData.message?.includes("مستخدم جديد")) {
+          console.log("New user detected from error response");
+          setShowProfile(true);
+          toast({
+            title: "مستخدم جديد",
+            description: "يرجى إكمال بياناتك الشخصية",
+          });
+          return;
+        }
+      } catch {
+        // إذا فشل parsing، تحقق من النص المباشر
+      }
+      
+      // التحقق من كون المستخدم جديد
+      if (error.message.includes("404") || 
+          error.message.includes("needsProfile") || 
+          error.message.includes("مستخدم جديد") ||
+          (error.status && error.status === 404)) {
         // مستخدم جديد - عرض نموذج الملف الشخصي
+        console.log("New user detected, showing profile form");
         setShowProfile(true);
         toast({
           title: "مستخدم جديد",
