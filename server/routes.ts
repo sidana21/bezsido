@@ -278,6 +278,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Direct login without OTP (temporary for development)
+  app.post("/api/auth/direct-login", async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      
+      // Check if user exists
+      let user = await storage.getUserByPhoneNumber(phoneNumber);
+      
+      if (!user) {
+        // User doesn't exist - need profile setup
+        return res.status(404).json({ 
+          success: false,
+          needsProfile: true,
+          message: "مستخدم جديد - يحتاج إعداد الملف الشخصي" 
+        });
+      } else {
+        // Existing user - update online status and create session
+        await storage.updateUserOnlineStatus(user.id, true);
+        
+        // Create session
+        const token = randomUUID();
+        const sessionData = insertSessionSchema.parse({
+          userId: user.id,
+          token,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        });
+        
+        await storage.createSession(sessionData);
+        
+        res.json({ 
+          success: true, 
+          user, 
+          token,
+          message: "تم تسجيل الدخول بنجاح" 
+        });
+      }
+    } catch (error) {
+      console.error('Direct login error:', error);
+      res.status(500).json({ message: "Failed to login directly" });
+    }
+  });
+
   // Create new user after OTP verification
   app.post("/api/auth/create-user", async (req, res) => {
     try {

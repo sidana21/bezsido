@@ -47,7 +47,7 @@ export default function LoginPage() {
     }
   }, [needsProfile]);
 
-  const handleSendOtp = async () => {
+  const handleDirectLogin = async () => {
     if (!phoneNumber.trim()) {
       toast({
         title: "خطأ",
@@ -62,59 +62,43 @@ export default function LoginPage() {
     setFullPhoneNumber(fullPhone);
 
     try {
-      const response = await apiRequest("/api/auth/send-otp", {
+      // Try to login with existing user first
+      const loginResponse = await apiRequest("/api/auth/direct-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phoneNumber: fullPhone }),
       });
 
-      // Handle SMS delivery status
-      if (response.smsDelivered) {
+      if (loginResponse.success && loginResponse.user && loginResponse.token) {
+        // Existing user login successful
+        login(loginResponse.user, loginResponse.token);
         toast({
-          title: "✅ تم الإرسال عبر SMS",
-          description: response.message,
-          duration: 8000,
+          title: "مرحباً " + loginResponse.user.name + "!",
+          description: "تم تسجيل الدخول بنجاح",
         });
-        
-        // If code is also shown (development mode)
-        if (response.showDirectly && response.code) {
-          setLastGeneratedOtp(response.code);
-          setCurrentOtp(response.code);
-        }
-      } else if (response.showDirectly && response.code) {
-        // OTP shown directly (fallback or development)
-        setLastGeneratedOtp(response.code);
-        setCurrentOtp(response.code);
-        
+      } else if (loginResponse.needsProfile) {
+        // New user needs profile setup
         toast({
-          title: response.smsError ? "⚠️ SMS فشل - الرمز معروض هنا" : "رمز التحقق",
-          description: response.message,
-          duration: 10000,
+          title: "مستخدم جديد",
+          description: "يرجى إكمال بياناتك الشخصية",
         });
-      } else {
-        // Standard SMS sent message
-        toast({
-          title: "تم الإرسال",
-          description: response.message || "تم إرسال رمز التحقق إلى هاتفك",
-          duration: 6000,
-        });
-        
-        // Try to extract OTP from logs as fallback
-        try {
-          const logs = await fetch('/api/dev/last-otp').then(r => r.json()).catch(() => null);
-          if (logs?.code) {
-            setLastGeneratedOtp(logs.code);
-            setCurrentOtp(logs.code);
-          }
-        } catch {}
+        setStep("profile");
       }
-      setStep("otp");
     } catch (error: any) {
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل في إرسال رمز التحقق",
-        variant: "destructive",
-      });
+      // User doesn't exist, go to profile creation
+      if (error.status === 404) {
+        toast({
+          title: "مستخدم جديد",
+          description: "يرجى إكمال بياناتك الشخصية",
+        });
+        setStep("profile");
+      } else {
+        toast({
+          title: "خطأ",
+          description: error.message || "فشل في تسجيل الدخول",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -267,7 +251,7 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-white mb-2">BizChat</h1>
             <p className="text-green-100 text-sm">
-منصة التواصل التجاري الذكية - سنرسل لك رمز تحقق للتأكد من رقم هاتفك
+منصة التواصل التجاري الذكية - أدخل رقم هاتفك للدخول مباشرة
             </p>
           </div>
 
@@ -314,17 +298,17 @@ export default function LoginPage() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  سيتم إرسال رمز تحقق عبر الرسائل النصية إلى هذا الرقم
+                  ادخل رقم هاتفك للدخول مباشرة إلى التطبيق
                 </p>
               </div>
 
               <Button 
-                onClick={handleSendOtp} 
+                onClick={handleDirectLogin} 
                 className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white"
                 disabled={isLoading}
-                data-testid="button-send-otp"
+                data-testid="button-direct-login"
               >
-                {isLoading ? "جارِ الإرسال..." : "إرسال رمز التحقق"}
+                {isLoading ? "جارِ الدخول..." : "دخول إلى التطبيق"}
               </Button>
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-6">
