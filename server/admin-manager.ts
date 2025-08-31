@@ -137,7 +137,7 @@ export class AdminManager {
         // إنشاء مستخدمين تجريبيين
         const user1 = await this.storage.createUser({
           name: "أحمد محمد",
-          phoneNumber: "+213555123456",
+          phoneNumber: "+213555987654", // تغيير الرقم لتجنب التضارب مع رقم المشرف
           location: "تندوف",
           avatar: null,
           isOnline: true,
