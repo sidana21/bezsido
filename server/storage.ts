@@ -3167,35 +3167,50 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // For now, implement other methods as simple stubs to satisfy the interface
-  // These can be fully implemented later when needed
+  // OTP Code management using database
   async createOtpCode(insertOtp: InsertOtp): Promise<OtpCode> {
-    const id = randomUUID();
-    const otp: OtpCode = {
-      ...insertOtp,
-      id,
-      isUsed: false,
-      createdAt: new Date(),
-    };
-    // For now, store in memory since OTP codes are temporary
-    this.otpCodes = this.otpCodes || new Map();
-    this.otpCodes.set(id, otp);
-    return otp;
-  }
-  async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> {
-    if (!this.otpCodes) return false;
-    
-    const otp = Array.from(this.otpCodes.values()).find(
-      (otp) => otp.phoneNumber === phoneNumber && otp.code === code && !otp.isUsed && otp.expiresAt > new Date()
-    );
-    
-    if (otp) {
-      otp.isUsed = true;
-      this.otpCodes.set(otp.id, otp);
-      return true;
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const [otp] = await db.insert(otpCodes).values(insertOtp).returning();
+      console.log('OTP created in database:', otp.code, 'for', otp.phoneNumber);
+      return otp;
+    } catch (error) {
+      console.error('Error creating OTP code:', error);
+      throw error;
     }
-    
-    return false;
+  }
+
+  async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const [otp] = await db.select().from(otpCodes).where(
+        and(
+          eq(otpCodes.phoneNumber, phoneNumber),
+          eq(otpCodes.code, code),
+          eq(otpCodes.isUsed, false)
+        )
+      );
+      
+      if (otp && otp.expiresAt > new Date()) {
+        // Mark OTP as used
+        await db.update(otpCodes).set({ isUsed: true }).where(eq(otpCodes.id, otp.id));
+        console.log('OTP verified successfully for:', phoneNumber);
+        return true;
+      }
+      
+      console.log('OTP verification failed for:', phoneNumber, 'code:', code);
+      return false;
+    } catch (error) {
+      console.error('Error verifying OTP code:', error);
+      return false;
+    }
   }
   async createSession(session: InsertSession): Promise<Session> {
     try {
