@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck, Star, AlertCircle, Check, Clock, Upload, Image, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Edit3, Phone, MapPin, User as UserIcon, Save, ShieldCheck, Star, AlertCircle, Check, Clock, Upload, Image, Trash2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { User, VerificationRequest } from "@shared/schema";
 
@@ -24,6 +25,7 @@ export default function Profile() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const { toast } = useToast();
+  const { logout } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: currentUser, isLoading } = useQuery<User>({
@@ -220,6 +222,22 @@ export default function Profile() {
       setAvatarUrl(currentUser.avatar || "");
     }
     setIsEditing(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "تم تسجيل الخروج",
+        description: "تم تسجيل خروجك بنجاح",
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تسجيل الخروج",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
@@ -530,9 +548,19 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Delete Account Section */}
+        {/* Account Actions Section */}
         {!isEditing && (
-          <div className="pt-8 border-t border-gray-200 dark:border-gray-700">
+          <div className="pt-8 border-t border-gray-200 dark:border-gray-700 space-y-4">
+            {/* Logout Button */}
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="w-full h-12 text-lg rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+              data-testid="button-logout"
+            >
+              <LogOut className="w-5 h-5 ml-2" />
+              تسجيل الخروج
+            </Button>
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <DialogTrigger asChild>
                 <Button
