@@ -23,10 +23,9 @@ export function useNotifications(options: NotificationOptions = {}) {
   // إنشاء صوت الإشعار
   useEffect(() => {
     if (enableSound) {
-      // استخدام الرنة الجديدة المخصصة
       try {
-        // محاولة تحميل الرنة من المجلد العام أولاً
-        soundRef.current = new Audio('/sounds/notification.mp3');
+        // استخدام الملف المستورد من assets مباشرة لضمان الاستقرار
+        soundRef.current = new Audio(notificationSound);
         soundRef.current.volume = soundVolume;
         soundRef.current.preload = 'auto';
         
@@ -39,26 +38,21 @@ export function useNotifications(options: NotificationOptions = {}) {
           console.log('✅ تم تحميل صوت الإشعار بنجاح وجاهز للتشغيل');
         }, { once: true });
         
-        // اختبار إذا كان الملف يمكن تحميله
-        soundRef.current.addEventListener('error', () => {
-          console.log('❌ فشل تحميل الرنة من المجلد العام، محاولة استخدام ملف الأصول');
+        soundRef.current.addEventListener('error', (e) => {
+          console.log('❌ فشل تحميل صوت الإشعار:', e);
+          // استخدام الرنة الافتراضية كحل بديل
           try {
-            // استخدام الملف المستورد من assets
-            soundRef.current = new Audio(notificationSound);
+            soundRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjibzvPfiTcIG2m98OScTQwNUarm7blsGws5n9P1vmocBjiAyfTakTsIGGm98OScTQwNUarm7bhkHA=');
             soundRef.current.volume = soundVolume;
             soundRef.current.preload = 'auto';
-            console.log('🔄 تم التبديل إلى ملف الصوت المستورد');
+            console.log('🔄 تم التبديل إلى الرنة الافتراضية');
           } catch (fallbackError) {
-            console.log('❌ فشل تحميل ملف الصوت المستورد أيضاً:', fallbackError);
+            console.log('❌ فشل تحميل الرنة الافتراضية أيضاً:', fallbackError);
           }
         }, { once: true });
         
       } catch (error) {
-        console.log('تعذر تحميل الرنة المخصصة، استخدام الافتراضية');
-        // استخدام الرنة الافتراضية كحل بديل
-        soundRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjibzvPfiTcIG2m98OScTQwNUarm7blsGws5n9P1vmocBjiAyfTakTsIGGm98OScTQwNUarm7bhkHA=');
-        soundRef.current.volume = soundVolume;
-        soundRef.current.preload = 'auto';
+        console.log('❌ تعذر تحميل صوت الإشعار:', error);
       }
     }
   }, [enableSound, soundVolume]);
