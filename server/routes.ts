@@ -537,12 +537,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user
   app.get("/api/user/current", requireAuth, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.userId);
+      const user = await storage.getUserById(req.userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       res.json(user);
     } catch (error) {
+      console.error("Error getting current user:", error);
       res.status(500).json({ message: "Failed to get user" });
     }
   });
