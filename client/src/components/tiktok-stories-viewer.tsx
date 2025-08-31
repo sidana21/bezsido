@@ -169,12 +169,31 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
     }
   };
 
-  // Touch gestures for navigation
+  // Enhanced touch gestures for TikTok-style navigation
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragDistance, setDragDistance] = useState(0);
+  
   const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(false);
+    setDragDistance(0);
     touchStartRef.current = {
       y: e.touches[0].clientY,
       time: Date.now()
     };
+    setIsPlaying(false); // Pause during interaction
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    
+    const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+    const deltaTime = Date.now() - touchStartRef.current.time;
+    
+    // Start dragging if moved enough
+    if (Math.abs(deltaY) > 10 && deltaTime > 50) {
+      setIsDragging(true);
+      setDragDistance(deltaY);
+    }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -182,16 +201,25 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
 
     const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
     const deltaTime = Date.now() - touchStartRef.current.time;
+    const velocity = Math.abs(deltaY) / deltaTime;
 
-    // Swipe detection
-    if (Math.abs(deltaY) > 50 && deltaTime < 300) {
+    // Enhanced swipe detection with velocity
+    if (Math.abs(deltaY) > 80 || velocity > 0.5) {
       if (deltaY > 0) {
+        // Swiped down - previous story
         prevStory();
       } else {
+        // Swiped up - next story  
         nextStory();
       }
+    } else {
+      // Resume playing if no significant swipe
+      setIsPlaying(true);
     }
 
+    // Reset states
+    setIsDragging(false);
+    setDragDistance(0);
     touchStartRef.current = null;
   };
 
@@ -325,17 +353,27 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
         <ArrowRight className="w-6 h-6" />
       </Button>
 
-      {/* Story content */}
-      <div 
+      {/* Story content with improved gestures */}
+      <motion.div 
         ref={containerRef}
-        className="w-full h-full flex items-center justify-center relative"
+        className="w-full h-full flex items-center justify-center relative overflow-hidden"
         style={{
           backgroundColor: currentStory?.backgroundColor || '#000000',
         }}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onDoubleClick={handleDoubleTap}
         onClick={() => setIsPlaying(!isPlaying)}
+        animate={{
+          y: isDragging ? dragDistance * 0.3 : 0,
+          scale: isDragging ? 0.95 : 1
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }}
       >
         {currentStory?.videoUrl ? (
           <video 
@@ -377,25 +415,47 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
           )}
         </AnimatePresence>
 
-        {/* Navigation zones */}
+        {/* Enhanced navigation zones with visual feedback */}
         <div className="absolute inset-0 flex">
-          <div 
-            className="w-1/3 h-full cursor-pointer"
+          <motion.div 
+            className="w-1/3 h-full cursor-pointer flex items-center justify-start pl-4"
             onClick={(e) => {
               e.stopPropagation();
               prevStory();
             }}
-          />
+            whileTap={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+          >
+            {currentIndex > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                className="text-white"
+              >
+                <ChevronUp className="w-8 h-8" />
+              </motion.div>
+            )}
+          </motion.div>
           <div className="w-1/3 h-full" />
-          <div 
-            className="w-1/3 h-full cursor-pointer"
+          <motion.div 
+            className="w-1/3 h-full cursor-pointer flex items-center justify-end pr-4"
             onClick={(e) => {
               e.stopPropagation();
               nextStory();
             }}
-          />
+            whileTap={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+          >
+            {currentIndex < stories.length - 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                className="text-white"
+              >
+                <ChevronDown className="w-8 h-8" />
+              </motion.div>
+            )}
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Right side actions */}
       <div className="absolute right-4 bottom-32 z-20 flex flex-col items-center space-y-6">
@@ -420,11 +480,12 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
               transition={{ duration: 0.3 }}
             >
               <Heart 
-                className={`w-8 h-8 ${
+                className={`w-8 h-8 transition-all duration-300 ${
                   likesData?.hasUserLiked 
-                    ? 'fill-red-500 text-red-500' 
-                    : 'text-white'
+                    ? 'fill-red-500 text-red-500 drop-shadow-lg' 
+                    : 'text-white hover:text-red-300'
                 }`} 
+                fill={likesData?.hasUserLiked ? '#EF4444' : 'none'}
               />
             </motion.div>
           </Button>
