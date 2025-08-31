@@ -62,21 +62,25 @@ export default function LoginPage() {
     setFullPhoneNumber(fullPhone);
 
     try {
-      // Try to login with existing user first
-      const loginResponse = await apiRequest("/api/auth/direct-login", {
+      // Use create-user endpoint directly since it handles both new and existing users
+      const response = await apiRequest("/api/auth/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: fullPhone }),
+        body: JSON.stringify({ 
+          phoneNumber: fullPhone,
+          name: "مستخدم جديد", // Default name for new users
+          location: "الجزائر" // Default location for new users
+        }),
       });
 
-      if (loginResponse.success && loginResponse.user && loginResponse.token) {
-        // Existing user login successful
-        login(loginResponse.user, loginResponse.token);
+      if (response.success && response.user && response.token) {
+        // Either existing user login or new user creation successful
+        login(response.user, response.token);
         toast({
-          title: "مرحباً " + loginResponse.user.name + "!",
-          description: "تم تسجيل الدخول بنجاح",
+          title: "مرحباً " + response.user.name + "!",
+          description: response.message || "تم تسجيل الدخول بنجاح",
         });
-      } else if (loginResponse.needsProfile) {
+      } else {
         // New user needs profile setup
         toast({
           title: "مستخدم جديد",
@@ -85,20 +89,11 @@ export default function LoginPage() {
         setStep("profile");
       }
     } catch (error: any) {
-      // User doesn't exist, go to profile creation
-      if (error.status === 404) {
-        toast({
-          title: "مستخدم جديد",
-          description: "يرجى إكمال بياناتك الشخصية",
-        });
-        setStep("profile");
-      } else {
-        toast({
-          title: "خطأ",
-          description: error.message || "فشل في تسجيل الدخول",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في تسجيل الدخول",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
