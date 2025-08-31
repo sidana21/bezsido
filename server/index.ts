@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
+import { AdminManager } from "./admin-manager";
 
 const app = express();
 app.use(express.json());
@@ -45,6 +46,16 @@ app.use((req, res, next) => {
     console.log('App features initialized successfully');
   } catch (error) {
     console.error('Warning: Failed to initialize default features:', error);
+  }
+
+  // Initialize admin user
+  try {
+    console.log('Initializing admin user...');
+    const adminManager = new AdminManager(storage);
+    await adminManager.ensureAdminUser();
+    console.log('Admin user initialized successfully');
+  } catch (error) {
+    console.error('Warning: Failed to initialize admin user:', error);
   }
 
   const server = await registerRoutes(app);

@@ -4,6 +4,10 @@ import ws from "ws";
 import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
+// Fix certificate issues in Replit environment
+if (process.env.NODE_ENV === 'development') {
+  process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+}
 
 // Allow application to work without database in production
 let pool: Pool | null = null;

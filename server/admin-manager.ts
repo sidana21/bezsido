@@ -57,7 +57,7 @@ export class AdminManager {
     try {
       // البحث عن مستخدم إدارة موجود
       const existingUsers = await this.storage.getAllUsers();
-      let adminUser = existingUsers.find(user => user.phoneNumber === "+213123456789");
+      let adminUser = existingUsers.find(user => user.phoneNumber === "+213555123456" || user.phoneNumber === "+213123456789");
       
       if (adminUser) {
         console.log('تم العثور على مستخدم إدارة موجود:', adminUser.name);
@@ -79,7 +79,7 @@ export class AdminManager {
       console.log('إنشاء مستخدم إدارة جديد...');
       adminUser = await this.storage.createUser({
         name: adminConfig.name || "المدير العام",
-        phoneNumber: "+213123456789",
+        phoneNumber: "+213555123456",
         location: "الجزائر",
         avatar: null,
         isOnline: true,
@@ -94,7 +94,9 @@ export class AdminManager {
         adminUser = await this.storage.updateUserAdminStatus(adminUser.id, true);
         
         // التحقق من المستخدم
-        await this.storage.updateUserVerificationStatus(adminUser.id, true);
+        if (adminUser) {
+          await this.storage.updateUserVerificationStatus(adminUser.id, true);
+        }
       }
       
       console.log('تم إنشاء مستخدم الإدارة بنجاح:', adminUser?.name);
