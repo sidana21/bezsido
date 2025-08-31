@@ -259,6 +259,9 @@ export default function Status() {
     return initialInteractions;
   };
 
+  // Use sample stories if no real stories
+  const displayStories = stories.length > 0 ? stories : sampleStories;
+  
   // Initialize interactions on mount
   useEffect(() => {
     if (Object.keys(interactions).length === 0) {
@@ -266,8 +269,19 @@ export default function Status() {
     }
   }, []);
 
-  // Use sample stories if no real stories
-  const displayStories = stories.length > 0 ? stories : sampleStories;
+  // Auto-play first video when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const firstVideo = videoRefs.current[0];
+      if (firstVideo && displayStories[0]?.videoUrl && isPlaying) {
+        firstVideo.play().catch(error => {
+          console.error('Failed to auto-play first video:', error);
+        });
+      }
+    }, 500); // Small delay to ensure video is loaded
+
+    return () => clearTimeout(timer);
+  }, [displayStories]);
   
   const currentStory = displayStories && displayStories.length > 0 && currentVideoIndex >= 0 && currentVideoIndex < displayStories.length
     ? displayStories[currentVideoIndex]
@@ -305,7 +319,20 @@ export default function Status() {
   };
 
   const togglePlayPause = () => {
-    setIsPlaying(!isPlaying);
+    const newPlayingState = !isPlaying;
+    setIsPlaying(newPlayingState);
+    
+    // Immediate control of current video
+    const currentVideo = videoRefs.current[currentVideoIndex];
+    if (currentVideo) {
+      if (newPlayingState) {
+        currentVideo.play().catch(error => {
+          console.error('Failed to play current video:', error);
+        });
+      } else {
+        currentVideo.pause();
+      }
+    }
   };
 
   const toggleMute = () => {
@@ -386,6 +413,30 @@ export default function Status() {
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [currentVideoIndex]);
+
+  // Handle video playback when currentVideoIndex or isPlaying changes
+  useEffect(() => {
+    videoRefs.current.forEach((video, index) => {
+      if (!video) return;
+      
+      if (index === currentVideoIndex && isPlaying) {
+        video.play().catch(error => {
+          console.error(`Failed to play video ${index}:`, error);
+        });
+      } else {
+        video.pause();
+      }
+    });
+  }, [currentVideoIndex, isPlaying]);
+
+  // Handle video mute state
+  useEffect(() => {
+    videoRefs.current.forEach((video) => {
+      if (video) {
+        video.muted = isMuted;
+      }
+    });
+  }, [isMuted]);
 
   if (isLoading) {
     return (
@@ -481,6 +532,9 @@ export default function Status() {
             {/* Background Content */}
             {story.videoUrl ? (
               <video
+                ref={(el) => {
+                  videoRefs.current[index] = el;
+                }}
                 src={story.videoUrl}
                 className="absolute inset-0 w-full h-full object-cover"
                 autoPlay={index === currentVideoIndex && isPlaying}
@@ -489,6 +543,15 @@ export default function Status() {
                 playsInline
                 controls={false}
                 data-testid={`video-story-${index}`}
+                onLoadedData={(e) => {
+                  const video = e.target as HTMLVideoElement;
+                  if (index === currentVideoIndex && isPlaying) {
+                    video.play().catch(console.error);
+                  }
+                }}
+                onError={(e) => {
+                  console.error(`Video load error for story ${index}:`, e);
+                }}
               />
             ) : story.imageUrl ? (
               <img
