@@ -1,14 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { MessageCircle, Shield, Users, ChevronDown } from "lucide-react";
+import { MessageCircle, Shield } from "lucide-react";
 
 const countries = [
   { code: "+213", name: "Algeria", flag: "🇩🇿" },
@@ -21,18 +20,12 @@ const countries = [
 ];
 
 export default function LoginPage() {
-  const [step, setStep] = useState<"phone" | "otp" | "profile">("phone");
   const [countryCode, setCountryCode] = useState("+213");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [fullPhoneNumber, setFullPhoneNumber] = useState("");
-  const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState("الجزائر");
   const [isLoading, setIsLoading] = useState(false);
-  const [lastGeneratedOtp, setLastGeneratedOtp] = useState("");
-  const [currentOtp, setCurrentOtp] = useState("");
-  const [needsProfile, setNeedsProfile] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -40,14 +33,7 @@ export default function LoginPage() {
     "تندوف", "الجزائر", "وهران", "قسنطينة", "عنابة", "سطيف", "باتنة", "تيزي وزو", "بجاية", "مستغانم"
   ];
 
-  useEffect(() => {
-    if (needsProfile) {
-      setStep("profile");
-      setNeedsProfile(false);
-    }
-  }, [needsProfile]);
-
-  const handleDirectLogin = async () => {
+  const handleLogin = async () => {
     if (!phoneNumber.trim()) {
       toast({
         title: "خطأ",
@@ -58,186 +44,97 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    const fullPhone = countryCode + phoneNumber;
-    setFullPhoneNumber(fullPhone);
+    const fullPhone = countryCode + phoneNumber.trim();
 
     try {
-      // Use create-user endpoint directly since it handles both new and existing users
+      // محاولة تسجيل الدخول المباشر أولاً
+      const response = await apiRequest("/api/auth/direct-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: fullPhone }),
+      });
+
+      if (response.success && response.user && response.token) {
+        // مستخدم موجود - تسجيل دخول مباشر
+        login(response.user, response.token);
+        toast({
+          title: "مرحباً " + response.user.name + "!",
+          description: "تم تسجيل الدخول بنجاح",
+        });
+      } else if (response.needsProfile) {
+        // مستخدم جديد - عرض نموذج الملف الشخصي
+        setShowProfile(true);
+        toast({
+          title: "مستخدم جديد",
+          description: "يرجى إكمال بياناتك الشخصية",
+        });
+      }
+    } catch (error: any) {
+      if (error.message.includes("404")) {
+        // مستخدم جديد - عرض نموذج الملف الشخصي
+        setShowProfile(true);
+        toast({
+          title: "مستخدم جديد",
+          description: "يرجى إكمال بياناتك الشخصية",
+        });
+      } else {
+        toast({
+          title: "خطأ",
+          description: error.message || "فشل في تسجيل الدخول",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    if (!name.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال الاسم",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!location) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار المنطقة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const fullPhone = countryCode + phoneNumber.trim();
+
+    try {
       const response = await apiRequest("/api/auth/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           phoneNumber: fullPhone,
-          name: "مستخدم جديد", // Default name for new users
-          location: "الجزائر" // Default location for new users
-        }),
-      });
-
-      if (response.success && response.user && response.token) {
-        // Either existing user login or new user creation successful
-        login(response.user, response.token);
-        toast({
-          title: "مرحباً " + response.user.name + "!",
-          description: response.message || "تم تسجيل الدخول بنجاح",
-        });
-      } else {
-        // New user needs profile setup
-        toast({
-          title: "مستخدم جديد",
-          description: "يرجى إكمال بياناتك الشخصية",
-        });
-        setStep("profile");
-      }
-    } catch (error: any) {
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل في تسجيل الدخول",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6) {
-      toast({
-        title: "خطأ",
-        description: "يرجى إدخال رمز التحقق المكون من 6 أرقام",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await apiRequest("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          phoneNumber: fullPhoneNumber, 
-          code: otp
-        }),
-      });
-
-      if (response.needsProfile) {
-        // OTP verified but new user needs profile setup
-        setOtpVerified(true);
-        toast({
-          title: "مستخدم جديد",
-          description: "يرجى إكمال بياناتك الشخصية",
-        });
-        setNeedsProfile(true);
-      } else if (response.user && response.token) {
-        // Existing user login successful
-        login(response.user, response.token);
-        toast({
-          title: "مرحباً!",
-          description: "تم تسجيل الدخول بنجاح",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "خطأ",
-        description: error.message || "رمز التحقق غير صحيح",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fillOtpAuto = () => {
-    if (lastGeneratedOtp) {
-      setOtp(lastGeneratedOtp);
-      toast({
-        title: "تم ملء الرمز",
-        description: "تم ملء رمز التحقق تلقائياً",
-      });
-    }
-  };
-
-  const handleCompleteProfile = async () => {
-    if (!name.trim() || !location) {
-      toast({
-        title: "خطأ",
-        description: "يرجى إكمال جميع البيانات المطلوبة",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // تأكد من وجود رقم الهاتف الكامل، إذا لم يكن موجود قم بتكوينه
-    let phoneToUse = fullPhoneNumber;
-    if (!phoneToUse && phoneNumber.trim()) {
-      phoneToUse = countryCode + phoneNumber.trim();
-      setFullPhoneNumber(phoneToUse);
-    }
-
-    if (!phoneToUse || !phoneToUse.trim()) {
-      toast({
-        title: "خطأ",
-        description: "رقم الهاتف مطلوب - يرجى البدء من جديد",
-        variant: "destructive",
-      });
-      setStep("phone");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      console.log("Creating user with data:", { 
-        phoneNumber: phoneToUse, 
-        name: name.trim(),
-        location,
-        otpVerified
-      });
-
-      const response = await apiRequest("/api/auth/create-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          phoneNumber: phoneToUse, 
           name: name.trim(),
           location
         }),
       });
 
-      console.log("User creation response:", response);
-
-      if (response && response.success && response.user && response.token) {
+      if (response.success && response.user && response.token) {
         login(response.user, response.token);
         toast({
           title: "مرحباً " + response.user.name + "! 🎉",
-          description: response.message || "تم إنشاء حسابك وتسجيل دخولك بنجاح",
+          description: "تم إنشاء حسابك وتسجيل دخولك بنجاح",
         });
       } else {
-        console.error("Invalid server response:", response);
-        throw new Error(response?.message || "استجابة غير صالحة من الخادم");
+        throw new Error(response?.message || "فشل في إنشاء الحساب");
       }
     } catch (error: any) {
-      console.error("User creation error details:", {
-        error,
-        message: error.message,
-        status: error.status,
-        phoneNumber: phoneToUse,
-        name: name.trim(),
-        location
-      });
-      
-      let errorMessage = "فشل في إنشاء الحساب";
-      
-      if (error.message && typeof error.message === 'string') {
-        errorMessage = error.message;
-      } else if (error.status === 400) {
-        errorMessage = "بيانات غير صحيحة - يرجى المحاولة مرة أخرى";
-      } else if (error.status === 500) {
-        errorMessage = "خطأ في الخادم - يرجى المحاولة لاحقاً";
-      }
-      
       toast({
         title: "خطأ في إنشاء الحساب",
-        description: errorMessage,
+        description: error.message || "حدث خطأ أثناء إنشاء الحساب",
         variant: "destructive",
       });
     } finally {
@@ -245,86 +142,7 @@ export default function LoginPage() {
     }
   };
 
-  if (step === "phone") {
-    return (
-      <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
-        <div className="w-full max-w-md">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-white mb-2">BizChat</h1>
-            <p className="text-green-100 text-sm">
-منصة التواصل التجاري الذكية - أدخل رقم هاتفك للدخول مباشرة
-            </p>
-          </div>
-
-          <Card className="border-0 shadow-lg" data-testid="card-phone-verification">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-lg font-semibold">تسجيل الدخول</CardTitle>
-              <CardDescription>أدخل رقم هاتفك للمتابعة</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="country">البلد</Label>
-                <Select value={countryCode} onValueChange={setCountryCode}>
-                  <SelectTrigger data-testid="select-country">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem key={country.code} value={country.code}>
-                        <div className="flex items-center gap-2">
-                          <span>{country.flag}</span>
-                          <span>{country.name}</span>
-                          <span className="text-muted-foreground">{country.code}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">رقم الهاتف</Label>
-                <div className="flex gap-2">
-                  <div className="flex items-center px-3 py-2 border border-input rounded-md bg-background text-sm font-medium">
-                    {countryCode}
-                  </div>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                    placeholder="555123456"
-                    className="flex-1"
-                    data-testid="input-phone-number"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  ادخل رقم هاتفك للدخول مباشرة إلى التطبيق
-                </p>
-              </div>
-
-              <Button 
-                onClick={handleDirectLogin} 
-                className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white"
-                disabled={isLoading}
-                data-testid="button-direct-login"
-              >
-                {isLoading ? "جارِ الدخول..." : "دخول إلى التطبيق"}
-              </Button>
-
-              <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-6">
-                <Shield className="w-4 h-4" />
-                <span>محمي بتشفير تام</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "otp") {
+  if (showProfile) {
     return (
       <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
         <div className="w-full max-w-md">
@@ -332,106 +150,20 @@ export default function LoginPage() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4">
               <MessageCircle className="w-10 h-10 text-[#075e54]" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">تحقق من رقم هاتفك</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">إنشاء حساب جديد</h1>
             <p className="text-green-100 text-sm">
-              أدخل الرمز المرسل إلى {fullPhoneNumber}
-            </p>
-          </div>
-
-          <Card className="border-0 shadow-lg" data-testid="card-otp-verification">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-lg font-semibold">رمز التحقق</CardTitle>
-              <CardDescription>أدخل الرمز المكون من 6 أرقام</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex justify-center">
-                <InputOTP
-                  value={otp}
-                  onChange={setOtp}
-                  maxLength={6}
-                  data-testid="input-otp"
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-
-              {lastGeneratedOtp && (
-                <div className="text-center p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <p className="text-lg font-bold text-green-800">
-                      رمز التحقق: <span className="text-2xl font-mono">{lastGeneratedOtp}</span>
-                    </p>
-                  </div>
-                  <p className="text-sm text-green-600 mb-2">
-                    استخدم هذا الرمز للتحقق من هاتفك
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setOtp(lastGeneratedOtp)}
-                    className="text-sm bg-green-100 hover:bg-green-200 border-green-300"
-                    data-testid="button-auto-fill"
-                  >
-                    📝 ملء تلقائي
-                  </Button>
-                </div>
-              )}
-
-              <Button 
-                onClick={handleVerifyOtp} 
-                className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white"
-                disabled={isLoading || otp.length !== 6}
-                data-testid="button-verify-otp"
-              >
-                {isLoading ? "جارِ التحقق..." : "تحقق من الرمز"}
-              </Button>
-
-              <div className="text-center">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setStep("phone")}
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                  data-testid="button-back-to-phone"
-                >
-                  تغيير رقم الهاتف
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "profile") {
-    return (
-      <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4">
-              <Users className="w-10 h-10 text-[#075e54]" />
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-2">إعداد الملف الشخصي</h1>
-            <p className="text-green-100 text-sm">
-              أكمل بياناتك لإنشاء حسابك
+              أكمل بياناتك لإنشاء حسابك في BizChat
             </p>
           </div>
 
           <Card className="border-0 shadow-lg" data-testid="card-profile-setup">
             <CardHeader className="text-center pb-4">
-              <CardTitle className="text-lg font-semibold">بياناتك الشخصية</CardTitle>
+              <CardTitle className="text-lg font-semibold">البيانات الشخصية</CardTitle>
               <CardDescription>هذه البيانات ستظهر للآخرين</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">الاسم</Label>
+                <Label htmlFor="name">الاسم الكامل</Label>
                 <Input
                   id="name"
                   value={name}
@@ -457,14 +189,25 @@ export default function LoginPage() {
                 </Select>
               </div>
 
-              <Button 
-                onClick={handleCompleteProfile} 
-                className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white"
-                disabled={isLoading || !name.trim() || !location}
-                data-testid="button-complete-profile"
-              >
-                {isLoading ? "جارِ الإنشاء..." : "إنشاء الحساب"}
-              </Button>
+              <div className="space-y-3 pt-2">
+                <Button 
+                  onClick={handleCreateAccount} 
+                  className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white"
+                  disabled={isLoading || !name.trim() || !location}
+                  data-testid="button-create-account"
+                >
+                  {isLoading ? "جارِ الإنشاء..." : "إنشاء الحساب والدخول"}
+                </Button>
+
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowProfile(false)}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground"
+                  data-testid="button-back-to-login"
+                >
+                  العودة لتسجيل الدخول
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -472,5 +215,88 @@ export default function LoginPage() {
     );
   }
 
-  return null;
+  return (
+    <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4">
+            <MessageCircle className="w-10 h-10 text-[#075e54]" />
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">BizChat</h1>
+          <p className="text-green-100 text-sm">
+            منصة التواصل التجاري الذكية
+          </p>
+        </div>
+
+        <Card className="border-0 shadow-lg" data-testid="card-phone-login">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-xl font-semibold">تسجيل الدخول</CardTitle>
+            <CardDescription>أدخل رقم هاتفك للدخول مباشرة إلى التطبيق</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="country">البلد</Label>
+              <Select value={countryCode} onValueChange={setCountryCode}>
+                <SelectTrigger data-testid="select-country">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {countries.map((country) => (
+                    <SelectItem key={country.code} value={country.code}>
+                      <div className="flex items-center gap-2">
+                        <span>{country.flag}</span>
+                        <span>{country.name}</span>
+                        <span className="text-muted-foreground">{country.code}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">رقم الهاتف</Label>
+              <div className="flex gap-2">
+                <div className="flex items-center px-3 py-2 border border-input rounded-md bg-background text-sm font-medium">
+                  {countryCode}
+                </div>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                  placeholder="555123456"
+                  className="flex-1"
+                  data-testid="input-phone-number"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && phoneNumber.trim()) {
+                      handleLogin();
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                لا نحتاج رموز تحقق - ادخل رقمك واضغط دخول فقط
+              </p>
+            </div>
+
+            <Button 
+              onClick={handleLogin} 
+              className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white text-lg py-3"
+              disabled={isLoading || !phoneNumber.trim()}
+              data-testid="button-login"
+            >
+              {isLoading ? "جارِ الدخول..." : "دخول إلى التطبيق"}
+            </Button>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-6">
+              <Shield className="w-4 h-4" />
+              <span>محمي بتشفير تام - دخول بدون رموز تحقق</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
