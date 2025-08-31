@@ -41,7 +41,7 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -3328,10 +3328,104 @@ export class DatabaseStorage implements IStorage {
   async updateOrderStatus(orderId: string, status: string, updatedBy: string): Promise<Order | undefined> { return undefined; }
   async cancelOrder(orderId: string, reason: string): Promise<Order | undefined> { return undefined; }
   
-  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> { throw new Error('Not implemented'); }
-  async getUserVerificationRequests(userId: string): Promise<VerificationRequest[]> { return []; }
-  async getVerificationRequest(id: string): Promise<VerificationRequest | undefined> { return undefined; }
-  async updateVerificationRequestStatus(id: string, status: string, adminNote?: string, reviewedBy?: string): Promise<VerificationRequest | undefined> { return undefined; }
+  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const [newRequest] = await db.insert(verificationRequests)
+        .values({
+          userId: request.userId,
+          storeId: request.storeId || null,
+          requestType: request.requestType,
+          status: 'pending',
+          documents: request.documents || [],
+          reason: request.reason || null,
+        })
+        .returning();
+
+      return newRequest;
+    } catch (error) {
+      console.error('Error creating verification request:', error);
+      throw error;
+    }
+  }
+  async getUserVerificationRequests(userId: string): Promise<VerificationRequest[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const requests = await db.select()
+        .from(verificationRequests)
+        .where(eq(verificationRequests.userId, userId))
+        .orderBy(sql`${verificationRequests.submittedAt} DESC`);
+
+      return requests;
+    } catch (error) {
+      console.error('Error getting user verification requests:', error);
+      return [];
+    }
+  }
+  async getVerificationRequest(id: string): Promise<VerificationRequest | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const [request] = await db.select()
+        .from(verificationRequests)
+        .where(eq(verificationRequests.id, id))
+        .limit(1);
+
+      return request;
+    } catch (error) {
+      console.error('Error getting verification request:', error);
+      return undefined;
+    }
+  }
+  async updateVerificationRequestStatus(id: string, status: string, adminNote?: string, reviewedBy?: string): Promise<VerificationRequest | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      // First update the verification request
+      const [updatedRequest] = await db.update(verificationRequests)
+        .set({
+          status,
+          adminNote: adminNote || null,
+          reviewedBy: reviewedBy || null,
+          reviewedAt: new Date(),
+        })
+        .where(eq(verificationRequests.id, id))
+        .returning();
+
+      if (!updatedRequest) {
+        return undefined;
+      }
+
+      // If approved, update the user's verification status
+      if (status === 'approved') {
+        await db.update(users)
+          .set({
+            isVerified: true,
+            verifiedAt: new Date(),
+          })
+          .where(eq(users.id, updatedRequest.userId));
+      }
+
+      return updatedRequest;
+    } catch (error) {
+      console.error('Error updating verification request status:', error);
+      return undefined;
+    }
+  }
 
   async likeStory(storyId: string, userId: string, reactionType: string = 'like'): Promise<StoryLike> {
     try {
@@ -3574,7 +3668,26 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
-  async getAllVerificationRequests(status?: string): Promise<VerificationRequest[]> { return []; }
+  async getAllVerificationRequests(status?: string): Promise<VerificationRequest[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      let query = db.select().from(verificationRequests);
+      
+      if (status) {
+        query = query.where(eq(verificationRequests.status, status));
+      }
+
+      const requests = await query.orderBy(sql`${verificationRequests.submittedAt} DESC`);
+      return requests;
+    } catch (error) {
+      console.error('Error getting all verification requests:', error);
+      return [];
+    }
+  }
   async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined> {
     try {
       if (!db) {
