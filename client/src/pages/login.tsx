@@ -215,7 +215,7 @@ export default function LoginPage() {
         login(response.user, response.token);
         toast({
           title: "مرحباً " + response.user.name + "!",
-          description: "تم إنشاء حسابك بنجاح",
+          description: response.message || "تم تسجيل الدخول بنجاح",
         });
       } else {
         throw new Error("Invalid response from server");

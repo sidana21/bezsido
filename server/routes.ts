@@ -260,8 +260,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByPhoneNumber(phoneNumber);
       
       if (user) {
-        console.log("User already exists:", user.id);
-        return res.status(400).json({ message: "User already exists" });
+        console.log("User already exists, logging them in:", user.id);
+        
+        // User exists, so log them in instead
+        await storage.updateUserOnlineStatus(user.id, true);
+        
+        // Create session
+        const token = randomUUID();
+        const sessionData = insertSessionSchema.parse({
+          userId: user.id,
+          token,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        });
+        
+        await storage.createSession(sessionData);
+        
+        return res.json({ 
+          success: true, 
+          user, 
+          token,
+          message: "تم تسجيل الدخول بنجاح - الحساب موجود مسبقاً" 
+        });
       }
       
       // Create user
@@ -294,12 +313,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         user, 
         token,
-        message: "User created successfully" 
+        message: "تم إنشاء الحساب بنجاح" 
       });
     } catch (error: any) {
       console.error('User creation error:', error);
+      
+      // Handle specific database errors
+      if (error.code === '23505' && error.constraint?.includes('phone_number')) {
+        return res.status(400).json({ 
+          message: "رقم الهاتف مستخدم بالفعل" 
+        });
+      }
+      
       res.status(500).json({ 
-        message: "Failed to create user",
+        message: "فشل في إنشاء الحساب",
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }

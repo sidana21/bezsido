@@ -2861,14 +2861,31 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     try {
+      console.log('Creating user with data:', insertUser);
+      
       if (!db) {
         const dbModule = await import('./db');
         db = dbModule.db;
       }
+      
+      // Check if user already exists
+      const existingUser = await this.getUserByPhoneNumber(insertUser.phoneNumber);
+      if (existingUser) {
+        console.error('User already exists with phone:', insertUser.phoneNumber);
+        throw new Error('User already exists with this phone number');
+      }
+      
       const [user] = await db.insert(users).values(insertUser).returning();
+      console.log('User created successfully:', user.id);
       return user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        constraint: error.constraint
+      });
       throw error;
     }
   }
