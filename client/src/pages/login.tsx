@@ -138,6 +138,10 @@ export default function LoginPage() {
     try {
       console.log("Creating account with data:", { phoneNumber: fullPhone, name: name.trim(), location });
       
+      // إضافة مهلة زمنية أطول لإنشاء الحساب
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 ثانية
+      
       const response = await fetch("/api/auth/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,20 +150,30 @@ export default function LoginPage() {
           name: name.trim(),
           location
         }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       console.log("Account creation HTTP status:", response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Account creation HTTP error:", errorText);
+        console.error("Account creation HTTP error:", response.status, errorText);
+        
+        let errorMessage = `خطأ في الشبكة: ${response.status}`;
         
         try {
           const errorData = JSON.parse(errorText);
-          throw new Error(errorData.message || `خطأ HTTP ${response.status}`);
+          errorMessage = errorData.message || errorMessage;
         } catch (parseError) {
-          throw new Error(`خطأ في الشبكة: ${response.status} ${response.statusText}`);
+          // If parsing fails, use the raw text or default message
+          if (errorText && errorText.trim()) {
+            errorMessage = errorText;
+          }
         }
+        
+        throw new Error(errorMessage);
       }
       
       const responseData = await response.json();
@@ -179,9 +193,18 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Account creation error:", error);
+      
+      let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
+      
+      if (error.name === 'AbortError') {
+        errorMessage = "انتهت المهلة الزمنية، يرجى المحاولة مرة أخرى";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "خطأ في إنشاء الحساب",
-        description: error.message || "حدث خطأ أثناء إنشاء الحساب",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
