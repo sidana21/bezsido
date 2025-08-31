@@ -59,6 +59,9 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
   const currentStory = stories[currentIndex];
 
   // Like mutation
+  // Flying hearts state
+  const [flyingHearts, setFlyingHearts] = useState<Array<{ id: number; x: number; y: number }>>([]);
+  
   const likeMutation = useMutation({
     mutationFn: async () => {
       return apiRequest(`/api/stories/${currentStory?.id}/like`, {
@@ -69,15 +72,18 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stories', currentStory?.id, 'likes'] });
-      // Show heart animation
-      const heartElement = document.createElement('div');
-      heartElement.innerHTML = '❤️';
-      heartElement.className = 'fixed text-6xl pointer-events-none z-50 animate-ping';
-      heartElement.style.left = '50%';
-      heartElement.style.top = '50%';
-      heartElement.style.transform = 'translate(-50%, -50%)';
-      document.body.appendChild(heartElement);
-      setTimeout(() => document.body.removeChild(heartElement), 1000);
+      // Add flying heart animation
+      const newHeart = {
+        id: Date.now(),
+        x: Math.random() * window.innerWidth,
+        y: window.innerHeight - 100
+      };
+      setFlyingHearts(prev => [...prev, newHeart]);
+      
+      // Remove heart after animation
+      setTimeout(() => {
+        setFlyingHearts(prev => prev.filter(heart => heart.id !== newHeart.id));
+      }, 3000);
     },
   });
 
@@ -121,7 +127,14 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
     progressRef.current = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
-          nextStory();
+          // Use setTimeout to avoid setState during render
+          setTimeout(() => {
+            if (currentIndex < stories.length - 1) {
+              setCurrentIndex(prevIndex => prevIndex + 1);
+            } else {
+              onClose();
+            }
+          }, 0);
           return 0;
         }
         return prev + increment;
@@ -133,7 +146,7 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
         clearInterval(progressRef.current);
       }
     };
-  }, [currentIndex, isPlaying, currentStory]);
+  }, [currentIndex, isPlaying, currentStory, stories.length, onClose]);
 
   // Reset progress when story changes
   useEffect(() => {
@@ -182,11 +195,42 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
     touchStartRef.current = null;
   };
 
-  // Double tap to like
-  const handleDoubleTap = () => {
-    if (currentStory && !likesData?.hasUserLiked) {
-      likeMutation.mutate();
+  // Double tap to like with position tracking
+  const [lastTap, setLastTap] = useState<number>(0);
+  
+  const handleDoubleTap = (e: React.MouseEvent | React.TouchEvent) => {
+    const now = Date.now();
+    const timeDiff = now - lastTap;
+    
+    if (timeDiff < 300 && timeDiff > 0) {
+      // Double tap detected
+      e.preventDefault();
+      if (currentStory) {
+        // Get tap position for heart placement
+        const rect = (e.target as HTMLElement).getBoundingClientRect();
+        const x = 'clientX' in e ? e.clientX : e.touches[0].clientX;
+        const y = 'clientY' in e ? e.clientY : e.touches[0].clientY;
+        
+        // Create immediate visual feedback
+        const newHeart = {
+          id: Date.now(),
+          x: x - 30, // Offset to center the heart
+          y: y - 30
+        };
+        setFlyingHearts(prev => [...prev, newHeart]);
+        
+        // Remove heart after animation
+        setTimeout(() => {
+          setFlyingHearts(prev => prev.filter(heart => heart.id !== newHeart.id));
+        }, 3000);
+        
+        // Send like request
+        if (!likesData?.hasUserLiked) {
+          likeMutation.mutate();
+        }
+      }
     }
+    setLastTap(now);
   };
 
   const handleAddComment = () => {
@@ -585,6 +629,41 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Flying Hearts Animation */}
+      <AnimatePresence>
+        {flyingHearts.map((heart) => (
+          <motion.div
+            key={heart.id}
+            initial={{ 
+              x: heart.x, 
+              y: heart.y, 
+              scale: 0.5, 
+              opacity: 1,
+              rotate: 0
+            }}
+            animate={{ 
+              y: heart.y - 200, 
+              scale: [0.5, 1.2, 0.8],
+              opacity: [1, 0.8, 0],
+              rotate: [0, 15, -10, 20, 0],
+              x: heart.x + (Math.random() - 0.5) * 100
+            }}
+            transition={{ 
+              duration: 3,
+              ease: "easeOut"
+            }}
+            className="fixed pointer-events-none z-50 text-6xl"
+            style={{
+              position: 'fixed',
+              left: heart.x,
+              top: heart.y
+            }}
+          >
+            ❤️
+          </motion.div>
+        ))}
       </AnimatePresence>
     </div>
   );
