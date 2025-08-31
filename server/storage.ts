@@ -3318,7 +3318,15 @@ export class DatabaseStorage implements IStorage {
     }
   }
   async getUserStories(userId: string): Promise<Story[]> { return []; }
-  async createStory(story: InsertStory): Promise<Story> { throw new Error('Not implemented'); }
+  async createStory(story: InsertStory): Promise<Story> {
+    try {
+      const [created] = await db.insert(stories).values(story).returning();
+      return created;
+    } catch (error) {
+      console.error('Error creating story:', error);
+      throw error;
+    }
+  }
   async viewStory(storyId: string, viewerId: string): Promise<void> {}
   async getStory(storyId: string): Promise<Story | undefined> { return undefined; }
   
