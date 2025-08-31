@@ -269,17 +269,19 @@ export default function Status() {
   // Use sample stories if no real stories
   const displayStories = stories.length > 0 ? stories : sampleStories;
   
-  const currentStory = displayStories[currentVideoIndex];
-  const currentInteraction = interactions[currentStory?.id] || {
-    storyId: currentStory?.id || '',
+  const currentStory = displayStories && displayStories.length > 0 && currentVideoIndex >= 0 && currentVideoIndex < displayStories.length
+    ? displayStories[currentVideoIndex]
+    : null;
+  const currentInteraction = currentStory ? (interactions[currentStory.id] || {
+    storyId: currentStory.id,
     likes: 0,
     isLiked: false, 
     comments: [],
     shares: 0
-  };
+  }) : null;
 
   const handleScroll = () => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || displayStories.length === 0) return;
     
     const container = containerRef.current;
     const scrollTop = container.scrollTop;
@@ -292,7 +294,7 @@ export default function Status() {
   };
 
   const scrollToVideo = (index: number) => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || displayStories.length === 0 || index < 0 || index >= displayStories.length) return;
     
     const container = containerRef.current;
     const windowHeight = window.innerHeight;
@@ -564,7 +566,7 @@ export default function Status() {
                 <div className="flex items-center gap-2">
                   <p className="text-white/90 text-sm font-medium drop-shadow-md">{story.location}</p>
                   <span className="text-white/70 text-xs">•</span>
-                  <span className="text-white/70 text-xs font-medium">{formatTimeAgo(story.timestamp)}</span>
+                  <span className="text-white/70 text-xs font-medium">{story.timestamp ? formatTimeAgo(story.timestamp) : 'الآن'}</span>
                 </div>
               </div>
             </div>
@@ -738,7 +740,7 @@ export default function Status() {
                 </div>
                 <DialogTitle className="text-xl font-bold text-white drop-shadow-lg">التعليقات</DialogTitle>
                 <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full">
-                  <span className="text-white text-xs font-bold">{currentInteraction.comments?.length || 0}</span>
+                  <span className="text-white text-xs font-bold">{currentInteraction?.comments?.length || 0}</span>
                 </div>
               </div>
               <Button
@@ -755,7 +757,7 @@ export default function Status() {
           
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
-              {currentInteraction.comments?.map((comment) => (
+              {currentInteraction?.comments?.map((comment) => (
                 <div key={comment.id} className="flex gap-3" data-testid={`comment-${comment.id}`}>
                   <Avatar className="w-8 h-8 flex-shrink-0">
                     <AvatarImage src={comment.userAvatar} />
@@ -768,7 +770,7 @@ export default function Status() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-sm">{comment.userName}</span>
                         <span className="text-xs text-gray-500">
-                          {formatTimeAgo(comment.timestamp)}
+                          {comment.timestamp ? formatTimeAgo(comment.timestamp) : 'الآن'}
                         </span>
                       </div>
                       <p className="text-sm leading-relaxed">{comment.content}</p>
@@ -796,7 +798,7 @@ export default function Status() {
                 </div>
               ))}
               
-              {currentInteraction.comments?.length === 0 && (
+              {currentInteraction?.comments?.length === 0 && (
                 <div className="text-center text-gray-500 py-8" data-testid="no-comments">
                   <MessageCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                   <p>لا توجد تعليقات بعد</p>
