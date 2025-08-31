@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import notificationSound from '../assets/notification.mp3';
 
 interface NotificationOptions {
   enableSound?: boolean;
@@ -17,15 +18,41 @@ export function useNotifications(options: NotificationOptions = {}) {
   const soundRef = useRef<HTMLAudioElement | null>(null);
   const lastUnreadCountRef = useRef<number>(0);
   const queryClient = useQueryClient();
+  const hasUserInteractedRef = useRef<boolean>(false);
 
   // إنشاء صوت الإشعار
   useEffect(() => {
     if (enableSound) {
       // استخدام الرنة الجديدة المخصصة
       try {
+        // محاولة تحميل الرنة من المجلد العام أولاً
         soundRef.current = new Audio('/sounds/notification.mp3');
         soundRef.current.volume = soundVolume;
         soundRef.current.preload = 'auto';
+        
+        // تسجيل أحداث التحميل والأخطاء
+        soundRef.current.addEventListener('loadstart', () => {
+          console.log('🔊 بدأ تحميل صوت الإشعار...');
+        }, { once: true });
+        
+        soundRef.current.addEventListener('canplaythrough', () => {
+          console.log('✅ تم تحميل صوت الإشعار بنجاح وجاهز للتشغيل');
+        }, { once: true });
+        
+        // اختبار إذا كان الملف يمكن تحميله
+        soundRef.current.addEventListener('error', () => {
+          console.log('❌ فشل تحميل الرنة من المجلد العام، محاولة استخدام ملف الأصول');
+          try {
+            // استخدام الملف المستورد من assets
+            soundRef.current = new Audio(notificationSound);
+            soundRef.current.volume = soundVolume;
+            soundRef.current.preload = 'auto';
+            console.log('🔄 تم التبديل إلى ملف الصوت المستورد');
+          } catch (fallbackError) {
+            console.log('❌ فشل تحميل ملف الصوت المستورد أيضاً:', fallbackError);
+          }
+        }, { once: true });
+        
       } catch (error) {
         console.log('تعذر تحميل الرنة المخصصة، استخدام الافتراضية');
         // استخدام الرنة الافتراضية كحل بديل
@@ -36,13 +63,29 @@ export function useNotifications(options: NotificationOptions = {}) {
     }
   }, [enableSound, soundVolume]);
 
-  // طلب إذن الإشعارات من المتصفح
+  // طلب إذن الإشعارات من المتصفح وتسجيل التفاعل مع المستخدم
   useEffect(() => {
     if (enableBrowserNotifications && 'Notification' in window) {
       if (Notification.permission === 'default') {
         Notification.requestPermission();
       }
     }
+
+    // تسجيل التفاعل مع المستخدم لتمكين الصوت
+    const enableAudio = () => {
+      hasUserInteractedRef.current = true;
+    };
+
+    // إضافة مستمعات للأحداث للكشف عن تفاعل المستخدم
+    window.addEventListener('click', enableAudio, { once: true });
+    window.addEventListener('keydown', enableAudio, { once: true });
+    window.addEventListener('touchstart', enableAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('click', enableAudio);
+      window.removeEventListener('keydown', enableAudio);
+      window.removeEventListener('touchstart', enableAudio);
+    };
   }, [enableBrowserNotifications]);
 
   // الحصول على عدد الرسائل غير المقروءة
@@ -62,10 +105,30 @@ export function useNotifications(options: NotificationOptions = {}) {
   });
 
   const playNotificationSound = useCallback(() => {
-    if (enableSound && soundRef.current) {
-      soundRef.current.play().catch(err => {
-        console.log('لا يمكن تشغيل صوت الإشعار:', err);
-      });
+    if (enableSound && soundRef.current && hasUserInteractedRef.current) {
+      // إعادة تعيين الصوت إلى البداية
+      soundRef.current.currentTime = 0;
+      
+      // محاولة تشغيل الصوت
+      const playPromise = soundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('✅ تم تشغيل صوت الإشعار بنجاح');
+          })
+          .catch(err => {
+            console.log('❌ لا يمكن تشغيل صوت الإشعار:', err);
+            console.log('نوع الخطأ:', err.name);
+            console.log('رسالة الخطأ:', err.message);
+            
+            if (err.name === 'NotAllowedError') {
+              console.log('⚠️ يحتاج المستخدم إلى التفاعل مع الصفحة أولاً لتمكين الصوت');
+            }
+          });
+      }
+    } else if (enableSound && !hasUserInteractedRef.current) {
+      console.log('⚠️ في انتظار تفاعل المستخدم مع الصفحة لتمكين الصوت');
     }
   }, [enableSound]);
 
