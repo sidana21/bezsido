@@ -610,7 +610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!chat.isGroup && chat.participants.length === 2) {
             const otherParticipantId = chat.participants.find(id => id !== req.userId);
             if (otherParticipantId) {
-              otherParticipant = await storage.getUser(otherParticipantId);
+              otherParticipant = await storage.getUserById(otherParticipantId);
             }
           }
           
@@ -665,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const recentUnread = unreadMessages.slice(-3);
         
         for (const message of recentUnread) {
-          const sender = await storage.getUser(message.senderId);
+          const sender = await storage.getUserById(message.senderId);
           if (sender) {
             recentMessages.push({
               id: message.id,
@@ -707,7 +707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if other user exists
-      const otherUser = await storage.getUser(otherUserId);
+      const otherUser = await storage.getUserById(otherUserId);
       if (!otherUser) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -748,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Include sender info with each message
       const messagesWithSenders = await Promise.all(
         messages.map(async (message) => {
-          const sender = await storage.getUser(message.senderId);
+          const sender = await storage.getUserById(message.senderId);
           return {
             ...message,
             sender,
@@ -773,7 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const message = await storage.createMessage(messageData);
-      const sender = await storage.getUser(message.senderId);
+      const sender = await storage.getUserById(message.senderId);
       
       res.json({
         ...message,
@@ -819,7 +819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const message = await storage.createMessage(messageData);
-      const sender = await storage.getUser(message.senderId);
+      const sender = await storage.getUserById(message.senderId);
       
       res.json({
         ...message,
@@ -878,7 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Include sender info with each message
       const messagesWithSenders = await Promise.all(
         messages.map(async (message) => {
-          const sender = await storage.getUser(message.senderId);
+          const sender = await storage.getUserById(message.senderId);
           return {
             ...message,
             sender,
@@ -907,7 +907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Message not found or cannot be edited" });
       }
       
-      const sender = await storage.getUser(message.senderId);
+      const sender = await storage.getUserById(message.senderId);
       res.json({
         ...message,
         sender,
@@ -953,7 +953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create story
   app.post("/api/stories", requireAuth, async (req: any, res) => {
     try {
-      const currentUser = await storage.getUser(req.userId);
+      const currentUser = await storage.getUserById(req.userId);
       if (!currentUser) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -1001,7 +1001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!story) {
         return res.status(404).json({ message: "Story not found" });
       }
-      const user = await storage.getUser(story.userId);
+      const user = await storage.getUserById(story.userId);
       res.json({ ...story, user });
     } catch (error) {
       res.status(500).json({ message: "Failed to get story" });
@@ -1091,7 +1091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const comment = await storage.addStoryComment(commentData);
-      const user = await storage.getUser(req.userId);
+      const user = await storage.getUserById(req.userId);
       res.json({ ...comment, user });
     } catch (error) {
       res.status(500).json({ message: "Failed to add comment" });
@@ -1139,7 +1139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to edit this comment" });
       }
       
-      const user = await storage.getUser(updatedComment.userId);
+      const user = await storage.getUserById(updatedComment.userId);
       res.json({ ...updatedComment, user });
     } catch (error) {
       res.status(500).json({ message: "Failed to update comment" });
@@ -1188,7 +1188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!store) {
         return res.status(404).json({ message: "Store not found" });
       }
-      const owner = await storage.getUser(store.userId);
+      const owner = await storage.getUserById(store.userId);
       res.json({ ...store, owner });
     } catch (error) {
       res.status(500).json({ message: "Failed to get store" });
