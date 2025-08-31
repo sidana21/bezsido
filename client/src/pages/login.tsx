@@ -136,7 +136,9 @@ export default function LoginPage() {
     const fullPhone = countryCode + phoneNumber.trim();
 
     try {
-      const response = await apiRequest("/api/auth/create-user", {
+      console.log("Creating account with data:", { phoneNumber: fullPhone, name: name.trim(), location });
+      
+      const response = await fetch("/api/auth/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -146,16 +148,37 @@ export default function LoginPage() {
         }),
       });
 
-      if (response.success && response.user && response.token) {
-        login(response.user, response.token);
+      console.log("Account creation HTTP status:", response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Account creation HTTP error:", errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || `خطأ HTTP ${response.status}`);
+        } catch (parseError) {
+          throw new Error(`خطأ في الشبكة: ${response.status} ${response.statusText}`);
+        }
+      }
+      
+      const responseData = await response.json();
+      console.log("Account creation response:", responseData);
+
+      if (responseData.success && responseData.user && responseData.token) {
+        console.log("Account created successfully, logging in user");
+        login(responseData.user, responseData.token);
+        setShowProfile(false); // إخفاء نموذج الملف الشخصي
         toast({
-          title: "مرحباً " + response.user.name + "! 🎉",
+          title: "مرحباً " + responseData.user.name + "! 🎉",
           description: "تم إنشاء حسابك وتسجيل دخولك بنجاح",
         });
       } else {
-        throw new Error(response?.message || "فشل في إنشاء الحساب");
+        console.error("Account creation failed:", responseData);
+        throw new Error(responseData?.message || "فشل في إنشاء الحساب");
       }
     } catch (error: any) {
+      console.error("Account creation error:", error);
       toast({
         title: "خطأ في إنشاء الحساب",
         description: error.message || "حدث خطأ أثناء إنشاء الحساب",
