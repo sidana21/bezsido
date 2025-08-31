@@ -48,7 +48,7 @@ export function BottomNavigation() {
       icon: Store,
       href: "/stores",
       isActive: location === "/stores" || location === "/my-store",
-      featureId: "stores",
+      featureId: "marketplace",
       color: "from-emerald-500 to-green-600",
       activeColor: "from-emerald-600 to-green-700"
     },
