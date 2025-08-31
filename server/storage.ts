@@ -2851,6 +2851,12 @@ export class DatabaseStorage implements IStorage {
         const dbModule = await import('./db');
         db = dbModule.db;
       }
+      
+      if (!db) {
+        console.warn('Database not available, returning undefined');
+        return undefined;
+      }
+      
       const [user] = await db.select().from(users).where(eq(users.phoneNumber, phoneNumber));
       return user || undefined;
     } catch (error) {
@@ -2866,6 +2872,11 @@ export class DatabaseStorage implements IStorage {
       if (!db) {
         const dbModule = await import('./db');
         db = dbModule.db;
+      }
+      
+      if (!db) {
+        console.error('Database not available, cannot create user');
+        throw new Error('فشل في إنشاء أو العثور على مستخدم الإدارة');
       }
       
       // Check if user already exists
