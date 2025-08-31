@@ -48,9 +48,10 @@ app.use((req, res, next) => {
     console.error('Warning: Failed to initialize default features:', error);
   }
 
-  // Initialize admin user
+  // Initialize admin user (with data protection)
   try {
     console.log('Initializing admin user...');
+    console.log('🔒 Data Protection Mode: ON - Real user data will be preserved');
     const adminManager = new AdminManager(storage);
     await adminManager.ensureAdminUser();
     console.log('Admin user initialized successfully');

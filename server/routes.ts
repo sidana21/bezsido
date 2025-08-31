@@ -1790,8 +1790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "فشل في إنشاء أو العثور على مستخدم الإدارة" });
       }
       
-      // إنشاء البيانات التجريبية إذا لزم الأمر
-      await adminManager.createSampleDataIfNeeded();
+      // تم تعطيل إنشاء البيانات التجريبية للحفاظ على البيانات الحقيقية
       
       // تحديث وقت آخر تسجيل دخول
       adminManager.updateLastLogin();

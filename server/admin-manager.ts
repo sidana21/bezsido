@@ -124,49 +124,12 @@ export class AdminManager {
   }
 
   /**
-   * إنشاء بيانات تجريبية عند أول تسجيل دخول
+   * إنشاء بيانات تجريبية عند أول تسجيل دخول (معطل لضمان حفظ البيانات الحقيقية)
    */
   public async createSampleDataIfNeeded(): Promise<void> {
-    try {
-      const allUsers = await this.storage.getAllUsers();
-      
-      // إنشاء البيانات التجريبية فقط إذا كان هناك مستخدم واحد فقط (الإدارة)
-      if (allUsers.length <= 1) {
-        console.log('إنشاء بيانات تجريبية...');
-        
-        // إنشاء مستخدمين تجريبيين
-        const user1 = await this.storage.createUser({
-          name: "أحمد محمد",
-          phoneNumber: "+213555987654", // تغيير الرقم لتجنب التضارب مع رقم المشرف
-          location: "تندوف",
-          avatar: null,
-          isOnline: true,
-        });
-        await this.storage.updateUserVerificationStatus(user1.id, true);
-
-        await this.storage.createUser({
-          name: "فاطمة بن علي",
-          phoneNumber: "+213555234567",
-          location: "الجزائر",
-          avatar: null,
-          isOnline: false,
-        });
-
-        const user3 = await this.storage.createUser({
-          name: "يوسف الزهراني",
-          phoneNumber: "+213555345678",
-          location: "وهران",
-          avatar: null,
-          isOnline: true,
-        });
-        await this.storage.updateUserVerificationStatus(user3.id, true);
-
-        console.log('تم إنشاء البيانات التجريبية بنجاح');
-      }
-    } catch (error) {
-      console.error('خطأ في إنشاء البيانات التجريبية:', error);
-      // لا نرمي خطأ هنا لأن هذا ليس ضرورياً لنجاح تسجيل الدخول
-    }
+    // تم تعطيل إنشاء البيانات التجريبية للحفاظ على البيانات الحقيقية للمستخدمين
+    console.log('تم تخطي إنشاء البيانات التجريبية - سيتم الاحتفاظ بالبيانات الحقيقية فقط');
+    return;
   }
 
   /**
