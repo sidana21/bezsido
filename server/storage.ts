@@ -138,6 +138,9 @@ export interface IStorage {
   updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Store | undefined>;
   getStoreProducts(storeId: string): Promise<Product[]>;
   getUserProducts(userId: string): Promise<Product[]>;
+  
+  // Admin dashboard stats
+  getAdminDashboardStats(): Promise<any>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
@@ -1466,6 +1469,51 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+
+  // Admin dashboard stats for DatabaseStorage
+  async getAdminDashboardStats(): Promise<any> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Get verification requests count
+      const pendingRequests = await db.select({ count: sql`count(*)` })
+        .from(verificationRequests)
+        .where(eq(verificationRequests.status, 'pending'));
+      
+      const totalRequests = await db.select({ count: sql`count(*)` })
+        .from(verificationRequests);
+      
+      // Get users count
+      const totalUsers = await db.select({ count: sql`count(*)` })
+        .from(users);
+      
+      // Get stores count  
+      const totalStores = await db.select({ count: sql`count(*)` })
+        .from(stores);
+      
+      return {
+        pendingVerificationRequests: Number(pendingRequests[0]?.count || 0),
+        totalVerificationRequests: Number(totalRequests[0]?.count || 0),
+        totalUsers: Number(totalUsers[0]?.count || 0),
+        totalStores: Number(totalStores[0]?.count || 0),
+        todayRequests: 0, 
+        totalRevenue: 0
+      };
+    } catch (error) {
+      console.error('Error getting admin dashboard stats:', error);
+      return {
+        pendingVerificationRequests: 0,
+        totalVerificationRequests: 0,
+        totalUsers: 0,
+        totalStores: 0,
+        todayRequests: 0,
+        totalRevenue: 0
+      };
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database
@@ -1963,6 +2011,18 @@ export class MemStorage implements IStorage {
 
   async getUserProducts(userId: string): Promise<Product[]> {
     return [];
+  }
+
+  // Admin dashboard stats for MemStorage
+  async getAdminDashboardStats(): Promise<any> {
+    return {
+      pendingVerificationRequests: 0,
+      totalVerificationRequests: 0,
+      totalUsers: this.users.size,
+      totalStores: 0,
+      todayRequests: 0,
+      totalRevenue: 0
+    };
   }
 }
 

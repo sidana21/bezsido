@@ -2203,15 +2203,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Additional Admin API Routes
   // ===========================
 
-  // Admin Dashboard Stats
-  app.get("/api/admin/dashboard-stats", requireAdmin, async (req: any, res) => {
-    try {
-      const stats = await storage.getAdminDashboardStats();
-      res.json(stats);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get dashboard stats" });
-    }
-  });
 
   // Admin Users Management
   app.get("/api/admin/users", requireAdmin, async (req: any, res) => {
