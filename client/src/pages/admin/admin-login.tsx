@@ -61,9 +61,18 @@ export function AdminLogin() {
 
   // Admin credentials are now stored in admin.json file
 
-  // Check if already logged in as admin
+  // Check if already logged in as admin and prevent session conflicts
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
+    
+    // Clear any non-admin sessions to prevent conflicts
+    if (token && !token.startsWith('admin-')) {
+      console.log('🔄 Clearing regular user session to prevent admin conflicts');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_backup');
+      localStorage.removeItem('profile_cache');
+    }
+    
     if (token && token.startsWith('admin-')) {
       setLocation('/admin');
     }
