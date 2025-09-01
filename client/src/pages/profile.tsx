@@ -48,24 +48,57 @@ export default function Profile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData: { name: string; location: string; avatar?: string }) => {
+      console.log("🔐 Saving profile changes permanently to database...");
       return apiRequest("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profileData),
       });
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/current"] });
       setIsEditing(false);
+      
+      // Update local backup with new data for protection
+      const currentBackup = localStorage.getItem("user_backup");
+      if (currentBackup) {
+        try {
+          const backup = JSON.parse(currentBackup);
+          const enhancedBackup = {
+            ...backup,
+            ...updatedUser,
+            lastUpdated: new Date().toISOString()
+          };
+          localStorage.setItem("user_backup", JSON.stringify(enhancedBackup));
+          localStorage.setItem("profile_cache", JSON.stringify({
+            userId: updatedUser.id,
+            userPhone: updatedUser.phoneNumber,
+            cachedAt: Date.now()
+          }));
+          console.log("✅ Profile backup updated with latest changes");
+        } catch (error) {
+          console.warn("Failed to update profile backup:", error);
+        }
+      }
+      
       toast({
-        title: "تم التحديث",
-        description: "تم تحديث ملفك الشخصي بنجاح",
+        title: "تم تحديث الملف الشخصي 🎉",
+        description: "تم حفظ التغييرات بنجاح في قاعدة البيانات",
       });
     },
     onError: (error: any) => {
+      // Save changes locally as backup if server fails
+      const localBackup = {
+        name: name.trim(),
+        location: location.trim(),
+        avatar: avatarUrl,
+        lastLocalUpdate: new Date().toISOString()
+      };
+      localStorage.setItem("profile_pending_changes", JSON.stringify(localBackup));
+      
       toast({
-        title: "خطأ",
-        description: error.message || "فشل في تحديث الملف الشخصي",
+        title: "خطأ في الحفظ",
+        description: "فشل في تحديث الملف الشخصي - البيانات محفوظة محلياً",
         variant: "destructive",
       });
     },

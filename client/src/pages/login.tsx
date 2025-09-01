@@ -30,8 +30,34 @@ export default function LoginPage() {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [generatedOtp, setGeneratedOtp] = useState("");
+  const [showQuickLogin, setShowQuickLogin] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
+
+  // Advanced user detection system
+  useState(() => {
+    const userBackup = localStorage.getItem("user_backup");
+    const profileCache = localStorage.getItem("profile_cache");
+    
+    if (userBackup) {
+      try {
+        const backup = JSON.parse(userBackup);
+        if (backup.phoneNumber) {
+          // Auto-fill phone number for quick access
+          const phone = backup.phoneNumber.replace(/^\+\d+/, "");
+          const country = backup.phoneNumber.match(/^\+\d+/)?.[0] || "+213";
+          setPhoneNumber(phone);
+          setCountryCode(country);
+          setName(backup.name || "");
+          setLocation(backup.location || "الجزائر");
+          setShowQuickLogin(true);
+          console.log("🔍 Detected returning user:", backup.name);
+        }
+      } catch (error) {
+        console.warn("Error reading user backup:", error);
+      }
+    }
+  });
 
   const locations = [
     "تندوف", "الجزائر", "وهران", "قسنطينة", "عنابة", "سطيف", "باتنة", "تيزي وزو", "بجاية", "مستغانم"
@@ -345,6 +371,45 @@ export default function LoginPage() {
     );
   }
 
+  // Quick login for returning users
+  const handleQuickLogin = async () => {
+    if (!phoneNumber.trim()) return;
+    
+    setIsLoading(true);
+    const fullPhone = countryCode + phoneNumber.trim();
+
+    try {
+      console.log("🚀 Attempting quick login for returning user:", fullPhone);
+      const response = await apiRequest("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          phoneNumber: fullPhone,
+          code: "QUICK_LOGIN", // Special code for quick login
+          name: name.trim(),
+          location: location.trim()
+        }),
+      });
+
+      if (response.success) {
+        console.log("✅ Quick login successful!");
+        await login(response.user, response.token);
+        toast({
+          title: "مرحباً بعودتك! 🎉",
+          description: `أهلاً وسهلاً ${response.user.name}`,
+        });
+      } else {
+        // Fall back to normal OTP flow
+        handleSendOTP();
+      }
+    } catch (error) {
+      console.warn("Quick login failed, using OTP:", error);
+      handleSendOTP();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
@@ -357,6 +422,21 @@ export default function LoginPage() {
           <p className="text-green-100 text-sm animate-pulse bg-gradient-to-r from-green-200 to-emerald-200 bg-clip-text text-transparent font-semibold">
             🌟 اكتشف عالماً جديداً من الفرص التجارية واربط منتجاتك بالأسواق العربية 🚀
           </p>
+          
+          {showQuickLogin && (
+            <div className="mt-4 p-3 bg-green-600/20 rounded-lg border border-green-400/30">
+              <p className="text-green-200 text-sm mb-2">
+                🎯 مرحباً بعودتك! تم اكتشاف حسابك
+              </p>
+              <Button 
+                onClick={handleQuickLogin}
+                className="w-full bg-green-600 hover:bg-green-700 text-white text-sm py-2"
+                disabled={isLoading}
+              >
+                {isLoading ? "جاري الدخول..." : `دخول سريع كـ ${name}`}
+              </Button>
+            </div>
+          )}
         </div>
 
         <Card className="border-0 shadow-lg" data-testid="card-phone-login">

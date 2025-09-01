@@ -397,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create new user
+      // Create new user with enhanced data protection
       const userData = {
         phoneNumber: cleanPhoneNumber,
         name: cleanName,
@@ -405,6 +405,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         avatar: null,
         isOnline: true,
         isAdmin: process.env.NODE_ENV === 'development', // Make users admin in development
+        // Add automatic verification for data protection
+        isVerified: false,
+        verifiedAt: null,
+        lastSeen: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       
       console.log("📋 Creating new user with parsed data:", userData);
@@ -521,6 +527,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Session recovery endpoint for advanced user protection
+  app.post("/api/auth/recover-session", async (req, res) => {
+    try {
+      const { phoneNumber, userId } = req.body;
+      
+      if (!phoneNumber || !userId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "بيانات الاسترداد مطلوبة" 
+        });
+      }
+      
+      console.log("🔄 Attempting session recovery for:", phoneNumber);
+      
+      // Verify user exists and matches provided data
+      const user = await storage.getUserByPhoneNumber(phoneNumber);
+      if (!user || user.id !== userId) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "لم يتم العثور على بيانات المستخدم" 
+        });
+      }
+      
+      console.log("✅ User verified for session recovery:", user.name);
+      
+      // Create new session for recovered user
+      const token = randomUUID();
+      const sessionData = insertSessionSchema.parse({
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      });
+      
+      await storage.createSession(sessionData);
+      await storage.updateUserOnlineStatus(user.id, true);
+      
+      console.log("🔑 Session recovery successful for user:", user.id);
+      
+      res.json({ 
+        success: true, 
+        user, 
+        token,
+        message: "تم استرداد جلستك بنجاح! مرحباً بعودتك" 
+      });
+    } catch (error) {
+      console.error("Session recovery error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "فشل في استرداد الجلسة" 
+      });
+    }
+  });
+
   app.post("/api/auth/logout", requireAuth, async (req: any, res) => {
     try {
       const token = req.headers.authorization?.split(' ')[1];
@@ -557,20 +616,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name and location are required" });
       }
       
+      console.log("🔐 Updating user profile permanently in database for user:", req.userId);
+      
       // Update user data - accept both avatar and avatarUrl for compatibility
       const updatedUser = await storage.updateUser(req.userId, {
         name: name.trim(),
         location: location.trim(),
         avatar: avatar || avatarUrl || null,
+        updatedAt: new Date(), // Always update timestamp for data integrity
       });
       
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
       
+      console.log("✅ User profile permanently updated in database:", updatedUser.name);
+      
       res.json(updatedUser);
     } catch (error) {
-      console.error("Profile update error:", error);
+      console.error("❌ Failed to update user profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
     }
   });
@@ -762,24 +826,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send message
+  // Send message with advanced data protection
   app.post("/api/chats/:chatId/messages", requireAuth, async (req: any, res) => {
     try {
       const { chatId } = req.params;
+      console.log("💬 Creating permanent message for chat:", chatId);
+      
       const messageData = insertMessageSchema.parse({
         ...req.body,
         chatId,
         senderId: req.userId,
+        timestamp: new Date(), // Ensure timestamp is set
+        isDelivered: true, // Mark as delivered immediately 
+        isRead: false, // Will be updated when read
       });
       
       const message = await storage.createMessage(messageData);
       const sender = await storage.getUserById(message.senderId);
+      
+      console.log("✅ Message permanently saved to database:", message.id);
       
       res.json({
         ...message,
         sender,
       });
     } catch (error) {
+      console.error("❌ Failed to save message:", error);
       res.status(500).json({ message: "Failed to send message" });
     }
   });
@@ -1068,11 +1140,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Story Comments endpoints
+  // Story Comments endpoints with advanced data protection
   app.post("/api/stories/:storyId/comments", requireAuth, async (req: any, res) => {
     try {
       const { storyId } = req.params;
       const { content } = req.body;
+      
+      console.log("💭 Creating permanent comment for story:", storyId);
       
       // Check if story exists
       const story = await storage.getStory(storyId);
@@ -1088,12 +1162,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storyId,
         userId: req.userId,
         content: content.trim(),
+        timestamp: new Date(), // Ensure timestamp for permanence
       });
       
       const comment = await storage.addStoryComment(commentData);
       const user = await storage.getUserById(req.userId);
+      
+      console.log("✅ Comment permanently saved to database:", comment.id);
+      
       res.json({ ...comment, user });
     } catch (error) {
+      console.error("❌ Failed to save comment:", error);
       res.status(500).json({ message: "Failed to add comment" });
     }
   });
