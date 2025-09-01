@@ -130,8 +130,13 @@ export interface IStorage {
   updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy'>>): Promise<VerificationRequest | undefined>;
   
   // Stores and products
-  getStores(): Promise<Store[]>;
+  getStores(location?: string, category?: string): Promise<Store[]>;
+  getStore(storeId: string): Promise<Store | undefined>;
   getUserStore(userId: string): Promise<Store | undefined>;
+  createStore(store: InsertStore): Promise<Store>;
+  updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined>;
+  updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Store | undefined>;
+  getStoreProducts(storeId: string): Promise<Product[]>;
   getUserProducts(userId: string): Promise<Product[]>;
 }
 
@@ -1318,17 +1323,116 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Stores and products methods
-  async getStores(): Promise<Store[]> {
+  async getStores(location?: string, category?: string): Promise<Store[]> {
     try {
       if (!db) {
         const dbModule = await import('./db');
         db = dbModule.db;
       }
       
-      const result = await db.select().from(stores).where(eq(stores.isActive, true));
+      let query = db.select().from(stores).where(eq(stores.isActive, true));
+      
+      if (location) {
+        query = query.where(eq(stores.location, location));
+      }
+      
+      if (category) {
+        query = query.where(eq(stores.category, category));
+      }
+      
+      const result = await query;
       return result;
     } catch (error) {
       console.error('Error getting stores:', error);
+      return [];
+    }
+  }
+
+  async getStore(storeId: string): Promise<Store | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(stores)
+        .where(eq(stores.id, storeId))
+        .limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting store:', error);
+      return undefined;
+    }
+  }
+
+  async createStore(store: InsertStore): Promise<Store> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.insert(stores).values(store).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating store:', error);
+      throw error;
+    }
+  }
+
+  async updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(stores)
+        .set(updates)
+        .where(eq(stores.id, storeId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating store:', error);
+      return undefined;
+    }
+  }
+
+  async updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Store | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(stores)
+        .set({ 
+          status, 
+          reviewedBy,
+          reviewedAt: new Date(),
+          rejectionReason: rejectionReason || null
+        })
+        .where(eq(stores.id, storeId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating store status:', error);
+      return undefined;
+    }
+  }
+
+  async getStoreProducts(storeId: string): Promise<Product[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(products)
+        .where(eq(products.storeId, storeId));
+      return result;
+    } catch (error) {
+      console.error('Error getting store products:', error);
       return [];
     }
   }
@@ -1816,12 +1920,45 @@ export class MemStorage implements IStorage {
   }
 
   // Stores and products methods for MemStorage
-  async getStores(): Promise<Store[]> {
+  async getStores(location?: string, category?: string): Promise<Store[]> {
     return [];
+  }
+
+  async getStore(storeId: string): Promise<Store | undefined> {
+    return undefined;
   }
 
   async getUserStore(userId: string): Promise<Store | undefined> {
     return undefined;
+  }
+
+  async createStore(store: InsertStore): Promise<Store> {
+    const newStore: Store = {
+      id: randomUUID(),
+      ...store,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isActive: true,
+      status: 'pending',
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionReason: null,
+      rating: 0,
+      totalSales: 0
+    };
+    return newStore;
+  }
+
+  async updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined> {
+    return undefined;
+  }
+
+  async updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Store | undefined> {
+    return undefined;
+  }
+
+  async getStoreProducts(storeId: string): Promise<Product[]> {
+    return [];
   }
 
   async getUserProducts(userId: string): Promise<Product[]> {
