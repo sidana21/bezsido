@@ -203,13 +203,9 @@ export function VerificationRequests() {
                     <div className="flex items-center gap-3">
                       <User className="h-4 w-4 text-gray-400" />
                       <span className="font-medium">
-                        {request.userName ? (
-                          <>
-                            المستخدم: {request.userName}
-                            <span className="text-sm text-gray-500 mr-2">({request.userPhone})</span>
-                          </>
-                        ) : (
-                          <>معرف المستخدم: {request.userId}</>
+                        المستخدم: {request.userName || "مستخدم غير معروف"}
+                        {request.userPhone && request.userPhone !== 'غير محدد' && (
+                          <span className="text-sm text-gray-500 mr-2">({request.userPhone})</span>
                         )}
                       </span>
                       {getStatusBadge(request.status)}
@@ -300,7 +296,7 @@ export function VerificationRequests() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <strong>المستخدم:</strong> {selectedRequest.userName || selectedRequest.userId}
+                    <strong>المستخدم:</strong> {selectedRequest.userName || "مستخدم غير معروف"}
                     {selectedRequest.userPhone && (
                       <div className="text-gray-500 text-xs mt-1">
                         الهاتف: {selectedRequest.userPhone}

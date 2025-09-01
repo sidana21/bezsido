@@ -1913,26 +1913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Verification Management
-  app.get("/api/admin/verification-requests", requireAdmin, async (req: any, res) => {
-    try {
-      const { status, page = 1, limit = 10 } = req.query;
-      const requests = await storage.getAllVerificationRequests(status as string);
-      
-      // Simple pagination
-      const startIndex = (Number(page) - 1) * Number(limit);
-      const endIndex = startIndex + Number(limit);
-      const paginatedRequests = requests.slice(startIndex, endIndex);
-      
-      res.json({
-        requests: paginatedRequests,
-        total: requests.length,
-        page: Number(page),
-        totalPages: Math.ceil(requests.length / Number(limit))
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get verification requests" });
-    }
-  });
+  // Note: Duplicate endpoint removed - using the enriched version below
 
   // Admin Orders Management
   app.get("/api/admin/orders", requireAdmin, async (req: any, res) => {
