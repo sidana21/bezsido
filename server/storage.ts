@@ -51,10 +51,12 @@ let db: any = null;
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
   getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined>;
   updateUserOnlineStatus(id: string, isOnline: boolean): Promise<void>;
+  deleteUser(id: string): Promise<boolean>;
   
   // Authentication
   createOtpCode(otp: InsertOtp): Promise<OtpCode>;
@@ -114,6 +116,10 @@ export class DatabaseStorage implements IStorage {
       console.error('Error getting user:', error);
       return undefined;
     }
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
   }
 
   async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
@@ -201,6 +207,21 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, id));
     } catch (error) {
       console.error('Error updating user online status:', error);
+    }
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(users).where(eq(users.id, id));
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
     }
   }
 
