@@ -21,6 +21,9 @@ import { apiRequest } from '@/lib/queryClient';
 interface VerificationRequest {
   id: string;
   userId: string;
+  userName?: string;
+  userPhone?: string;
+  userLocation?: string;
   requestType: string;
   status: string;
   reason?: string;
@@ -200,7 +203,14 @@ export function VerificationRequests() {
                     <div className="flex items-center gap-3">
                       <User className="h-4 w-4 text-gray-400" />
                       <span className="font-medium">
-                        معرف المستخدم: {request.userId}
+                        {request.userName ? (
+                          <>
+                            المستخدم: {request.userName}
+                            <span className="text-sm text-gray-500 mr-2">({request.userPhone})</span>
+                          </>
+                        ) : (
+                          <>معرف المستخدم: {request.userId}</>
+                        )}
                       </span>
                       {getStatusBadge(request.status)}
                     </div>
@@ -209,6 +219,13 @@ export function VerificationRequests() {
                       <FileText className="h-4 w-4" />
                       <span>نوع الطلب: {getRequestTypeLabel(request.requestType)}</span>
                     </div>
+                    
+                    {request.userLocation && (
+                      <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                        <User className="h-4 w-4" />
+                        <span>المنطقة: {request.userLocation}</span>
+                      </div>
+                    )}
                     
                     <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                       <Calendar className="h-4 w-4" />
@@ -283,10 +300,20 @@ export function VerificationRequests() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <strong>معرف المستخدم:</strong> {selectedRequest.userId}
+                    <strong>المستخدم:</strong> {selectedRequest.userName || selectedRequest.userId}
+                    {selectedRequest.userPhone && (
+                      <div className="text-gray-500 text-xs mt-1">
+                        الهاتف: {selectedRequest.userPhone}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <strong>تاريخ التقديم:</strong> {new Date(selectedRequest.submittedAt).toLocaleDateString('ar-DZ')}
+                    {selectedRequest.userLocation && (
+                      <div className="text-gray-500 text-xs mt-1">
+                        المنطقة: {selectedRequest.userLocation}
+                      </div>
+                    )}
                   </div>
                 </div>
 

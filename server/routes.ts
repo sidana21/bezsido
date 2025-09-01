@@ -623,7 +623,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: name.trim(),
         location: location.trim(),
         avatar: avatar || avatarUrl || null,
-        updatedAt: new Date(), // Always update timestamp for data integrity
       });
       
       if (!updatedUser) {
@@ -2323,18 +2322,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, page = 1, limit = 50 } = req.query;
       let requests = await storage.getAllVerificationRequests(status ? status.toString() : undefined);
       
+      // Enrich requests with user data
+      const enrichedRequests = await Promise.all(
+        requests.map(async (request) => {
+          try {
+            const user = await storage.getUserById(request.userId);
+            return {
+              ...request,
+              userName: user?.name || 'مستخدم غير معروف',
+              userPhone: user?.phoneNumber || 'غير محدد',
+              userLocation: user?.location || 'غير محدد',
+            };
+          } catch (error) {
+            console.warn(`Failed to get user data for ${request.userId}:`, error);
+            return {
+              ...request,
+              userName: 'مستخدم غير معروف',
+              userPhone: 'غير محدد',
+              userLocation: 'غير محدد',
+            };
+          }
+        })
+      );
+      
       // Simple pagination
       const startIndex = (Number(page) - 1) * Number(limit);
       const endIndex = startIndex + Number(limit);
-      const paginatedRequests = requests.slice(startIndex, endIndex);
+      const paginatedRequests = enrichedRequests.slice(startIndex, endIndex);
+      
+      console.log("📋 Sending verification requests with user names to admin panel");
       
       res.json({
         requests: paginatedRequests,
-        total: requests.length,
+        total: enrichedRequests.length,
         page: Number(page),
-        totalPages: Math.ceil(requests.length / Number(limit))
+        totalPages: Math.ceil(enrichedRequests.length / Number(limit))
       });
     } catch (error) {
+      console.error("Failed to get verification requests:", error);
       res.status(500).json({ message: "Failed to get verification requests" });
     }
   });
