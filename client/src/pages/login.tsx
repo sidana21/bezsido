@@ -281,8 +281,8 @@ export default function LoginPage() {
               <img src={appIconUrl} alt="BizChat" className="w-28 h-28 object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">إنشاء حساب جديد</h1>
-            <p className="text-green-100 text-sm">
-              شارك منتجاتك مع جميع الصحراويين
+            <p className="text-green-100 text-sm animate-pulse bg-gradient-to-r from-green-200 to-emerald-200 bg-clip-text text-transparent font-semibold">
+              🌟 اكتشف عالماً جديداً من الفرص التجارية واربط منتجاتك بالأسواق العربية 🚀
             </p>
           </div>
 
@@ -354,8 +354,8 @@ export default function LoginPage() {
             <img src={appIconUrl} alt="BizChat" className="w-28 h-28 object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">BizChat</h1>
-          <p className="text-green-100 text-sm">
-            شارك منتجاتك مع جميع الصحراويين
+          <p className="text-green-100 text-sm animate-pulse bg-gradient-to-r from-green-200 to-emerald-200 bg-clip-text text-transparent font-semibold">
+            🌟 اكتشف عالماً جديداً من الفرص التجارية واربط منتجاتك بالأسواق العربية 🚀
           </p>
         </div>
 
