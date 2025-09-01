@@ -195,8 +195,8 @@ export function Sidebar({ selectedChatId, onChatSelect, isVisible, onToggle }: S
     <div className="w-full sm:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
       {/* Header */}
       <div className="bg-[var(--whatsapp-secondary)] dark:bg-gray-700 p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src={appIconUrl} alt="BizChat" className="w-8 h-8 object-contain bg-white rounded-full p-1" />
+        <div className="flex items-center gap-2">
+          <img src={appIconUrl} alt="BizChat" className="w-12 h-12 object-contain" />
           <Avatar className="w-10 h-10 border-2 border-white" data-testid="user-avatar">
             <AvatarImage 
               src={currentUser?.avatar} 

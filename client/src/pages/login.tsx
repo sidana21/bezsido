@@ -277,8 +277,8 @@ export default function LoginPage() {
       <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4 p-2">
-              <img src={appIconUrl} alt="BizChat" className="w-full h-full object-contain" />
+            <div className="inline-flex items-center justify-center mb-4">
+              <img src={appIconUrl} alt="BizChat" className="w-24 h-24 object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">إنشاء حساب جديد</h1>
             <p className="text-green-100 text-sm">
@@ -350,8 +350,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4 p-2">
-            <img src={appIconUrl} alt="BizChat" className="w-full h-full object-contain" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src={appIconUrl} alt="BizChat" className="w-24 h-24 object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">BizChat</h1>
           <p className="text-green-100 text-sm">

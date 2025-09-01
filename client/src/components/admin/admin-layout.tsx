@@ -73,8 +73,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       mobile ? "w-full" : "w-64"
     )}>
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-        <div className="flex items-center gap-3">
-          <img src={appIconUrl} alt="BizChat" className="w-8 h-8 object-contain" />
+        <div className="flex items-center gap-2">
+          <img src={appIconUrl} alt="BizChat" className="w-10 h-10 object-contain" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             لوحة الإدارة
           </h2>
