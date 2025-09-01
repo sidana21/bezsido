@@ -404,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: cleanLocation,
         avatar: null,
         isOnline: true,
-        isAdmin: process.env.NODE_ENV === 'development', // Make users admin in development
+        isAdmin: false, // Regular users should not be admins by default
         // Add automatic verification for data protection
         isVerified: false,
         verifiedAt: null,

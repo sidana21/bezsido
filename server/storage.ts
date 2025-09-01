@@ -3787,22 +3787,48 @@ export class DatabaseStorage implements IStorage {
     activeUsers: number;
     verifiedUsers: number;
   }> {
-    return {
-      totalUsers: 0,
-      totalStores: 0,
-      totalOrders: 0,
-      pendingVerifications: 0,
-      recentOrders: 0,
-      totalRevenue: "0",
-      activeUsers: 0,
-      verifiedUsers: 0
-    };
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Get all users
+      const allUsers = await db.select().from(users);
+      
+      // Calculate stats
+      const totalUsers = allUsers.length;
+      const activeUsers = allUsers.filter(user => user.isOnline).length;
+      const verifiedUsers = allUsers.filter(user => user.isVerified).length;
+      
+      // For now, return zeros for stores/orders/revenue as they're not implemented
+      return {
+        totalUsers,
+        totalStores: 0,
+        totalOrders: 0,
+        pendingVerifications: 0,
+        recentOrders: 0,
+        totalRevenue: "0",
+        activeUsers,
+        verifiedUsers
+      };
+    } catch (error) {
+      console.error('Error getting admin dashboard stats:', error);
+      return {
+        totalUsers: 0,
+        totalStores: 0,
+        totalOrders: 0,
+        pendingVerifications: 0,
+        recentOrders: 0,
+        totalRevenue: "0",
+        activeUsers: 0,
+        verifiedUsers: 0
+      };
+    }
   }
 }
 
 // Initialize storage with proper error handling
-let storage: IStorage;
-
 async function initializeStorage(): Promise<IStorage> {
   if (process.env.DATABASE_URL) {
     try {
@@ -3820,17 +3846,27 @@ async function initializeStorage(): Promise<IStorage> {
   return new MemStorage();
 }
 
-// Initialize storage instance with synchronous fallback
-storage = new MemStorage(); // Immediate fallback
-
-// Asynchronously try to upgrade to database storage
-(async () => {
+// Initialize storage synchronously to prevent data loss
+async function initializeStorageSync(): Promise<IStorage> {
   try {
-    const dbStorage = await initializeStorage();
-    storage = dbStorage;
+    const storage = await initializeStorage();
     console.log('✅ Storage successfully initialized');
+    return storage;
   } catch (error) {
     console.warn('⚠️ Failed to initialize storage, using memory fallback:', error);
+    return new MemStorage();
+  }
+}
+
+// Initialize storage instance - using IIFE to handle async
+const storage = await (async () => {
+  try {
+    const storageInstance = await initializeStorage();
+    console.log('✅ Storage successfully initialized');
+    return storageInstance;
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize storage, using memory fallback:', error);
+    return new MemStorage();
   }
 })();
 
