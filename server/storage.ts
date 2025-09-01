@@ -124,6 +124,9 @@ export interface IStorage {
   // Verification requests
   createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest>;
   getVerificationRequests(userId?: string): Promise<VerificationRequest[]>;
+  getUserVerificationRequests(userId: string): Promise<VerificationRequest[]>;
+  getVerificationRequest(requestId: string): Promise<VerificationRequest | undefined>;
+  getAllVerificationRequests(status?: string): Promise<VerificationRequest[]>;
   updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy'>>): Promise<VerificationRequest | undefined>;
   
   // Stores and products
@@ -1238,6 +1241,61 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getUserVerificationRequests(userId: string): Promise<VerificationRequest[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(verificationRequests)
+        .where(eq(verificationRequests.userId, userId))
+        .orderBy(sql`${verificationRequests.submittedAt} DESC`);
+      return result;
+    } catch (error) {
+      console.error('Error getting user verification requests:', error);
+      return [];
+    }
+  }
+
+  async getVerificationRequest(requestId: string): Promise<VerificationRequest | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(verificationRequests)
+        .where(eq(verificationRequests.id, requestId))
+        .limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting verification request:', error);
+      return undefined;
+    }
+  }
+
+  async getAllVerificationRequests(status?: string): Promise<VerificationRequest[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(verificationRequests);
+      
+      if (status) {
+        query = query.where(eq(verificationRequests.status, status));
+      }
+
+      const result = await query.orderBy(sql`${verificationRequests.submittedAt} DESC`);
+      return result;
+    } catch (error) {
+      console.error('Error getting all verification requests:', error);
+      return [];
+    }
+  }
+
   async updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy'>>): Promise<VerificationRequest | undefined> {
     try {
       if (!db) {
@@ -1738,6 +1796,18 @@ export class MemStorage implements IStorage {
   }
 
   async getVerificationRequests(userId?: string): Promise<VerificationRequest[]> {
+    return [];
+  }
+
+  async getUserVerificationRequests(userId: string): Promise<VerificationRequest[]> {
+    return [];
+  }
+
+  async getVerificationRequest(requestId: string): Promise<VerificationRequest | undefined> {
+    return undefined;
+  }
+
+  async getAllVerificationRequests(status?: string): Promise<VerificationRequest[]> {
     return [];
   }
 
