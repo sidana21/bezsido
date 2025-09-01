@@ -41,7 +41,7 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests, cartItems, stickers, products } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -120,6 +120,16 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User | undefined>;
   updateUserVerificationStatus(userId: string, isVerified: boolean): Promise<User | undefined>;
+  
+  // Verification requests
+  createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest>;
+  getVerificationRequests(userId?: string): Promise<VerificationRequest[]>;
+  updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy'>>): Promise<VerificationRequest | undefined>;
+  
+  // Stores and products
+  getStores(): Promise<Store[]>;
+  getUserStore(userId: string): Promise<Store | undefined>;
+  getUserProducts(userId: string): Promise<Product[]>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
@@ -1184,6 +1194,116 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
   }
+
+  // Verification requests methods
+  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newRequest = {
+        id: randomUUID(),
+        ...request,
+        submittedAt: new Date(),
+      };
+
+      const result = await db.insert(verificationRequests).values(newRequest).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating verification request:', error);
+      throw new Error(`فشل في إنشاء طلب التوثيق: ${error.message}`);
+    }
+  }
+
+  async getVerificationRequests(userId?: string): Promise<VerificationRequest[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(verificationRequests);
+      
+      if (userId) {
+        query = query.where(eq(verificationRequests.userId, userId));
+      }
+
+      const result = await query.orderBy(sql`${verificationRequests.submittedAt} DESC`);
+      return result;
+    } catch (error) {
+      console.error('Error getting verification requests:', error);
+      return [];
+    }
+  }
+
+  async updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy'>>): Promise<VerificationRequest | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(verificationRequests)
+        .set({ 
+          ...updates,
+          reviewedAt: new Date()
+        })
+        .where(eq(verificationRequests.id, requestId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating verification request:', error);
+      return undefined;
+    }
+  }
+
+  // Stores and products methods
+  async getStores(): Promise<Store[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(stores).where(eq(stores.isActive, true));
+      return result;
+    } catch (error) {
+      console.error('Error getting stores:', error);
+      return [];
+    }
+  }
+
+  async getUserStore(userId: string): Promise<Store | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(stores).where(eq(stores.userId, userId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting user store:', error);
+      return undefined;
+    }
+  }
+
+  async getUserProducts(userId: string): Promise<Product[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(products).where(and(eq(products.userId, userId), eq(products.isActive, true)));
+      return result;
+    } catch (error) {
+      console.error('Error getting user products:', error);
+      return [];
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database
@@ -1604,6 +1724,38 @@ export class MemStorage implements IStorage {
   
   async updateCartItemQuantity(userId: string, cartItemId: string, quantity: number): Promise<any> {
     return { id: cartItemId, quantity };
+  }
+
+  // Verification requests methods for MemStorage
+  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> {
+    const newRequest: VerificationRequest = {
+      id: randomUUID(),
+      ...request,
+      submittedAt: new Date(),
+      reviewedAt: null,
+    };
+    return newRequest;
+  }
+
+  async getVerificationRequests(userId?: string): Promise<VerificationRequest[]> {
+    return [];
+  }
+
+  async updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy'>>): Promise<VerificationRequest | undefined> {
+    return undefined;
+  }
+
+  // Stores and products methods for MemStorage
+  async getStores(): Promise<Store[]> {
+    return [];
+  }
+
+  async getUserStore(userId: string): Promise<Store | undefined> {
+    return undefined;
+  }
+
+  async getUserProducts(userId: string): Promise<Product[]> {
+    return [];
   }
 }
 
