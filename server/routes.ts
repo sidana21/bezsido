@@ -2004,8 +2004,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedRequest = await storage.updateVerificationRequestStatus(
         requestId, 
         status, 
-        req.userId, 
-        adminNote
+        adminNote,
+        req.userId
       );
       
       if (!updatedRequest) {
