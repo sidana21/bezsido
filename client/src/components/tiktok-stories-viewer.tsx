@@ -36,7 +36,7 @@ interface StoryWithUser extends Story {
 export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [progress, setProgress] = useState(0);

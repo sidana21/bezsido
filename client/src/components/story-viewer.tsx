@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle, Heart, MessageSquare, Send, Share } from "lucide-react";
+import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle, Heart, MessageSquare, Send, Share, VolumeOff, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
@@ -24,6 +24,7 @@ interface StoryWithUser extends Story {
 
 export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -252,6 +253,17 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
                 <MessageCircle className="h-4 w-4" />
               </Button>
             )}
+            {story.videoUrl && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMuted(!isMuted)}
+                className="text-white hover:bg-white hover:bg-opacity-20"
+                data-testid="button-toggle-mute"
+              >
+                {isMuted ? <VolumeOff className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -287,7 +299,7 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
               className="w-full h-full object-cover"
               autoPlay={isPlaying}
               loop
-              muted
+              muted={isMuted}
               playsInline
               data-testid="story-video"
               onLoadedData={(e) => {
