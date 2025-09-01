@@ -1982,11 +1982,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
       }
       
-      const updatedRequest = await storage.updateVerificationRequestStatus(
+      const updatedRequest = await storage.updateVerificationRequest(
         requestId, 
-        status, 
-        adminNote,
-        req.userId
+        { 
+          status, 
+          adminNote,
+          reviewedBy: req.userId,
+          reviewedAt: new Date()
+        }
       );
       
       if (!updatedRequest) {
@@ -2345,32 +2348,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update Verification Request Status
-  app.put("/api/admin/verification-requests/:requestId", requireAdmin, async (req: any, res) => {
-    try {
-      const { requestId } = req.params;
-      const { status, adminNote } = req.body;
-      
-      if (!['approved', 'rejected'].includes(status)) {
-        return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
-      }
-      
-      const updatedRequest = await storage.updateVerificationRequestStatus(
-        requestId, 
-        status, 
-        adminNote, 
-        req.userId
-      );
-      
-      if (!updatedRequest) {
-        return res.status(404).json({ message: "Verification request not found" });
-      }
-      
-      res.json(updatedRequest);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to update verification request" });
-    }
-  });
 
   // Stickers routes
   app.get('/api/stickers', async (req, res) => {
