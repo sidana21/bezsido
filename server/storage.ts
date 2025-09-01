@@ -102,6 +102,15 @@ export interface IStorage {
   // Admin Features
   getAdminCredentials(): Promise<AdminCredentials | undefined>;
   updateAdminCredentials(credentials: InsertAdminCredentials): Promise<AdminCredentials>;
+  
+  // Stickers
+  getAllStickers(): Promise<any[]>;
+  
+  // Cart functionality
+  getCartItems(userId: string): Promise<any[]>;
+  addToCart(userId: string, productId: string, quantity: number): Promise<any>;
+  removeFromCart(userId: string, cartItemId: string): Promise<void>;
+  updateCartItemQuantity(userId: string, cartItemId: string, quantity: number): Promise<any>;
   getAllFeatures(): Promise<AppFeature[]>;
   getFeature(featureId: string): Promise<AppFeature | undefined>;
   updateFeature(featureId: string, updates: Partial<InsertAppFeature>): Promise<AppFeature | undefined>;
@@ -943,6 +952,100 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Stickers implementation for DatabaseStorage
+  async getAllStickers(): Promise<any[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(stickers);
+      return result;
+    } catch (error) {
+      console.error('Error getting stickers:', error);
+      return [];
+    }
+  }
+  
+  // Cart implementation for DatabaseStorage
+  async getCartItems(userId: string): Promise<any[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(cartItems).where(eq(cartItems.userId, userId));
+      return result;
+    } catch (error) {
+      console.error('Error getting cart items:', error);
+      return [];
+    }
+  }
+  
+  async addToCart(userId: string, productId: string, quantity: number): Promise<any> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newCartItem = {
+        id: randomUUID(),
+        userId,
+        productId,
+        quantity,
+        addedAt: new Date(),
+      };
+
+      const result = await db.insert(cartItems).values(newCartItem).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      throw error;
+    }
+  }
+  
+  async removeFromCart(userId: string, cartItemId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(cartItems)
+        .where(and(
+          eq(cartItems.id, cartItemId),
+          eq(cartItems.userId, userId)
+        ));
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+    }
+  }
+  
+  async updateCartItemQuantity(userId: string, cartItemId: string, quantity: number): Promise<any> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(cartItems)
+        .set({ quantity })
+        .where(and(
+          eq(cartItems.id, cartItemId),
+          eq(cartItems.userId, userId)
+        ))
+        .returning();
+      
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating cart item quantity:', error);
+      return undefined;
+    }
+  }
+
   async getAllFeatures(): Promise<AppFeature[]> {
     try {
       if (!db) {
@@ -1479,6 +1582,28 @@ export class MemStorage implements IStorage {
     user.updatedAt = new Date();
     this.users.set(userId, user);
     return user;
+  }
+
+  // Stickers implementation for MemStorage
+  async getAllStickers(): Promise<any[]> {
+    return [];
+  }
+  
+  // Cart implementation for MemStorage
+  async getCartItems(userId: string): Promise<any[]> {
+    return [];
+  }
+  
+  async addToCart(userId: string, productId: string, quantity: number): Promise<any> {
+    return { id: randomUUID(), userId, productId, quantity };
+  }
+  
+  async removeFromCart(userId: string, cartItemId: string): Promise<void> {
+    // Mock implementation
+  }
+  
+  async updateCartItemQuantity(userId: string, cartItemId: string, quantity: number): Promise<any> {
+    return { id: cartItemId, quantity };
   }
 }
 

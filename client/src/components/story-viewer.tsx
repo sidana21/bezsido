@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle, Heart, MessageSquare, Send, Share, VolumeOff, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,6 +30,18 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
   const [newComment, setNewComment] = useState('');
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Control video playback
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.play().catch(console.error);
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
 
   const { data: story, isLoading } = useQuery<StoryWithUser>({
     queryKey: ['/api/stories', storyId],
@@ -300,6 +312,7 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
         >
           {story.videoUrl ? (
             <video 
+              ref={videoRef}
               src={story.videoUrl} 
               className="w-full h-full object-cover"
               autoPlay={isPlaying}
@@ -311,13 +324,10 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
                 e.stopPropagation();
                 setIsPlaying(!isPlaying);
               }}
-              onLoadedData={(e) => {
-                // Ensure video plays/pauses based on isPlaying state
-                const video = e.target as HTMLVideoElement;
+              onLoadedData={() => {
+                // Video will be controlled by useEffect
                 if (isPlaying) {
-                  video.play().catch(console.error);
-                } else {
-                  video.pause();
+                  videoRef.current?.play().catch(console.error);
                 }
               }}
             />

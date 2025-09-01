@@ -42,10 +42,22 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
   const [progress, setProgress] = useState(0);
   const progressRef = useRef<NodeJS.Timeout>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const touchStartRef = useRef<{ y: number; time: number } | null>(null);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Control video playback
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.play().catch(console.error);
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
 
   // Fetch stories
   const { data: stories = [], isLoading } = useQuery<StoryWithUser[]>({
@@ -382,6 +394,7 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
       >
         {currentStory?.videoUrl ? (
           <video 
+            ref={videoRef}
             src={currentStory.videoUrl} 
             className="w-full h-full object-cover"
             autoPlay={isPlaying}
