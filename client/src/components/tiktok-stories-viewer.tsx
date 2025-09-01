@@ -364,7 +364,12 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onDoubleClick={handleDoubleTap}
-        onClick={() => setIsPlaying(!isPlaying)}
+        onClick={(e) => {
+          // Only handle click if it's not on interactive elements
+          if (!((e.target as HTMLElement).closest('video, button'))) {
+            setIsPlaying(!isPlaying);
+          }
+        }}
         animate={{
           y: isDragging ? dragDistance * 0.3 : 0,
           scale: isDragging ? 0.95 : 1
@@ -383,6 +388,10 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
             loop
             muted={isMuted}
             playsInline
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsPlaying(!isPlaying);
+            }}
           />
         ) : currentStory?.imageUrl ? (
           <img 

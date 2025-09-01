@@ -291,7 +291,12 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
           style={{
             backgroundColor: story.backgroundColor || '#075e54',
           }}
-          onClick={() => setIsPlaying(!isPlaying)}
+          onClick={(e) => {
+            // Only handle click if it's not on interactive elements
+            if (!((e.target as HTMLElement).closest('video, button'))) {
+              setIsPlaying(!isPlaying);
+            }
+          }}
         >
           {story.videoUrl ? (
             <video 
@@ -302,6 +307,10 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
               muted={isMuted}
               playsInline
               data-testid="story-video"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPlaying(!isPlaying);
+              }}
               onLoadedData={(e) => {
                 // Ensure video plays/pauses based on isPlaying state
                 const video = e.target as HTMLVideoElement;

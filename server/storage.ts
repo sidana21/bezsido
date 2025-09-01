@@ -87,6 +87,18 @@ export interface IStorage {
   viewStory(storyId: string, viewerId: string): Promise<void>;
   getStory(storyId: string): Promise<Story | undefined>;
   
+  // Story interactions
+  likeStory(storyId: string, userId: string, reactionType: string): Promise<StoryLike>;
+  unlikeStory(storyId: string, userId: string): Promise<void>;
+  getStoryLikes(storyId: string): Promise<(StoryLike & { user: User })[]>;
+  getStoryLikeCount(storyId: string): Promise<number>;
+  hasUserLikedStory(storyId: string, userId: string): Promise<boolean>;
+  addStoryComment(storyId: string, userId: string, content: string): Promise<StoryComment>;
+  getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]>;
+  getStoryCommentCount(storyId: string): Promise<number>;
+  updateStoryComment(commentId: string, content: string): Promise<StoryComment | undefined>;
+  deleteStoryComment(commentId: string): Promise<boolean>;
+  
   // Admin Features
   getAdminCredentials(): Promise<AdminCredentials | undefined>;
   updateAdminCredentials(credentials: InsertAdminCredentials): Promise<AdminCredentials>;
@@ -657,6 +669,231 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Story interactions implementation
+  async likeStory(storyId: string, userId: string, reactionType: string): Promise<StoryLike> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newLike = {
+        id: randomUUID(),
+        storyId,
+        userId,
+        reactionType,
+        timestamp: new Date(),
+      };
+
+      const result = await db.insert(storyLikes).values(newLike).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error liking story:', error);
+      throw error;
+    }
+  }
+
+  async unlikeStory(storyId: string, userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(storyLikes)
+        .where(and(
+          eq(storyLikes.storyId, storyId),
+          eq(storyLikes.userId, userId)
+        ));
+    } catch (error) {
+      console.error('Error unliking story:', error);
+    }
+  }
+
+  async getStoryLikes(storyId: string): Promise<(StoryLike & { user: User })[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({
+        id: storyLikes.id,
+        storyId: storyLikes.storyId,
+        userId: storyLikes.userId,
+        reactionType: storyLikes.reactionType,
+        timestamp: storyLikes.timestamp,
+        user: users,
+      })
+      .from(storyLikes)
+      .leftJoin(users, eq(storyLikes.userId, users.id))
+      .where(eq(storyLikes.storyId, storyId));
+      
+      return result.map(row => ({
+        id: row.id,
+        storyId: row.storyId,
+        userId: row.userId,
+        reactionType: row.reactionType,
+        timestamp: row.timestamp,
+        user: row.user!,
+      }));
+    } catch (error) {
+      console.error('Error getting story likes:', error);
+      return [];
+    }
+  }
+
+  async getStoryLikeCount(storyId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(storyLikes)
+        .where(eq(storyLikes.storyId, storyId));
+      
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Error getting story like count:', error);
+      return 0;
+    }
+  }
+
+  async hasUserLikedStory(storyId: string, userId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select()
+        .from(storyLikes)
+        .where(and(
+          eq(storyLikes.storyId, storyId),
+          eq(storyLikes.userId, userId)
+        ))
+        .limit(1);
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error checking if user liked story:', error);
+      return false;
+    }
+  }
+
+  async addStoryComment(storyId: string, userId: string, content: string): Promise<StoryComment> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newComment = {
+        id: randomUUID(),
+        storyId,
+        userId,
+        content,
+        timestamp: new Date(),
+      };
+
+      const result = await db.insert(storyComments).values(newComment).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error adding story comment:', error);
+      throw error;
+    }
+  }
+
+  async getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({
+        id: storyComments.id,
+        storyId: storyComments.storyId,
+        userId: storyComments.userId,
+        content: storyComments.content,
+        timestamp: storyComments.timestamp,
+        user: users,
+      })
+      .from(storyComments)
+      .leftJoin(users, eq(storyComments.userId, users.id))
+      .where(eq(storyComments.storyId, storyId))
+      .orderBy(storyComments.timestamp);
+      
+      return result.map(row => ({
+        id: row.id,
+        storyId: row.storyId,
+        userId: row.userId,
+        content: row.content,
+        timestamp: row.timestamp,
+        user: row.user!,
+      }));
+    } catch (error) {
+      console.error('Error getting story comments:', error);
+      return [];
+    }
+  }
+
+  async getStoryCommentCount(storyId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(storyComments)
+        .where(eq(storyComments.storyId, storyId));
+      
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Error getting story comment count:', error);
+      return 0;
+    }
+  }
+
+  async updateStoryComment(commentId: string, content: string): Promise<StoryComment | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(storyComments)
+        .set({ content })
+        .where(eq(storyComments.id, commentId))
+        .returning();
+      
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating story comment:', error);
+      return undefined;
+    }
+  }
+
+  async deleteStoryComment(commentId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.delete(storyComments)
+        .where(eq(storyComments.id, commentId));
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting story comment:', error);
+      return false;
+    }
+  }
+
   // Admin methods
   async getAdminCredentials(): Promise<AdminCredentials | undefined> {
     try {
@@ -1080,6 +1317,92 @@ export class MemStorage implements IStorage {
 
   async getStory(storyId: string): Promise<Story | undefined> {
     return this.stories.get(storyId);
+  }
+
+  // Story interactions for MemStorage
+  async likeStory(storyId: string, userId: string, reactionType: string): Promise<StoryLike> {
+    const newLike: StoryLike = {
+      id: randomUUID(),
+      storyId,
+      userId,
+      reactionType,
+      timestamp: new Date(),
+    };
+    
+    this.storyLikes.set(newLike.id, newLike);
+    return newLike;
+  }
+
+  async unlikeStory(storyId: string, userId: string): Promise<void> {
+    for (const [id, like] of this.storyLikes.entries()) {
+      if (like.storyId === storyId && like.userId === userId) {
+        this.storyLikes.delete(id);
+        break;
+      }
+    }
+  }
+
+  async getStoryLikes(storyId: string): Promise<(StoryLike & { user: User })[]> {
+    return Array.from(this.storyLikes.values())
+      .filter(like => like.storyId === storyId)
+      .map(like => ({
+        ...like,
+        user: this.users.get(like.userId)!,
+      }));
+  }
+
+  async getStoryLikeCount(storyId: string): Promise<number> {
+    return Array.from(this.storyLikes.values())
+      .filter(like => like.storyId === storyId)
+      .length;
+  }
+
+  async hasUserLikedStory(storyId: string, userId: string): Promise<boolean> {
+    return Array.from(this.storyLikes.values())
+      .some(like => like.storyId === storyId && like.userId === userId);
+  }
+
+  async addStoryComment(storyId: string, userId: string, content: string): Promise<StoryComment> {
+    const newComment: StoryComment = {
+      id: randomUUID(),
+      storyId,
+      userId,
+      content,
+      timestamp: new Date(),
+    };
+    
+    this.storyComments.set(newComment.id, newComment);
+    return newComment;
+  }
+
+  async getStoryComments(storyId: string): Promise<(StoryComment & { user: User })[]> {
+    return Array.from(this.storyComments.values())
+      .filter(comment => comment.storyId === storyId)
+      .map(comment => ({
+        ...comment,
+        user: this.users.get(comment.userId)!,
+      }))
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
+
+  async getStoryCommentCount(storyId: string): Promise<number> {
+    return Array.from(this.storyComments.values())
+      .filter(comment => comment.storyId === storyId)
+      .length;
+  }
+
+  async updateStoryComment(commentId: string, content: string): Promise<StoryComment | undefined> {
+    const comment = this.storyComments.get(commentId);
+    if (comment) {
+      comment.content = content;
+      this.storyComments.set(commentId, comment);
+      return comment;
+    }
+    return undefined;
+  }
+
+  async deleteStoryComment(commentId: string): Promise<boolean> {
+    return this.storyComments.delete(commentId);
   }
 
   // Admin methods
