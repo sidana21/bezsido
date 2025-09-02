@@ -1995,9 +1995,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedRequest) {
         return res.status(404).json({ message: "Verification request not found" });
       }
+
+      // 🎯 إصلاح المشكلة: إذا تم قبول التوثيق، حدث حالة المستخدم مباشرة
+      if (status === 'approved' && updatedRequest.userId) {
+        try {
+          console.log(`✅ تم قبول التوثيق للمستخدم ${updatedRequest.userId} - تطبيق إشارة التحقق...`);
+          await storage.updateUser(updatedRequest.userId, {
+            isVerified: true,
+            verifiedAt: new Date()
+          });
+          console.log(`🎉 تم تطبيق إشارة التحقق بنجاح للمستخدم ${updatedRequest.userId}`);
+        } catch (verificationError) {
+          console.error('خطأ في تطبيق إشارة التحقق:', verificationError);
+          // لا نفشل الطلب كاملاً، فقط نسجل الخطأ
+        }
+      }
       
       res.json(updatedRequest);
     } catch (error) {
+      console.error('Error updating verification request:', error);
       res.status(500).json({ message: "Failed to update verification request" });
     }
   });
