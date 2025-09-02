@@ -1865,41 +1865,29 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
 
-      const result = await db.select({
-        call: calls,
-        caller: {
-          id: users.id,
-          fullName: users.fullName,
-          name: users.name,
-          phoneNumber: users.phoneNumber,
-          profilePicture: users.profilePicture,
-          isVerified: users.isVerified,
-        },
-        receiver: {
-          id: users.id,
-          fullName: users.fullName,
-          name: users.name,
-          phoneNumber: users.phoneNumber,
-          profilePicture: users.profilePicture,
-          isVerified: users.isVerified,
-        }
-      })
-      .from(calls)
-      .leftJoin(users, eq(calls.callerId, users.id))
-      .leftJoin(users, eq(calls.receiverId, users.id))
-      .where(
-        and(
-          sql`(${calls.callerId} = ${userId} OR ${calls.receiverId} = ${userId})`,
-          sql`${calls.status} IN ('ringing', 'accepted')`
-        )
-      );
+      // Get calls with caller and receiver info using separate queries
+      const callResults = await db.select()
+        .from(calls)
+        .where(
+          and(
+            sql`(${calls.callerId} = ${userId} OR ${calls.receiverId} = ${userId})`,
+            sql`${calls.status} IN ('ringing', 'accepted')`
+          )
+        );
 
-      return result.map(row => ({
-        ...row.call,
-        caller: row.caller,
-        receiver: row.receiver,
-        otherUser: row.call.callerId === userId ? row.receiver : row.caller
+      // Get caller and receiver info for each call
+      const result = await Promise.all(callResults.map(async (call) => {
+        const caller = await db.select().from(users).where(eq(users.id, call.callerId)).limit(1);
+        const receiver = await db.select().from(users).where(eq(users.id, call.receiverId)).limit(1);
+        
+        return {
+          ...call,
+          caller: caller[0] || null,
+          receiver: receiver[0] || null,
+          otherUser: call.callerId === userId ? receiver[0] : caller[0]
+        };
       }));
+      return result;
     } catch (error) {
       console.error('خطأ في جلب المكالمات النشطة:', error);
       return [];
