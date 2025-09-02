@@ -875,7 +875,16 @@ export default function MyStore() {
                             </Badge>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="flex-1" data-testid={`button-edit-product-${product.id}`}>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="flex-1" 
+                              onClick={() => {
+                                // TODO: Implement product editing functionality
+                                console.log('Edit product:', product.id);
+                              }}
+                              data-testid={`button-edit-product-${product.id}`}
+                            >
                               <Edit className="w-3 h-3 ml-1" />
                               تعديل
                             </Button>

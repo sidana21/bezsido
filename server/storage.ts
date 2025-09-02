@@ -41,7 +41,7 @@ import {
   type InsertAppFeature
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests, cartItems, stickers, products } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests, cartItems, stickers, products, affiliateLinks, commissions, contacts, orders, orderItems } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -131,13 +131,52 @@ export interface IStorage {
   
   // Stores and products
   getStores(location?: string, category?: string): Promise<Store[]>;
+  getAllStores(): Promise<Store[]>;
   getStore(storeId: string): Promise<Store | undefined>;
   getUserStore(userId: string): Promise<Store | undefined>;
   createStore(store: InsertStore): Promise<Store>;
   updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined>;
   updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Store | undefined>;
+  deleteStore(storeId: string): Promise<boolean>;
   getStoreProducts(storeId: string): Promise<Product[]>;
   getUserProducts(userId: string): Promise<Product[]>;
+  
+  // Products
+  getProducts(location?: string, category?: string): Promise<Product[]>;
+  getProduct(productId: string): Promise<Product | undefined>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(productId: string, updates: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(productId: string): Promise<boolean>;
+  
+  // Affiliate links
+  createAffiliateLink(affiliateLink: InsertAffiliateLink): Promise<AffiliateLink>;
+  getUserAffiliateLinks(userId: string): Promise<AffiliateLink[]>;
+  getAffiliateLink(uniqueCode: string): Promise<AffiliateLink | undefined>;
+  trackClick(uniqueCode: string): Promise<void>;
+  trackConversion(uniqueCode: string, buyerId: string, amount: number): Promise<void>;
+  
+  // Commissions
+  getUserCommissions(userId: string): Promise<Commission[]>;
+  getTotalCommissions(userId: string): Promise<{ total: number; pending: number; paid: number }>;
+  getCommissionsByStatus(status: string): Promise<Commission[]>;
+  
+  // Contacts
+  getUserContacts(userId: string): Promise<Contact[]>;
+  addContact(contact: InsertContact): Promise<Contact>;
+  searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+  
+  // Orders
+  createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
+  getUserOrders(userId: string): Promise<Order[]>;
+  getSellerOrders(sellerId: string): Promise<Order[]>;
+  getOrder(orderId: string): Promise<Order | undefined>;
+  updateOrderStatus(orderId: string, status: string, updatedBy: string): Promise<Order | undefined>;
+  cancelOrder(orderId: string, reason: string): Promise<Order | undefined>;
+  getAllOrders(): Promise<Order[]>;
+  clearCart(userId: string): Promise<void>;
+  
+  // Stickers
+  getStickersByCategory(category?: string): Promise<Sticker[]>;
   
   // Admin dashboard stats
   getAdminDashboardStats(): Promise<any>;
@@ -1440,6 +1479,21 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getAllStores(): Promise<Store[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(stores);
+      return result;
+    } catch (error) {
+      console.error('Error getting all stores:', error);
+      return [];
+    }
+  }
+
   async getUserStore(userId: string): Promise<Store | undefined> {
     try {
       if (!db) {
@@ -1452,6 +1506,117 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting user store:', error);
       return undefined;
+    }
+  }
+
+  async deleteStore(storeId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.delete(stores).where(eq(stores.id, storeId)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting store:', error);
+      return false;
+    }
+  }
+
+  async getProducts(location?: string, category?: string): Promise<Product[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(products).where(eq(products.isActive, true));
+      
+      if (location) {
+        query = query.where(eq(products.location, location));
+      }
+      
+      if (category) {
+        query = query.where(eq(products.category, category));
+      }
+      
+      const result = await query;
+      return result;
+    } catch (error) {
+      console.error('Error getting products:', error);
+      return [];
+    }
+  }
+
+  async getProduct(productId: string): Promise<Product | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(products).where(eq(products.id, productId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting product:', error);
+      return undefined;
+    }
+  }
+
+  async createProduct(product: InsertProduct): Promise<Product> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newProduct = {
+        id: randomUUID(),
+        ...product,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      const result = await db.insert(products).values(newProduct).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
+  }
+
+  async updateProduct(productId: string, updates: Partial<InsertProduct>): Promise<Product | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(products)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(products.id, productId))
+        .returning();
+      
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating product:', error);
+      return undefined;
+    }
+  }
+
+  async deleteProduct(productId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.delete(products).where(eq(products.id, productId)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      return false;
     }
   }
 
@@ -1468,6 +1633,87 @@ export class DatabaseStorage implements IStorage {
       console.error('Error getting user products:', error);
       return [];
     }
+  }
+
+  // Additional missing methods - stub implementations
+  async createAffiliateLink(affiliateLink: InsertAffiliateLink): Promise<AffiliateLink> {
+    throw new Error('Not implemented');
+  }
+
+  async getUserAffiliateLinks(userId: string): Promise<AffiliateLink[]> {
+    return [];
+  }
+
+  async getAffiliateLink(uniqueCode: string): Promise<AffiliateLink | undefined> {
+    return undefined;
+  }
+
+  async trackClick(uniqueCode: string): Promise<void> {
+    // Stub implementation
+  }
+
+  async trackConversion(uniqueCode: string, buyerId: string, amount: number): Promise<void> {
+    // Stub implementation
+  }
+
+  async getUserCommissions(userId: string): Promise<Commission[]> {
+    return [];
+  }
+
+  async getTotalCommissions(userId: string): Promise<{ total: number; pending: number; paid: number }> {
+    return { total: 0, pending: 0, paid: 0 };
+  }
+
+  async getCommissionsByStatus(status: string): Promise<Commission[]> {
+    return [];
+  }
+
+  async getUserContacts(userId: string): Promise<Contact[]> {
+    return [];
+  }
+
+  async addContact(contact: InsertContact): Promise<Contact> {
+    throw new Error('Not implemented');
+  }
+
+  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+    return this.getUserByPhoneNumber(phoneNumber);
+  }
+
+  async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
+    throw new Error('Not implemented');
+  }
+
+  async getUserOrders(userId: string): Promise<Order[]> {
+    return [];
+  }
+
+  async getSellerOrders(sellerId: string): Promise<Order[]> {
+    return [];
+  }
+
+  async getOrder(orderId: string): Promise<Order | undefined> {
+    return undefined;
+  }
+
+  async updateOrderStatus(orderId: string, status: string, updatedBy: string): Promise<Order | undefined> {
+    return undefined;
+  }
+
+  async cancelOrder(orderId: string, reason: string): Promise<Order | undefined> {
+    return undefined;
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return [];
+  }
+
+  async clearCart(userId: string): Promise<void> {
+    // Stub implementation
+  }
+
+  async getStickersByCategory(category?: string): Promise<Sticker[]> {
+    return [];
   }
 
   // Admin dashboard stats for DatabaseStorage
