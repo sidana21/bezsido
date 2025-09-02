@@ -38,10 +38,12 @@ import {
   type AdminCredentials,
   type InsertAdminCredentials,
   type AppFeature,
-  type InsertAppFeature
+  type InsertAppFeature,
+  type Call,
+  type InsertCall
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests, cartItems, stickers, products, affiliateLinks, commissions, contacts, orders, orderItems } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests, cartItems, stickers, products, affiliateLinks, commissions, contacts, orders, orderItems, calls } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -49,6 +51,13 @@ import { eq, and } from 'drizzle-orm';
 let db: any = null;
 
 export interface IStorage {
+  // Call management
+  createCall(callData: any): Promise<any>;
+  getCallById(callId: string): Promise<any>;
+  updateCallStatus(callId: string, status: string): Promise<any>;
+  endCall(callId: string, duration?: number): Promise<any>;
+  getActiveCallsForUser(userId: string): Promise<any[]>;
+  getCallHistoryForUser(userId: string): Promise<any[]>;
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
@@ -1760,6 +1769,161 @@ export class DatabaseStorage implements IStorage {
       };
     }
   }
+
+  // Call management methods for DatabaseStorage
+  async createCall(callData: any): Promise<any> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const newCall = {
+        id: randomUUID(),
+        ...callData,
+        startedAt: new Date(),
+        duration: 0
+      };
+
+      const result = await db.insert(calls).values(newCall).returning();
+      console.log('📞 تم إنشاء مكالمة جديدة في قاعدة البيانات:', result[0].id);
+      return result[0];
+    } catch (error) {
+      console.error('خطأ في إنشاء المكالمة:', error);
+      throw error;
+    }
+  }
+
+  async getCallById(callId: string): Promise<any> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.select().from(calls).where(eq(calls.id, callId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('خطأ في جلب المكالمة:', error);
+      return undefined;
+    }
+  }
+
+  async updateCallStatus(callId: string, status: string): Promise<any> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const updateData: any = { status };
+      if (status === 'accepted') {
+        updateData.acceptedAt = new Date();
+      }
+
+      const result = await db.update(calls)
+        .set(updateData)
+        .where(eq(calls.id, callId))
+        .returning();
+
+      console.log('📞 تم تحديث حالة المكالمة:', callId, 'إلى:', status);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('خطأ في تحديث حالة المكالمة:', error);
+      throw error;
+    }
+  }
+
+  async endCall(callId: string, duration: number = 0): Promise<any> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.update(calls)
+        .set({
+          status: 'ended',
+          endedAt: new Date(),
+          duration
+        })
+        .where(eq(calls.id, callId))
+        .returning();
+
+      console.log('📞 تم إنهاء المكالمة:', callId, 'مدة:', duration, 'ثانية');
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('خطأ في إنهاء المكالمة:', error);
+      throw error;
+    }
+  }
+
+  async getActiveCallsForUser(userId: string): Promise<any[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.select({
+        call: calls,
+        caller: {
+          id: users.id,
+          fullName: users.fullName,
+          name: users.name,
+          phoneNumber: users.phoneNumber,
+          profilePicture: users.profilePicture,
+          isVerified: users.isVerified,
+        },
+        receiver: {
+          id: users.id,
+          fullName: users.fullName,
+          name: users.name,
+          phoneNumber: users.phoneNumber,
+          profilePicture: users.profilePicture,
+          isVerified: users.isVerified,
+        }
+      })
+      .from(calls)
+      .leftJoin(users, eq(calls.callerId, users.id))
+      .leftJoin(users, eq(calls.receiverId, users.id))
+      .where(
+        and(
+          sql`(${calls.callerId} = ${userId} OR ${calls.receiverId} = ${userId})`,
+          sql`${calls.status} IN ('ringing', 'accepted')`
+        )
+      );
+
+      return result.map(row => ({
+        ...row.call,
+        caller: row.caller,
+        receiver: row.receiver,
+        otherUser: row.call.callerId === userId ? row.receiver : row.caller
+      }));
+    } catch (error) {
+      console.error('خطأ في جلب المكالمات النشطة:', error);
+      return [];
+    }
+  }
+
+  async getCallHistoryForUser(userId: string): Promise<any[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.select()
+        .from(calls)
+        .where(sql`${calls.callerId} = ${userId} OR ${calls.receiverId} = ${userId}`)
+        .orderBy(sql`${calls.startedAt} DESC`);
+
+      return result;
+    } catch (error) {
+      console.error('خطأ في جلب تاريخ المكالمات:', error);
+      return [];
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database
@@ -1772,6 +1936,7 @@ export class MemStorage implements IStorage {
   private otpCodes = new Map<string, OtpCode>();
   private features = new Map<string, AppFeature>();
   private adminCredentials: AdminCredentials | undefined;
+  private calls = new Map<string, Call>();
 
   constructor() {
     // Initialize only default features - NO MOCK DATA
@@ -2269,6 +2434,70 @@ export class MemStorage implements IStorage {
       todayRequests: 0,
       totalRevenue: 0
     };
+  }
+
+  // Call management methods for MemStorage
+  async createCall(callData: any): Promise<any> {
+    const call = {
+      id: randomUUID(),
+      ...callData,
+      startedAt: new Date(),
+      duration: 0
+    };
+    this.calls.set(call.id, call);
+    console.log('📞 مكالمة جديدة تم إنشاؤها:', call.id);
+    return call;
+  }
+
+  async getCallById(callId: string): Promise<any> {
+    return this.calls.get(callId);
+  }
+
+  async updateCallStatus(callId: string, status: string): Promise<any> {
+    const call = this.calls.get(callId);
+    if (call) {
+      call.status = status;
+      if (status === 'accepted') {
+        call.acceptedAt = new Date();
+      }
+      this.calls.set(callId, call);
+      console.log('📞 تم تحديث حالة المكالمة:', callId, 'إلى:', status);
+    }
+    return call;
+  }
+
+  async endCall(callId: string, duration: number = 0): Promise<any> {
+    const call = this.calls.get(callId);
+    if (call) {
+      call.status = 'ended';
+      call.endedAt = new Date();
+      call.duration = duration;
+      this.calls.set(callId, call);
+      console.log('📞 تم إنهاء المكالمة:', callId, 'مدة:', duration, 'ثانية');
+    }
+    return call;
+  }
+
+  async getActiveCallsForUser(userId: string): Promise<any[]> {
+    const activeCalls: any[] = [];
+    for (const call of this.calls.values()) {
+      if ((call.callerId === userId || call.receiverId === userId) && 
+          (call.status === 'ringing' || call.status === 'accepted')) {
+        activeCalls.push(call);
+      }
+    }
+    return activeCalls;
+  }
+
+  async getCallHistoryForUser(userId: string): Promise<any[]> {
+    const callHistory: any[] = [];
+    for (const call of this.calls.values()) {
+      if (call.callerId === userId || call.receiverId === userId) {
+        callHistory.push(call);
+      }
+    }
+    // ترتيب حسب التاريخ من الأحدث للأقدم
+    return callHistory.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
   }
 }
 

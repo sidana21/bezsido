@@ -22,12 +22,14 @@ import {
   insertOrderItemSchema,
   insertStoryLikeSchema,
   insertStoryCommentSchema,
+  insertCallSchema,
   type Store,
   type Product,
   type AffiliateLink,
   type Commission,
   type CartItem,
-  type Order
+  type Order,
+  type Call
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { AdminManager } from "./admin-manager";
@@ -2480,6 +2482,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get admin features error:', error);
       res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  // Voice/Video Call Routes
+  // بدء مكالمة جديدة
+  app.post("/api/calls/start", requireAuth, async (req: any, res: any) => {
+    try {
+      const { receiverId, callType = "voice" } = req.body;
+      
+      if (!receiverId) {
+        return res.status(400).json({ message: "Receiver ID is required" });
+      }
+
+      // التحقق من وجود المستقبل
+      const receiver = await storage.getUserById(receiverId);
+      if (!receiver) {
+        return res.status(404).json({ message: "Receiver not found" });
+      }
+
+      // إنشاء مكالمة جديدة
+      const callData = {
+        callerId: req.userId,
+        receiverId,
+        callType,
+        status: "ringing"
+      };
+
+      const call = await storage.createCall(callData);
+      
+      res.json({ 
+        success: true, 
+        call,
+        message: "Call initiated successfully"
+      });
+    } catch (error) {
+      console.error("Error starting call:", error);
+      res.status(500).json({ message: "Failed to start call" });
+    }
+  });
+
+  // قبول مكالمة
+  app.post("/api/calls/:callId/accept", requireAuth, async (req: any, res: any) => {
+    try {
+      const { callId } = req.params;
+      
+      const call = await storage.getCallById(callId);
+      if (!call) {
+        return res.status(404).json({ message: "Call not found" });
+      }
+
+      if (call.receiverId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to accept this call" });
+      }
+
+      if (call.status !== "ringing") {
+        return res.status(400).json({ message: "Call cannot be accepted in current state" });
+      }
+
+      await storage.updateCallStatus(callId, "accepted");
+      
+      res.json({ 
+        success: true, 
+        message: "Call accepted successfully"
+      });
+    } catch (error) {
+      console.error("Error accepting call:", error);
+      res.status(500).json({ message: "Failed to accept call" });
+    }
+  });
+
+  // رفض مكالمة
+  app.post("/api/calls/:callId/reject", requireAuth, async (req: any, res: any) => {
+    try {
+      const { callId } = req.params;
+      
+      const call = await storage.getCallById(callId);
+      if (!call) {
+        return res.status(404).json({ message: "Call not found" });
+      }
+
+      if (call.receiverId !== req.userId && call.callerId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to reject this call" });
+      }
+
+      if (call.status === "ended") {
+        return res.status(400).json({ message: "Call already ended" });
+      }
+
+      await storage.updateCallStatus(callId, "rejected");
+      
+      res.json({ 
+        success: true, 
+        message: "Call rejected successfully"
+      });
+    } catch (error) {
+      console.error("Error rejecting call:", error);
+      res.status(500).json({ message: "Failed to reject call" });
+    }
+  });
+
+  // إنهاء مكالمة
+  app.post("/api/calls/:callId/end", requireAuth, async (req: any, res: any) => {
+    try {
+      const { callId } = req.params;
+      const { duration = 0 } = req.body;
+      
+      const call = await storage.getCallById(callId);
+      if (!call) {
+        return res.status(404).json({ message: "Call not found" });
+      }
+
+      if (call.receiverId !== req.userId && call.callerId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to end this call" });
+      }
+
+      await storage.endCall(callId, duration);
+      
+      res.json({ 
+        success: true, 
+        message: "Call ended successfully"
+      });
+    } catch (error) {
+      console.error("Error ending call:", error);
+      res.status(500).json({ message: "Failed to end call" });
+    }
+  });
+
+  // الحصول على المكالمات النشطة للمستخدم
+  app.get("/api/calls/active", requireAuth, async (req: any, res: any) => {
+    try {
+      const activeCalls = await storage.getActiveCallsForUser(req.userId);
+      res.json(activeCalls);
+    } catch (error) {
+      console.error("Error getting active calls:", error);
+      res.status(500).json({ message: "Failed to get active calls" });
+    }
+  });
+
+  // الحصول على تاريخ المكالمات
+  app.get("/api/calls/history", requireAuth, async (req: any, res: any) => {
+    try {
+      const callHistory = await storage.getCallHistoryForUser(req.userId);
+      res.json(callHistory);
+    } catch (error) {
+      console.error("Error getting call history:", error);
+      res.status(500).json({ message: "Failed to get call history" });
     }
   });
 

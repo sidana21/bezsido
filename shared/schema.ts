@@ -220,6 +220,18 @@ export const commissions = pgTable("commissions", {
   paidAt: timestamp("paid_at"),
 });
 
+// Call schema for voice/video calls
+export const calls = pgTable("calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  callerId: varchar("caller_id").notNull().references(() => users.id),
+  receiverId: varchar("receiver_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("ringing"), // ringing, accepted, rejected, ended, missed
+  callType: text("call_type").notNull().default("voice"), // voice, video
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  duration: integer("duration").default(0), // in seconds
+});
+
 // Contacts table for user friendships
 export const contacts = pgTable("contacts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -433,3 +445,14 @@ export const insertAppFeatureSchema = createInsertSchema(appFeatures).omit({
 
 export type InsertAppFeature = z.infer<typeof insertAppFeatureSchema>;
 export type AppFeature = typeof appFeatures.$inferSelect;
+
+// Call schema and types
+export const insertCallSchema = createInsertSchema(calls).omit({
+  id: true,
+  startedAt: true,
+  endedAt: true,
+  duration: true,
+});
+
+export type InsertCall = z.infer<typeof insertCallSchema>;
+export type Call = typeof calls.$inferSelect;

@@ -14,6 +14,8 @@ import { safeAddEventListener, createSafeCleanup } from "@/utils/dom-cleanup";
 import { safeStopMediaStream, safeInitMicrophone, safeCreateMediaRecorder, createRecordingTimer } from "@/utils/audio-recording";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useToast } from "@/hooks/use-toast";
+import { useVoiceCalls } from '@/hooks/use-voice-calls';
+import { VoiceCall } from './voice-call';
 
 interface ChatAreaProps {
   chatId: string | null;
@@ -44,9 +46,22 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: currentUser } = useQuery({
     queryKey: ['/api/user/current'],
+  });
+
+  // إعداد hook المكالمات
+  const voiceCalls = useVoiceCalls({
+    currentUserId: currentUser?.id,
+    onIncomingCall: (call) => {
+      console.log('📞 مكالمة واردة جديدة في ChatArea:', call);
+      toast({
+        title: "مكالمة واردة",
+        description: `يتصل بك ${call.caller.fullName}`,
+      });
+    },
   });
 
   const { data: messages = [], isLoading, isSuccess } = useQuery<ChatMessage[]>({
@@ -180,8 +195,6 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     enableBrowserNotifications: true,
     soundVolume: 0.7
   });
-
-  const { toast } = useToast();
 
 
   // تمييز الرسائل كمقروءة عند دخول المحادثة
@@ -548,6 +561,43 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     sendMessageMutation.mutate(trimmedText);
   };
 
+  // دالة بدء المكالمة
+  const handleStartCall = () => {
+    if (!currentUser?.id) {
+      toast({
+        title: "خطأ",
+        description: "يجب تسجيل الدخول أولاً",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // الحصول على معرف المحادثة والمستخدم الآخر
+    const currentChat = chats.find(chat => chat.id === chatId);
+    if (!currentChat) {
+      toast({
+        title: "خطأ",
+        description: "لم يتم العثور على المحادثة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // العثور على المستخدم الآخر في المحادثة
+    const otherUserId = currentChat.participants?.find((id: string) => id !== currentUser.id);
+    if (!otherUserId) {
+      toast({
+        title: "خطأ",
+        description: "لم يتم العثور على المستخدم للاتصال به",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('📞 بدء مكالمة مع:', otherUserId);
+    voiceCalls.startCall(otherUserId, 'voice');
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -722,12 +772,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => {
-              toast({
-                title: "المكالمات الصوتية",
-                description: "ميزة المكالمات الصوتية ستكون متاحة قريباً!",
-              });
-            }}
+            onClick={() => handleStartCall()}
             className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target"
             data-testid="button-call"
           >
@@ -1028,6 +1073,21 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Voice Call Component */}
+      {voiceCalls.isCallModalOpen && voiceCalls.activeCall && (
+        <VoiceCall
+          call={voiceCalls.activeCall}
+          currentUser={currentUser}
+          onAccept={() => voiceCalls.acceptCall(voiceCalls.activeCall!.id)}
+          onReject={() => voiceCalls.rejectCall(voiceCalls.activeCall!.id)}
+          onEnd={() => voiceCalls.endCall(voiceCalls.activeCall!.id)}
+          onClose={voiceCalls.closeCallModal}
+          isAccepting={voiceCalls.isAcceptingCall}
+          isRejecting={voiceCalls.isRejectingCall}
+          isEnding={voiceCalls.isEndingCall}
+        />
+      )}
     </div>
   );
 }
