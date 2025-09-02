@@ -167,7 +167,7 @@ export function VoiceCall({
         description: "لا يمكن الوصول إلى الميكروفون. يرجى التحقق من الأذونات.",
         variant: "destructive",
       });
-      onCallEnd();
+      onEnd();
     }
   };
 
@@ -227,7 +227,7 @@ export function VoiceCall({
     } finally {
       setCallStatus('ended');
       cleanup();
-      onCallEnd();
+      onEnd();
     }
   };
 
@@ -380,7 +380,7 @@ export function VoiceCall({
               </Button>
               
               <Button
-                onClick={handleEndCall}
+                onClick={endCall}
                 disabled={isEnding}
                 size="lg"
                 variant="destructive"
@@ -397,7 +397,7 @@ export function VoiceCall({
           ) : (
             // زر إنهاء للمكالمات الصادرة في حالة الرنين
             <Button
-              onClick={handleEndCall}
+              onClick={endCall}
               disabled={isEnding}
               size="lg"
               variant="destructive"
