@@ -1936,6 +1936,10 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+
   async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(user => user.phoneNumber === phoneNumber);
   }
@@ -1974,6 +1978,10 @@ export class MemStorage implements IStorage {
       user.updatedAt = new Date();
       this.users.set(id, user);
     }
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    return this.users.delete(id);
   }
 
   // Authentication methods

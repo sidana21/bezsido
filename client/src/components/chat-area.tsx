@@ -59,7 +59,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       console.log('📞 مكالمة واردة جديدة في ChatArea:', call);
       toast({
         title: "مكالمة واردة",
-        description: `يتصل بك ${call.caller.fullName}`,
+        description: `يتصل بك ${call.caller?.name || 'مستخدم غير معروف'}`,
       });
     },
   });
@@ -1078,7 +1078,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       {voiceCalls.isCallModalOpen && voiceCalls.activeCall && (
         <VoiceCall
           call={voiceCalls.activeCall}
-          currentUser={currentUser}
+          currentUser={currentUser as any}
           onAccept={() => voiceCalls.acceptCall(voiceCalls.activeCall!.id)}
           onReject={() => voiceCalls.rejectCall(voiceCalls.activeCall!.id)}
           onEnd={() => voiceCalls.endCall(voiceCalls.activeCall!.id)}
