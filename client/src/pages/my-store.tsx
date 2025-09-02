@@ -64,6 +64,19 @@ export default function MyStore() {
     },
   });
 
+  const editForm = useForm<StoreFormData>({
+    resolver: zodResolver(storeFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      category: "",
+      location: "",
+      phoneNumber: "",
+      imageUrl: "",
+      isOpen: true,
+    },
+  });
+
   // Update location field when currentUser data is available
   useEffect(() => {
     if (currentUser?.location) {
@@ -118,6 +131,21 @@ export default function MyStore() {
     },
   });
 
+  // Update edit form when store data changes
+  useEffect(() => {
+    if (userStore && isEditDialogOpen) {
+      editForm.reset({
+        name: userStore.name,
+        description: userStore.description,
+        category: userStore.category,
+        location: userStore.location,
+        phoneNumber: userStore.phoneNumber || "",
+        imageUrl: userStore.imageUrl || "",
+        isOpen: userStore.isOpen,
+      });
+    }
+  }, [userStore, isEditDialogOpen, editForm]);
+
   const createStoreMutation = useMutation({
     mutationFn: async (data: StoreFormData) => {
       console.log("Sending store data to API:", data);
@@ -129,7 +157,37 @@ export default function MyStore() {
       console.log("API response:", response);
       return response;
     },
-    onSuccess: () => {
+    onSuccess: async (result: any) => {
+      // Auto-verify store if user is verified
+      if (currentUser?.isVerified) {
+        try {
+          await apiRequest(`/api/stores/${result.id}/auto-verify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          toast({
+            title: "✅ تم إنشاء وتوثيق متجرك بنجاح!",
+            description: "نظراً لأن حسابك موثق، تم توثيق متجرك تلقائياً وهو جاهز الآن لبيع المنتجات!",
+            duration: 10000,
+          });
+        } catch (error) {
+          console.log('Auto-verify failed, store created normally');
+          toast({
+            title: "✅ تم إنشاء متجرك بنجاح!",
+            description: "متجرك قيد المراجعة من قبل الإدارة. سيتم إشعارك فور الموافقة.",
+            duration: 8000,
+          });
+        }
+      } else {
+        toast({
+          title: "🕒 انتظار الموافقة",
+          description: "تم تقديم طلب إنشاء متجرك بنجاح! سيتم مراجعته من قبل الإدارة وستتلقى إشعارًا عند الموافقة.",
+          duration: 6000,
+        });
+      }
+      
       // Invalidate multiple related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/user/store"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
@@ -138,11 +196,6 @@ export default function MyStore() {
       // Force refetch the user store immediately
       queryClient.refetchQueries({ queryKey: ["/api/user/store"] });
       
-      toast({
-        title: "🕒 انتظار الموافقة",
-        description: "تم تقديم طلب إنشاء متجرك بنجاح! سيتم مراجعته من قبل الإدارة وستتلقى إشعارًا عند الموافقة.",
-        duration: 6000,
-      });
       setIsCreateDialogOpen(false);
       form.reset();
     },
@@ -460,9 +513,104 @@ export default function MyStore() {
             {/* Store Info Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center flex-wrap gap-2">
-                  <StoreIcon className="w-5 h-5 ml-2" />
-                  {userStore.name}
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center flex-wrap gap-2">
+                    <StoreIcon className="w-5 h-5 ml-2" />
+                    {userStore.name}
+                  </div>
+                  <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-2"
+                        data-testid="button-edit-store"
+                      >
+                        <Edit className="w-4 h-4" />
+                        تعديل المتجر
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>تعديل بيانات المتجر</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={editForm.handleSubmit(handleEditStore)} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="editName">اسم المتجر *</Label>
+                          <Input
+                            id="editName"
+                            {...editForm.register("name")}
+                            placeholder="متجر الإلكترونيات"
+                          />
+                          {editForm.formState.errors.name && (
+                            <p className="text-sm text-red-500">{editForm.formState.errors.name.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="editDescription">وصف المتجر *</Label>
+                          <Textarea
+                            id="editDescription"
+                            {...editForm.register("description")}
+                            placeholder="متجر لبيع أحدث الأجهزة الإلكترونية..."
+                          />
+                          {editForm.formState.errors.description && (
+                            <p className="text-sm text-red-500">{editForm.formState.errors.description.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="editCategory">فئة المتجر *</Label>
+                          <Input
+                            id="editCategory"
+                            {...editForm.register("category")}
+                            placeholder="إلكترونيات"
+                          />
+                          {editForm.formState.errors.category && (
+                            <p className="text-sm text-red-500">{editForm.formState.errors.category.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="editLocation">موقع المتجر *</Label>
+                          <Input
+                            id="editLocation"
+                            {...editForm.register("location")}
+                            placeholder="الجزائر العاصمة"
+                          />
+                          {editForm.formState.errors.location && (
+                            <p className="text-sm text-red-500">{editForm.formState.errors.location.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="editPhoneNumber">رقم الهاتف</Label>
+                          <Input
+                            id="editPhoneNumber"
+                            {...editForm.register("phoneNumber")}
+                            placeholder="+213555123456"
+                          />
+                        </div>
+
+                        <div className="flex justify-end space-x-2 space-x-reverse">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsEditDialogOpen(false)}
+                          >
+                            إلغاء
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={updateStoreMutation.isPending}
+                            className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]"
+                          >
+                            {updateStoreMutation.isPending ? "جاري التحديث..." : "حفظ التغييرات"}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                   <div className="flex gap-2">
                     <Badge className={`${userStore.isOpen ? 'bg-green-500' : 'bg-red-500'}`}>
                       {userStore.isOpen ? 'مفتوح' : 'مغلق'}
@@ -660,6 +808,7 @@ export default function MyStore() {
                                   id="product-image-upload"
                                   type="file"
                                   accept="image/*,image/jpeg,image/png,image/gif,image/webp"
+                                  capture="environment"
                                   onChange={handleProductImageChange}
                                   className="hidden"
                                   data-testid="input-product-image"

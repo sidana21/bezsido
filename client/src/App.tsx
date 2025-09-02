@@ -12,6 +12,7 @@ import Status from "@/pages/status";
 import Stores from "@/pages/stores";
 import ProductDetail from "@/pages/product-detail";
 import MyStore from "@/pages/my-store";
+import StoreProfile from "@/pages/store-profile";
 import Affiliate from "@/pages/affiliate";
 import Profile from "@/pages/profile";
 import AffiliateRedirect from "@/pages/affiliate-redirect";
@@ -96,6 +97,7 @@ function Router() {
             <Route path="/stores" component={Stores} />
             <Route path="/product/:productId" component={ProductDetail} />
             <Route path="/my-store" component={MyStore} />
+            <Route path="/store/:storeId" component={StoreProfile} />
             <Route path="/cart" component={Cart} />
             <Route path="/orders" component={Orders} />
             <Route path="/affiliate" component={Affiliate} />

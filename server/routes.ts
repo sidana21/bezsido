@@ -1366,6 +1366,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto-verify store for verified users
+  app.post("/api/stores/:storeId/auto-verify", requireAuth, async (req: any, res) => {
+    try {
+      const { storeId } = req.params;
+      
+      // Get user to check if they're verified
+      const user = await storage.getUserById(req.userId);
+      if (!user || !user.isVerified) {
+        return res.status(403).json({ message: "User is not verified" });
+      }
+      
+      // Check if user owns this store
+      const store = await storage.getStore(storeId);
+      if (!store || store.userId !== req.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Auto-approve and verify the store
+      const updatedStore = await storage.updateStore(storeId, {
+        status: 'approved',
+        isVerified: true,
+        verifiedAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        approvedBy: req.userId,
+        isActive: true
+      });
+      
+      res.json(updatedStore);
+    } catch (error) {
+      console.error('Auto-verify store error:', error);
+      res.status(500).json({ message: "Failed to auto-verify store" });
+    }
+  });
+
   // Products endpoints
   app.get("/api/products", requireAuth, async (req: any, res) => {
     try {
