@@ -13,6 +13,7 @@ import { safeExecute } from "@/utils/error-handling";
 import { safeAddEventListener, createSafeCleanup } from "@/utils/dom-cleanup";
 import { safeStopMediaStream, safeInitMicrophone, safeCreateMediaRecorder, createRecordingTimer } from "@/utils/audio-recording";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatAreaProps {
   chatId: string | null;
@@ -66,25 +67,35 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!chatId) {
-        console.error("لا يوجد محادثة محددة لإرسال الرسالة");
-        throw new Error("No chat selected");
+      try {
+        if (!chatId) {
+          console.error("لا يوجد محادثة محددة لإرسال الرسالة");
+          throw new Error("No chat selected");
+        }
+        
+        console.log("إرسال رسالة إلى:", chatId, "المحتوى:", content);
+        
+        const result = await apiRequest(`/api/chats/${chatId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: content.trim(),
+            messageType: "text",
+            replyToId: replyingTo?.id || null,
+          }),
+        });
+        
+        console.log("تم إرسال الرسالة بنجاح:", result);
+        return result;
+      } catch (error) {
+        console.error("خطأ في إرسال الرسالة:", error);
+        toast({
+          title: "فشل إرسال الرسالة",
+          description: "حصل خطأ أثناء إرسال الرسالة، يرجى المحاولة مرة أخرى",
+          variant: "destructive",
+        });
+        throw error;
       }
-      
-      console.log("إرسال رسالة إلى:", chatId, "المحتوى:", content);
-      
-      const result = await apiRequest(`/api/chats/${chatId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: content.trim(),
-          messageType: "text",
-          replyToId: replyingTo?.id || null,
-        }),
-      });
-      
-      console.log("تم إرسال الرسالة بنجاح:", result);
-      return result;
     },
     onSuccess: (data) => {
       console.log("تحديث قائمة الرسائل...");
@@ -97,30 +108,69 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     },
     onError: (error) => {
       console.error("خطأ في إرسال الرسالة:", error);
+      toast({
+        title: "فشل إرسال الرسالة",
+        description: "حصل خطأ، يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى",
+        variant: "destructive",
+      });
     },
   });
 
   const editMessageMutation = useMutation({
     mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
-      return apiRequest(`/api/messages/${messageId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
+      try {
+        return await apiRequest(`/api/messages/${messageId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+      } catch (error) {
+        console.error("خطأ في تعديل الرسالة:", error);
+        toast({
+          title: "فشل تعديل الرسالة",
+          description: "حصل خطأ أثناء تعديل الرسالة، يرجى المحاولة مرة أخرى",
+          variant: "destructive",
+        });
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+      toast({
+        title: "تم تعديل الرسالة",
+        description: "تم تعديل الرسالة بنجاح",
+      });
+    },
+    onError: (error) => {
+      console.error("خطأ في تعديل الرسالة:", error);
     },
   });
 
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: string) => {
-      return apiRequest(`/api/messages/${messageId}`, {
-        method: "DELETE",
-      });
+      try {
+        return await apiRequest(`/api/messages/${messageId}`, {
+          method: "DELETE",
+        });
+      } catch (error) {
+        console.error("خطأ في حذف الرسالة:", error);
+        toast({
+          title: "فشل حذف الرسالة",
+          description: "حصل خطأ أثناء حذف الرسالة، يرجى المحاولة مرة أخرى",
+          variant: "destructive",
+        });
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/chats', chatId, 'messages'] });
+      toast({
+        title: "تم حذف الرسالة",
+        description: "تم حذف الرسالة بنجاح",
+      });
+    },
+    onError: (error) => {
+      console.error("خطأ في حذف الرسالة:", error);
     },
   });
 
@@ -130,6 +180,8 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     enableBrowserNotifications: true,
     soundVolume: 0.7
   });
+
+  const { toast } = useToast();
 
 
   // تمييز الرسائل كمقروءة عند دخول المحادثة
@@ -363,10 +415,19 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       // تحديث عدد الرسائل غير المقروءة
       refreshUnreadCount();
       setReplyingTo(null);
+      
+      toast({
+        title: "تم إرسال الرسالة الصوتية",
+        description: "تم إرسال رسالتك الصوتية بنجاح",
+      });
     } catch (error) {
       console.error('Error sending audio message:', error);
       const err = error as any;
-      alert('فشل في إرسال الرسالة الصوتية: ' + (err.message || 'خطأ غير معروف'));
+      toast({
+        title: "فشل إرسال الرسالة الصوتية",
+        description: `حصل خطأ أثناء إرسال الرسالة الصوتية: ${err.message || 'خطأ غير معروف'}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -400,8 +461,18 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       refreshUnreadCount();
       setReplyingTo(null);
       setShowStickers(false);
+      
+      toast({
+        title: "تم إرسال الملصق",
+        description: `تم إرسال ملصق ${sticker.name} بنجاح`,
+      });
     } catch (error) {
       console.error("خطأ في إرسال الملصق:", error);
+      toast({
+        title: "فشل إرسال الملصق",
+        description: "حصل خطأ أثناء إرسال الملصق، يرجى المحاولة مرة أخرى",
+        variant: "destructive",
+      });
     }
   };
 
@@ -515,19 +586,50 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   };
 
   const handleReply = (message: ChatMessage) => {
-    setReplyingTo(message);
+    try {
+      setReplyingTo(message);
+      toast({
+        title: "رد على الرسالة",
+        description: `سيتم الرد على رسالة ${message.sender?.name || 'المرسل'}`,
+      });
+    } catch (error) {
+      console.error("خطأ في بدء الرد على الرسالة:", error);
+      toast({
+        title: "خطأ",
+        description: "حصل خطأ أثناء بدء الرد على الرسالة",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEdit = (message: Message) => {
-    const newContent = prompt("تحرير الرسالة:", message.content || "");
-    if (newContent && newContent.trim() !== message.content) {
-      editMessageMutation.mutate({ messageId: message.id, content: newContent.trim() });
+    try {
+      const newContent = prompt("تحرير الرسالة:", message.content || "");
+      if (newContent && newContent.trim() !== message.content) {
+        editMessageMutation.mutate({ messageId: message.id, content: newContent.trim() });
+      }
+    } catch (error) {
+      console.error("خطأ في تعديل الرسالة:", error);
+      toast({
+        title: "خطأ في التعديل",
+        description: "حصل خطأ أثناء محاولة تعديل الرسالة",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDelete = (messageId: string) => {
-    if (confirm("هل أنت متأكد من حذف هذه الرسالة؟")) {
-      deleteMessageMutation.mutate(messageId);
+    try {
+      if (confirm("هل أنت متأكد من حذف هذه الرسالة؟")) {
+        deleteMessageMutation.mutate(messageId);
+      }
+    } catch (error) {
+      console.error("خطأ في حذف الرسالة:", error);
+      toast({
+        title: "خطأ في الحذف",
+        description: "حصل خطأ أثناء محاولة حذف الرسالة",
+        variant: "destructive",
+      });
     }
   };
 
