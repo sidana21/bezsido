@@ -534,7 +534,7 @@ export default function MyStore() {
                       <DialogHeader>
                         <DialogTitle>تعديل بيانات المتجر</DialogTitle>
                       </DialogHeader>
-                      <form onSubmit={editForm.handleSubmit(handleEditStore)} className="space-y-4">
+                      <form onSubmit={editForm.handleSubmit(handleUpdateStore)} className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="editName">اسم المتجر *</Label>
                           <Input
