@@ -25,9 +25,9 @@ const FeaturesContext = createContext<FeaturesContextType | undefined>(undefined
 export function FeaturesProvider({ children }: { children: ReactNode }) {
   const { data: features = [], isLoading } = useQuery<AppFeature[]>({
     queryKey: ["/api/features"],
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 1 * 1000, // Cache for 1 second only for real-time updates
     refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time updates
+    refetchInterval: 3 * 1000, // Refetch every 3 seconds for immediate updates
   });
 
   const isFeatureEnabled = (featureId: string): boolean => {
