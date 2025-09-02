@@ -553,9 +553,9 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     );
   }
 
-  const currentChat = chats.find((chat: any) => chat.id === chatId);
+  const currentChat = chats?.find((chat: any) => chat?.id === chatId);
   const chatDisplayName = currentChat?.isGroup 
-    ? currentChat.name || "مجموعة"
+    ? currentChat?.name || "مجموعة"
     : currentChat?.otherParticipant?.name || "مستخدم";
   const chatAvatar = currentChat?.isGroup 
     ? currentChat.avatar 
@@ -668,7 +668,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <div className="text-gray-500 dark:text-gray-400">لا توجد رسائل بعد</div>
           </div>
         ) : (
-          messages.map((message: ChatMessage) => (
+          messages?.filter(Boolean)?.map((message: ChatMessage) => message && (
             <MessageBubble
               key={message.id}
               message={message}

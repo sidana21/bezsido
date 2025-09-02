@@ -88,7 +88,7 @@ export default function Stores() {
       });
 
       // Send product message
-      const productMessage = `مرحباً، أريد شراء هذا المنتج:\n\n📦 ${product.name}\n💰 السعر: ${parseInt(product.price).toLocaleString()} دج\n📝 ${product.description}\n\nهل هذا المنتج متوفر؟`;
+      const productMessage = `مرحباً، أريد شراء هذا المنتج:\n\n📦 ${product?.name || 'منتج'}\n💰 السعر: ${parseInt(product?.price || '0').toLocaleString()} دج\n📝 ${product?.description || 'بدون وصف'}\n\nهل هذا المنتج متوفر؟`;
       
       await apiRequest(`/api/chats/${chatResponse.chatId}/messages`, {
         method: "POST",
@@ -115,8 +115,8 @@ export default function Stores() {
   });
 
   const filteredStores = stores.filter(store =>
-    store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    store.category.toLowerCase().includes(searchQuery.toLowerCase())
+    store?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    store?.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -268,7 +268,7 @@ export default function Stores() {
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-bold text-xl text-gray-800 dark:text-white group-hover:text-whatsapp-green transition-colors">
-                        {store.name}
+                        {store?.name || 'اسم المتجر'}
                       </h3>
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
@@ -277,13 +277,13 @@ export default function Stores() {
                     </div>
                     
                     <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
-                      {store.description}
+                      {store?.description || 'وصف المتجر'}
                     </p>
                     
                     {/* Owner Info */}
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>بواسطة {store.owner.name}</span>
-                      {store.owner.isVerified && (
+                      <span>بواسطة {store?.owner?.name || 'صاحب المتجر'}</span>
+                      {store?.owner?.isVerified && (
                         <ShieldCheck className="w-3 h-3 text-blue-500" data-testid={`badge-verified-owner-${store.id}`} />
                       )}
                     </div>
@@ -293,13 +293,13 @@ export default function Stores() {
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <MapPin className="w-4 h-4 text-red-500" />
-                      <span>{store.location}</span>
+                      <span>{store?.location || 'الموقع غير محدد'}</span>
                     </div>
                     
-                    {store.phoneNumber && (
+                    {store?.phoneNumber && (
                       <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <Phone className="w-4 h-4 text-green-500" />
-                        <span>{store.phoneNumber}</span>
+                        <span>{store?.phoneNumber}</span>
                       </div>
                     )}
                   </div>
@@ -310,7 +310,7 @@ export default function Stores() {
                       variant="outline" 
                       className="text-xs bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900 dark:to-blue-900 border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300"
                     >
-                      {store.category}
+                      {store?.category || 'التصنيف'}
                     </Badge>
                   </div>
 
@@ -344,7 +344,7 @@ export default function Stores() {
                       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
                         <DialogHeader>
                           <DialogTitle className="text-xl">
-                            منتجات {selectedStore?.name}
+                            منتجات {selectedStore?.name || 'المتجر'}
                           </DialogTitle>
                         </DialogHeader>
                         
@@ -358,13 +358,13 @@ export default function Stores() {
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {storeProducts.map((product) => (
+                              {storeProducts?.map((product) => product && (
                                 <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow" data-testid={`product-card-${product.id}`}>
                                   <CardHeader className="p-0">
                                     {product.imageUrl && (
                                       <img
                                         src={product.imageUrl}
-                                        alt={product.name}
+                                        alt={product?.name || 'منتج'}
                                         className="w-full h-32 object-cover"
                                       />
                                     )}
@@ -377,18 +377,18 @@ export default function Stores() {
                                   <CardContent className="p-4">
                                     <div className="space-y-3">
                                       <div>
-                                        <h3 className="font-semibold text-lg">{product.name}</h3>
+                                        <h3 className="font-semibold text-lg">{product?.name || 'اسم المنتج'}</h3>
                                         <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                                          {product.description}
+                                          {product?.description || 'وصف المنتج'}
                                         </p>
                                       </div>
                                       
                                       <div className="flex justify-between items-center">
                                         <Badge variant="outline" className="text-xs">
-                                          {product.category}
+                                          {product?.category || 'تصنيف'}
                                         </Badge>
                                         <div className="text-lg font-bold text-whatsapp-green">
-                                          {parseInt(product.price).toLocaleString()} دج
+                                          {parseInt(product?.price || '0').toLocaleString()} دج
                                         </div>
                                       </div>
                                       
@@ -399,7 +399,7 @@ export default function Stores() {
                                           className="flex-1"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            addToCartMutation.mutate({ productId: product.id });
+                                            addToCartMutation.mutate({ productId: product?.id });
                                           }}
                                           disabled={addToCartMutation.isPending}
                                           data-testid={`button-add-to-cart-${product.id}`}

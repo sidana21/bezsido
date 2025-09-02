@@ -88,14 +88,15 @@ export function FeaturesManagement() {
     },
   });
 
-  const filteredFeatures = features.filter((feature) => {
-    const matchesSearch = feature.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         feature.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || feature.category === selectedCategory;
+  const filteredFeatures = features?.filter((feature) => {
+    if (!feature) return false;
+    const matchesSearch = feature?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         feature?.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || feature?.category === selectedCategory;
     return matchesSearch && matchesCategory;
-  });
+  }) || [];
 
-  const categories = Array.from(new Set(features.map(f => f.category)));
+  const categories = Array.from(new Set(features?.filter(Boolean)?.map(f => f?.category).filter(Boolean) || []));
 
   const handleFeatureToggle = (featureId: string, isEnabled: boolean) => {
     updateFeatureMutation.mutate({ featureId, isEnabled });
@@ -143,9 +144,9 @@ export function FeaturesManagement() {
               size="sm"
               data-testid="filter-all"
             >
-              الكل ({features.length})
+              الكل ({features?.length || 0})
             </Button>
-            {categories.map((category) => (
+            {categories?.map((category) => category && (
               <Button
                 key={category}
                 variant={selectedCategory === category ? "default" : "outline"}
@@ -155,7 +156,7 @@ export function FeaturesManagement() {
                 data-testid={`filter-${category}`}
               >
                 {getCategoryIcon(category)}
-                {getCategoryLabel(category)} ({features.filter(f => f.category === category).length})
+                {getCategoryLabel(category)} ({features?.filter(f => f?.category === category)?.length || 0})
               </Button>
             ))}
           </div>
@@ -168,7 +169,7 @@ export function FeaturesManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">إجمالي الميزات</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{features.length}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{features?.length || 0}</p>
                 </div>
                 <Settings2 className="h-8 w-8 text-blue-600" />
               </div>
@@ -181,7 +182,7 @@ export function FeaturesManagement() {
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">الميزات المفعلة</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {features.filter(f => f.isEnabled).length}
+                    {features?.filter(f => f?.isEnabled)?.length || 0}
                   </p>
                 </div>
                 <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
@@ -197,7 +198,7 @@ export function FeaturesManagement() {
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">الميزات المتوقفة</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {features.filter(f => !f.isEnabled).length}
+                    {features?.filter(f => !f?.isEnabled)?.length || 0}
                   </p>
                 </div>
                 <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
@@ -212,7 +213,7 @@ export function FeaturesManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">الفئات</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{categories.length}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{categories?.length || 0}</p>
                 </div>
                 <Package className="h-8 w-8 text-purple-600" />
               </div>
@@ -222,7 +223,7 @@ export function FeaturesManagement() {
 
         {/* Features List */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredFeatures.map((feature) => (
+          {filteredFeatures?.map((feature) => feature && (
             <Card 
               key={feature.id} 
               className={`transition-all duration-200 ${

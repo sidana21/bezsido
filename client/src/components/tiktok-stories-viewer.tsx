@@ -313,7 +313,7 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
     <div className="fixed inset-0 bg-black z-50 overflow-hidden">
       {/* Progress indicators */}
       <div className="absolute top-4 left-4 right-4 z-20 flex space-x-1">
-        {stories.map((_, index) => (
+        {stories?.map((_, index) => (
           <div key={index} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-white rounded-full"
@@ -330,15 +330,15 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
       {/* Header */}
       <div className="absolute top-8 left-4 right-20 z-20 flex items-center space-x-3 space-x-reverse">
         <Avatar className="w-12 h-12 border-2 border-white">
-          <AvatarImage src={currentStory?.user.avatar || undefined} alt={currentStory?.user.name} />
+          <AvatarImage src={currentStory?.user?.avatar || undefined} alt={currentStory?.user?.name || 'مستخدم'} />
           <AvatarFallback className="text-black bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-            {currentStory?.user.name[0]}
+            {currentStory?.user?.name?.[0] || 'م'}
           </AvatarFallback>
         </Avatar>
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-white font-bold text-lg">{currentStory?.user.name}</h3>
-            {currentStory?.user.isVerified && (
+            <h3 className="text-white font-bold text-lg">{currentStory?.user?.name || 'مستخدم'}</h3>
+            {currentStory?.user?.isVerified && (
               <VerifiedBadge className="w-5 h-5" />
             )}
           </div>
@@ -650,7 +650,7 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
 
               {/* Comments list */}
               <ScrollArea className="h-60 mb-4">
-                {commentsData?.comments?.map((comment) => (
+                {commentsData?.comments?.filter(Boolean)?.map((comment) => comment && (
                   <motion.div
                     key={comment.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -659,20 +659,20 @@ export function TikTokStoriesViewer({ onClose }: TikTokStoriesViewerProps) {
                   >
                     <div className="flex items-start space-x-3 space-x-reverse">
                       <Avatar className="w-10 h-10 border-2 border-white/30">
-                        <AvatarImage src={comment.user.avatar || undefined} alt={comment.user.name} />
+                        <AvatarImage src={comment?.user?.avatar || undefined} alt={comment?.user?.name || 'معلق'} />
                         <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                          {comment.user.name[0]}
+                          {comment?.user?.name?.[0] || 'م'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 space-x-reverse mb-1">
-                          <span className="text-white font-bold text-sm">{comment.user.name}</span>
-                          {comment.user.isVerified && <VerifiedBadge className="w-4 h-4" />}
+                          <span className="text-white font-bold text-sm">{comment?.user?.name || 'مستخدم'}</span>
+                          {comment?.user?.isVerified && <VerifiedBadge className="w-4 h-4" />}
                           <span className="text-white/60 text-xs">
-                            {formatTimeAgo(new Date(comment.createdAt || new Date()))}
+                            {formatTimeAgo(new Date(comment?.createdAt || new Date()))}
                           </span>
                         </div>
-                        <p className="text-white text-sm leading-relaxed">{comment.content}</p>
+                        <p className="text-white text-sm leading-relaxed">{comment?.content || ''}</p>
                       </div>
                     </div>
                   </motion.div>
