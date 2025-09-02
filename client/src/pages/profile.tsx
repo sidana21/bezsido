@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
@@ -366,9 +367,7 @@ export default function Profile() {
               <UserIcon className="w-5 h-5" />
               الاسم
               {currentUser?.isVerified && (
-                <div title="حساب موثق">
-                  <ShieldCheck className="w-4 h-4 text-blue-500" data-testid="badge-verified-user" />
-                </div>
+                <VerifiedBadge className="w-6 h-6" variant="premium" title="حساب موثق ومميز ⭐" data-testid="badge-verified-user" />
               )}
             </Label>
             {isEditing ? (

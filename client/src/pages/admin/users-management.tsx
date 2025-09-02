@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { AdminLayout } from '@/components/admin/admin-layout';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -124,11 +125,24 @@ export function UsersManagement() {
   };
 
   const getStatusBadge = (user: User) => {
+    if (user.isAdmin && user.isVerified) {
+      return (
+        <div className="flex items-center gap-2">
+          <Badge className="bg-purple-100 text-purple-800"><Shield className="w-3 h-3 ml-1" />مدير</Badge>
+          <VerifiedBadge className="w-5 h-5" variant="premium" title="حساب موثق ومميز ⭐" />
+        </div>
+      );
+    }
     if (user.isAdmin) {
       return <Badge className="bg-purple-100 text-purple-800"><Shield className="w-3 h-3 ml-1" />مدير</Badge>;
     }
     if (user.isVerified) {
-      return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 ml-1" />موثق</Badge>;
+      return (
+        <div className="flex items-center gap-1">
+          <VerifiedBadge className="w-5 h-5" title="حساب موثق ⭐" />
+          <span className="text-sm text-emerald-600 font-medium">موثق</span>
+        </div>
+      );
     }
     return <Badge variant="outline"><XCircle className="w-3 h-3 ml-1" />غير موثق</Badge>;
   };

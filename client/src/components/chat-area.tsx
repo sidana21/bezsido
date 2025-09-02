@@ -598,7 +598,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
                 {chatDisplayName}
               </h2>
               {!currentChat?.isGroup && currentChat?.otherParticipant?.isVerified && (
-                <VerifiedBadge className="w-4 h-4" />
+                <VerifiedBadge className="w-5 h-5" variant="default" title="حساب موثق ⭐" />
               )}
             </div>
             <p className="text-sm text-[var(--whatsapp-online)]" data-testid="chat-status">
