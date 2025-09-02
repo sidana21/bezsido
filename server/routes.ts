@@ -833,6 +833,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { chatId } = req.params;
       console.log("💬 Creating permanent message for chat:", chatId);
       
+      // التحقق من وجود المحادثة أولاً
+      const chat = await storage.getChat(chatId);
+      if (!chat) {
+        console.log("❌ Chat not found:", chatId);
+        return res.status(404).json({ message: "Chat not found" });
+      }
+      
+      // التحقق من أن المستخدم جزء من المحادثة
+      if (!chat.participants.includes(req.userId)) {
+        console.log("❌ User not in chat:", req.userId, "Chat participants:", chat.participants);
+        return res.status(403).json({ message: "Not authorized to send messages in this chat" });
+      }
+      
       const messageData = insertMessageSchema.parse({
         ...req.body,
         chatId,
