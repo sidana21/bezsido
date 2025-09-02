@@ -620,6 +620,12 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => {
+              toast({
+                title: "المكالمات الصوتية",
+                description: "ميزة المكالمات الصوتية ستكون متاحة قريباً!",
+              });
+            }}
             className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target"
             data-testid="button-call"
           >
@@ -628,6 +634,12 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => {
+              toast({
+                title: "مكالمات الفيديو",
+                description: "ميزة مكالمات الفيديو ستكون متاحة قريباً!",
+              });
+            }}
             className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target hidden sm:flex"
             data-testid="button-video-call"
           >
@@ -636,6 +648,12 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => {
+              toast({
+                title: "خيارات إضافية",
+                description: "المزيد من الخيارات ستكون متاحة قريباً!",
+              });
+            }}
             className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target"
             data-testid="button-menu"
           >

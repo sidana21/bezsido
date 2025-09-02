@@ -35,6 +35,8 @@ export default function MyStore() {
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const [lastStoreStatus, setLastStoreStatus] = useState<string | null>(null);
   const [productImageUrl, setProductImageUrl] = useState<string>("");
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [isEditProductDialogOpen, setIsEditProductDialogOpen] = useState(false);
   const { toast } = useToast();
   const isInitialMount = useRef(true);
 
@@ -399,6 +401,63 @@ export default function MyStore() {
     
     addProductMutation.mutate(data);
   };
+
+  // Toggle product active status
+  const toggleProductStatus = useMutation({
+    mutationFn: async ({ productId, currentStatus }: { productId: string; currentStatus: boolean }) => {
+      return apiRequest(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !currentStatus }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
+      toast({
+        title: "تم تحديث حالة المنتج",
+        description: "تم تغيير حالة المنتج بنجاح",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في تحديث حالة المنتج",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit product mutation
+  const editProductMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!editingProduct) throw new Error("No product selected for editing");
+      return apiRequest(`/api/products/${editingProduct.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          imageUrl: productImageUrl || editingProduct.imageUrl,
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
+      toast({
+        title: "تم تحديث المنتج",
+        description: "تم تحديث معلومات المنتج بنجاح!",
+      });
+      setIsEditProductDialogOpen(false);
+      setEditingProduct(null);
+      setProductImageUrl("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في تحديث المنتج",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Reset image when dialog closes
   const handleCloseAddProductDialog = (open: boolean) => {
@@ -945,8 +1004,8 @@ export default function MyStore() {
                               variant="outline" 
                               className="flex-1" 
                               onClick={() => {
-                                // TODO: Implement product editing functionality
-                                console.log('Edit product:', product.id);
+                                setEditingProduct(product);
+                                setIsEditProductDialogOpen(true);
                               }}
                               data-testid={`button-edit-product-${product.id}`}
                             >
@@ -957,6 +1016,8 @@ export default function MyStore() {
                               size="sm" 
                               variant={product.isActive ? "secondary" : "default"}
                               className="flex-1"
+                              onClick={() => toggleProductStatus.mutate({ productId: product.id, currentStatus: product.isActive })}
+                              disabled={toggleProductStatus.isPending}
                               data-testid={`button-toggle-product-${product.id}`}
                             >
                               {product.isActive ? "إيقاف" : "تفعيل"}
@@ -1049,6 +1110,136 @@ export default function MyStore() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Product Dialog */}
+        {editingProduct && (
+          <Dialog open={isEditProductDialogOpen} onOpenChange={setIsEditProductDialogOpen}>
+            <DialogContent className="max-w-md" data-testid="edit-product-modal">
+              <DialogHeader>
+                <DialogTitle>تعديل المنتج</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={productForm.handleSubmit((data) => editProductMutation.mutate(data))} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editProductName">اسم المنتج *</Label>
+                  <Input
+                    id="editProductName"
+                    {...productForm.register("name")}
+                    defaultValue={editingProduct.name}
+                    placeholder="اسم المنتج"
+                    data-testid="input-edit-product-name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editProductDescription">وصف المنتج *</Label>
+                  <Textarea
+                    id="editProductDescription"
+                    {...productForm.register("description")}
+                    defaultValue={editingProduct.description}
+                    placeholder="وصف المنتج"
+                    data-testid="input-edit-product-description"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editProductPrice">السعر (دج) *</Label>
+                  <Input
+                    id="editProductPrice"
+                    {...productForm.register("price")}
+                    defaultValue={editingProduct.price}
+                    placeholder="5000"
+                    type="number"
+                    data-testid="input-edit-product-price"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editProductCategory">فئة المنتج *</Label>
+                  <Input
+                    id="editProductCategory"
+                    {...productForm.register("category")}
+                    defaultValue={editingProduct.category}
+                    placeholder="إلكترونيات، ملابس، طعام..."
+                    data-testid="input-edit-product-category"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>صورة المنتج</Label>
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    {(productImageUrl || editingProduct.imageUrl) ? (
+                      <div className="relative">
+                        <img
+                          src={productImageUrl || editingProduct.imageUrl}
+                          alt="صورة المنتج"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => setProductImageUrl("")}
+                          data-testid="button-remove-edit-image"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCameraCapture}
+                            className="flex-1 max-w-32"
+                            data-testid="button-edit-camera-capture"
+                          >
+                            📷 كاميرا
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleGallerySelect}
+                            className="flex-1 max-w-32"
+                            data-testid="button-edit-gallery-select"
+                          >
+                            🖼️ استوديو
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2 space-x-reverse">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditProductDialogOpen(false);
+                      setEditingProduct(null);
+                      setProductImageUrl("");
+                    }}
+                    data-testid="button-cancel-edit-product"
+                  >
+                    إلغاء
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={editProductMutation.isPending}
+                    className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]"
+                    data-testid="button-submit-edit-product"
+                  >
+                    {editProductMutation.isPending ? "جاري التحديث..." : "حفظ التغييرات"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );
