@@ -217,191 +217,217 @@ export default function Stores() {
           </div>
         )}
 
-        {/* Stores Grid */}
+        {/* Stores Grid - Beautiful Grid Layout */}
         {!isLoadingStores && (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredStores.map((store) => (
               <div
                 key={store.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
                 data-testid={`store-card-${store.id}`}
               >
-                <div className="flex">
-                  {store.imageUrl && (
+                {/* Store Image - Larger and more prominent */}
+                <div className="relative h-48 overflow-hidden">
+                  {store.imageUrl ? (
                     <img
                       src={store.imageUrl}
                       alt={store.name}
-                      className="w-24 h-24 object-cover"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       data-testid={`img-store-${store.id}`}
                     />
-                  )}
-                  {!store.imageUrl && (
-                    <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                      <Store className="w-8 h-8 text-gray-400" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                      <Store className="w-16 h-16 text-white" />
                     </div>
                   )}
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-lg">{store.name}</h3>
-                          {store.isVerified && (
-                            <div title="متجر موثق">
-                              <ShieldCheck className="w-4 h-4 text-blue-500" data-testid={`badge-verified-store-${store.id}`} />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{store.description}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <p className="text-xs text-gray-500 dark:text-gray-500">
-                            بواسطة {store.owner.name}
-                          </p>
-                          {store.owner.isVerified && (
-                            <div title="حساب موثق">
-                              <ShieldCheck className="w-3 h-3 text-blue-500" data-testid={`badge-verified-owner-${store.id}`} />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Badge
-                        variant={store.isOpen ? "default" : "secondary"}
-                        className={store.isOpen ? "bg-green-500" : "bg-gray-500"}
-                      >
-                        <Clock className="w-3 h-3 mr-1" />
-                        {store.isOpen ? "مفتوح" : "مغلق"}
-                      </Badge>
-                    </div>
+                  
+                  {/* Status Badge - Floating */}
+                  <div className="absolute top-3 right-3">
+                    <Badge
+                      variant={store.isOpen ? "default" : "secondary"}
+                      className={`${store.isOpen ? "bg-green-500 text-white" : "bg-gray-500 text-white"} backdrop-blur-sm bg-opacity-90`}
+                    >
+                      <Clock className="w-3 h-3 mr-1" />
+                      {store.isOpen ? "مفتوح" : "مغلق"}
+                    </Badge>
+                  </div>
 
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        <span>{store.location}</span>
+                  {/* Verification Badge */}
+                  {store.isVerified && (
+                    <div className="absolute top-3 left-3">
+                      <div className="bg-blue-500 text-white rounded-full p-2 backdrop-blur-sm bg-opacity-90" title="متجر موثق">
+                        <ShieldCheck className="w-4 h-4" data-testid={`badge-verified-store-${store.id}`} />
                       </div>
-                      {store.phoneNumber && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="w-4 h-4" />
-                          <span>{store.phoneNumber}</span>
-                        </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Store Content */}
+                <div className="p-5">
+                  {/* Store Header */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-bold text-xl text-gray-800 dark:text-white group-hover:text-whatsapp-green transition-colors">
+                        {store.name}
+                      </h3>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">4.8</span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
+                      {store.description}
+                    </p>
+                    
+                    {/* Owner Info */}
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>بواسطة {store.owner.name}</span>
+                      {store.owner.isVerified && (
+                        <ShieldCheck className="w-3 h-3 text-blue-500" data-testid={`badge-verified-owner-${store.id}`} />
                       )}
                     </div>
+                  </div>
 
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <Badge variant="outline" className="text-xs">
-                        {store.category}
-                      </Badge>
+                  {/* Store Details */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <MapPin className="w-4 h-4 text-red-500" />
+                      <span>{store.location}</span>
                     </div>
+                    
+                    {store.phoneNumber && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <Phone className="w-4 h-4 text-green-500" />
+                        <span>{store.phoneNumber}</span>
+                      </div>
+                    )}
+                  </div>
 
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        className="bg-whatsapp-green hover:bg-green-600 flex items-center gap-1"
-                        onClick={() => startChatMutation.mutate(store.userId)}
-                        disabled={startChatMutation.isPending}
-                        data-testid={`button-contact-${store.id}`}
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                        تواصل
-                      </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setSelectedStore(store)}
-                            data-testid={`button-view-${store.id}`}
-                          >
-                            <Package className="w-3 h-3 mr-1" />
-                            عرض المنتجات
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-                          <DialogHeader>
-                            <DialogTitle className="text-xl">
-                              منتجات {selectedStore?.name}
-                            </DialogTitle>
-                          </DialogHeader>
-                          
-                          <div className="flex-1 overflow-y-auto">
-                            {isLoadingProducts ? (
-                              <div className="text-center py-8">جاري التحميل...</div>
-                            ) : storeProducts.length === 0 ? (
-                              <div className="text-center py-8">
-                                <Package className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                                <p className="text-gray-500">لا توجد منتجات في هذا المتجر حالياً</p>
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {storeProducts.map((product) => (
-                                  <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow" data-testid={`product-card-${product.id}`}>
-                                    <CardHeader className="p-0">
-                                      {product.imageUrl && (
-                                        <img
-                                          src={product.imageUrl}
-                                          alt={product.name}
-                                          className="w-full h-32 object-cover"
-                                        />
-                                      )}
-                                      {!product.imageUrl && (
-                                        <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                                          <Package className="w-8 h-8 text-gray-400" />
-                                        </div>
-                                      )}
-                                    </CardHeader>
-                                    <CardContent className="p-4">
-                                      <div className="space-y-3">
-                                        <div>
-                                          <h3 className="font-semibold text-lg">{product.name}</h3>
-                                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                                            {product.description}
-                                          </p>
-                                        </div>
-                                        
-                                        <div className="flex justify-between items-center">
-                                          <Badge variant="outline" className="text-xs">
-                                            {product.category}
-                                          </Badge>
-                                          <div className="text-lg font-bold text-whatsapp-green">
-                                            {parseInt(product.price).toLocaleString()} دج
-                                          </div>
-                                        </div>
-                                        
-                                        <div className="flex gap-2">
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="flex-1"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              addToCartMutation.mutate({ productId: product.id });
-                                            }}
-                                            disabled={addToCartMutation.isPending}
-                                            data-testid={`button-add-to-cart-${product.id}`}
-                                          >
-                                            <ShoppingCart className="w-3 h-3 mr-1" />
-                                            {addToCartMutation.isPending ? "جاري..." : "أضف للسلة"}
-                                          </Button>
-                                          
-                                          <Link href={`/product/${product.id}`}>
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              className="flex-1 min-w-fit"
-                                              data-testid={`button-view-details-${product.id}`}
-                                            >
-                                              عرض التفاصيل
-                                            </Button>
-                                          </Link>
+                  {/* Category Badge */}
+                  <div className="mb-4">
+                    <Badge 
+                      variant="outline" 
+                      className="text-xs bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900 dark:to-blue-900 border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300"
+                    >
+                      {store.category}
+                    </Badge>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      className="flex-1 bg-gradient-to-r from-whatsapp-green to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                      onClick={() => startChatMutation.mutate(store.userId)}
+                      disabled={startChatMutation.isPending}
+                      data-testid={`button-contact-${store.id}`}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-1" />
+                      تواصل
+                    </Button>
+                    
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="flex-1 border-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                          onClick={() => setSelectedStore(store)}
+                          data-testid={`button-view-${store.id}`}
+                        >
+                          <Package className="w-4 h-4 mr-1" />
+                          المنتجات
+                        </Button>
+                      </DialogTrigger>
+                        
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl">
+                            منتجات {selectedStore?.name}
+                          </DialogTitle>
+                        </DialogHeader>
+                        
+                        <div className="flex-1 overflow-y-auto">
+                          {isLoadingProducts ? (
+                            <div className="text-center py-8">جاري التحميل...</div>
+                          ) : storeProducts.length === 0 ? (
+                            <div className="text-center py-8">
+                              <Package className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                              <p className="text-gray-500">لا توجد منتجات في هذا المتجر حالياً</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {storeProducts.map((product) => (
+                                <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow" data-testid={`product-card-${product.id}`}>
+                                  <CardHeader className="p-0">
+                                    {product.imageUrl && (
+                                      <img
+                                        src={product.imageUrl}
+                                        alt={product.name}
+                                        className="w-full h-32 object-cover"
+                                      />
+                                    )}
+                                    {!product.imageUrl && (
+                                      <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                        <Package className="w-8 h-8 text-gray-400" />
+                                      </div>
+                                    )}
+                                  </CardHeader>
+                                  <CardContent className="p-4">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <h3 className="font-semibold text-lg">{product.name}</h3>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                                          {product.description}
+                                        </p>
+                                      </div>
+                                      
+                                      <div className="flex justify-between items-center">
+                                        <Badge variant="outline" className="text-xs">
+                                          {product.category}
+                                        </Badge>
+                                        <div className="text-lg font-bold text-whatsapp-green">
+                                          {parseInt(product.price).toLocaleString()} دج
                                         </div>
                                       </div>
-                                    </CardContent>
-                                  </Card>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                                      
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="flex-1"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            addToCartMutation.mutate({ productId: product.id });
+                                          }}
+                                          disabled={addToCartMutation.isPending}
+                                          data-testid={`button-add-to-cart-${product.id}`}
+                                        >
+                                          <ShoppingCart className="w-3 h-3 mr-1" />
+                                          {addToCartMutation.isPending ? "جاري..." : "أضف للسلة"}
+                                        </Button>
+                                        
+                                        <Link href={`/product/${product.id}`}>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="flex-1 min-w-fit"
+                                            data-testid={`button-view-details-${product.id}`}
+                                          >
+                                            عرض التفاصيل
+                                          </Button>
+                                        </Link>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </div>
