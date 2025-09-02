@@ -314,6 +314,16 @@ export default function MyStore() {
   const handleProductImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "نوع الملف غير صحيح",
+          description: "يرجى اختيار صورة صحيحة (JPG, PNG, GIF, WebP)",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({
           title: "حجم الصورة كبير",
@@ -323,6 +333,24 @@ export default function MyStore() {
         return;
       }
       uploadProductImageMutation.mutate(file);
+    }
+  };
+
+  // Handle camera capture
+  const handleCameraCapture = () => {
+    const input = document.getElementById('product-image-upload') as HTMLInputElement;
+    if (input) {
+      input.setAttribute('capture', 'environment'); // Use back camera
+      input.click();
+    }
+  };
+
+  // Handle gallery selection
+  const handleGallerySelect = () => {
+    const input = document.getElementById('product-image-upload') as HTMLInputElement;
+    if (input) {
+      input.removeAttribute('capture'); // Remove capture to allow gallery
+      input.click();
     }
   };
 
@@ -349,6 +377,26 @@ export default function MyStore() {
   };
 
   const handleAddProduct = (data: any) => {
+    // Validate that image is uploaded if required
+    if (!productImageUrl) {
+      toast({
+        title: "صورة المنتج مطلوبة",
+        description: "يرجى إضافة صورة للمنتج قبل النشر",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate all required fields
+    if (!data.name || !data.description || !data.price || !data.category) {
+      toast({
+        title: "بيانات ناقصة",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     addProductMutation.mutate(data);
   };
 
@@ -779,40 +827,57 @@ export default function MyStore() {
                               </div>
                             ) : (
                               <div className="text-center">
-                                <label htmlFor="product-image-upload" className="cursor-pointer">
+                                {uploadProductImageMutation.isPending ? (
                                   <div className="flex flex-col items-center space-y-2">
                                     <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                      {uploadProductImageMutation.isPending ? (
-                                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                      ) : (
-                                        <ImageIcon className="w-6 h-6 text-gray-400" />
-                                      )}
+                                      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                     </div>
                                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                                      {uploadProductImageMutation.isPending ? (
-                                        "جاري تحميل الصورة..."
-                                      ) : (
-                                        <>
-                                          <span className="font-semibold text-blue-600">انقر للتحميل</span>
-                                          <br />
-                                          أو اسحب الصورة هنا
-                                        </>
-                                      )}
+                                      جاري تحميل الصورة...
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                      اختر طريقة إضافة الصورة:
+                                    </div>
+                                    <div className="flex gap-2 justify-center">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleCameraCapture}
+                                        className="flex-1 max-w-32"
+                                        data-testid="button-camera-capture"
+                                      >
+                                        📷 كاميرا
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleGallerySelect}
+                                        className="flex-1 max-w-32"
+                                        data-testid="button-gallery-select"
+                                      >
+                                        🖼️ استوديو
+                                      </Button>
                                     </div>
                                     <div className="text-xs text-gray-500">
                                       JPG, PNG, GIF حتى 5MB
                                     </div>
                                   </div>
-                                </label>
+                                )}
                                 <input
                                   id="product-image-upload"
                                   type="file"
-                                  accept="image/*,image/jpeg,image/png,image/gif,image/webp"
+                                  accept="image/*"
                                   capture="environment"
                                   onChange={handleProductImageChange}
                                   className="hidden"
                                   data-testid="input-product-image"
                                   disabled={uploadProductImageMutation.isPending}
+                                  multiple={false}
                                 />
                               </div>
                             )}
