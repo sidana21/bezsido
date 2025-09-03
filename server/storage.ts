@@ -1925,10 +1925,13 @@ export class MemStorage implements IStorage {
   private features = new Map<string, AppFeature>();
   private adminCredentials: AdminCredentials | undefined;
   private calls = new Map<string, Call>();
+  private stickers: any[] = [];
 
   constructor() {
     // Initialize only default features - NO MOCK DATA
     this.initializeDefaultFeatures();
+    // Initialize free stickers collection
+    this.initializeDefaultStickers();
   }
 
   // User methods
@@ -2295,6 +2298,516 @@ export class MemStorage implements IStorage {
     });
   }
 
+  // Initialize comprehensive free stickers collection
+  private initializeDefaultStickers() {
+    const stickerCategories = [
+      // Emotions and Faces (وجوه وتعابير)
+      { category: 'emotions', stickers: [
+        { name: '😀', imageUrl: '😀', nameAr: 'وجه مبتسم' },
+        { name: '😃', imageUrl: '😃', nameAr: 'وجه مبتسم بعينين مفتوحتين' },
+        { name: '😄', imageUrl: '😄', nameAr: 'وجه مبتسم بفم مفتوح' },
+        { name: '😁', imageUrl: '😁', nameAr: 'وجه مبتسم بعينين ضاحكتين' },
+        { name: '😆', imageUrl: '😆', nameAr: 'وجه ضاحك' },
+        { name: '😅', imageUrl: '😅', nameAr: 'وجه مبتسم بعرق' },
+        { name: '🤣', imageUrl: '🤣', nameAr: 'وجه يدحرج من الضحك' },
+        { name: '😂', imageUrl: '😂', nameAr: 'وجه بدموع الفرح' },
+        { name: '🙂', imageUrl: '🙂', nameAr: 'وجه مبتسم قليلاً' },
+        { name: '🙃', imageUrl: '🙃', nameAr: 'وجه مقلوب' },
+        { name: '😉', imageUrl: '😉', nameAr: 'وجه غامز' },
+        { name: '😊', imageUrl: '😊', nameAr: 'وجه مبتسم بعينين مبتسمتين' },
+        { name: '😇', imageUrl: '😇', nameAr: 'وجه مبتسم بهالة' },
+        { name: '🥰', imageUrl: '🥰', nameAr: 'وجه مبتسم بقلوب' },
+        { name: '😍', imageUrl: '😍', nameAr: 'وجه بعينين قلب' },
+        { name: '🤩', imageUrl: '🤩', nameAr: 'وجه مذهول بنجوم' },
+        { name: '😘', imageUrl: '😘', nameAr: 'وجه يرسل قبلة' },
+        { name: '😗', imageUrl: '😗', nameAr: 'وجه يقبل' },
+        { name: '☺️', imageUrl: '☺️', nameAr: 'وجه مبتسم' },
+        { name: '😚', imageUrl: '😚', nameAr: 'وجه يقبل بعينين مغلقتين' },
+        { name: '😙', imageUrl: '😙', nameAr: 'وجه يقبل بعينين مبتسمتين' },
+        { name: '🥲', imageUrl: '🥲', nameAr: 'وجه مبتسم بدمعة' },
+        { name: '😋', imageUrl: '😋', nameAr: 'وجه يتذوق طعاماً لذيذاً' },
+        { name: '😛', imageUrl: '😛', nameAr: 'وجه مخرج لسانه' },
+        { name: '😜', imageUrl: '😜', nameAr: 'وجه غامز مخرج لسانه' },
+        { name: '🤪', imageUrl: '🤪', nameAr: 'وجه مجنون' },
+        { name: '😝', imageUrl: '😝', nameAr: 'وجه مخرج لسانه بعينين مغلقتين' },
+        { name: '🤑', imageUrl: '🤑', nameAr: 'وجه بفم دولار' },
+        { name: '🤗', imageUrl: '🤗', nameAr: 'وجه معانق' },
+        { name: '🤭', imageUrl: '🤭', nameAr: 'وجه بيد على الفم' },
+        { name: '🤫', imageUrl: '🤫', nameAr: 'وجه يطلب الصمت' },
+        { name: '🤔', imageUrl: '🤔', nameAr: 'وجه مفكر' },
+        { name: '🤐', imageUrl: '🤐', nameAr: 'وجه بسحاب على الفم' },
+        { name: '🤨', imageUrl: '🤨', nameAr: 'وجه بحاجب مرفوع' },
+        { name: '😐', imageUrl: '😐', nameAr: 'وجه محايد' },
+        { name: '😑', imageUrl: '😑', nameAr: 'وجه بدون تعبير' },
+        { name: '😶', imageUrl: '😶', nameAr: 'وجه بدون فم' },
+        { name: '😏', imageUrl: '😏', nameAr: 'وجه ماكر' },
+        { name: '😒', imageUrl: '😒', nameAr: 'وجه غير مهتم' },
+        { name: '🙄', imageUrl: '🙄', nameAr: 'وجه يدحرج عينيه' },
+        { name: '😬', imageUrl: '😬', nameAr: 'وجه محرج' },
+        { name: '🤥', imageUrl: '🤥', nameAr: 'وجه كاذب' },
+        { name: '😔', imageUrl: '😔', nameAr: 'وجه حزين' },
+        { name: '😕', imageUrl: '😕', nameAr: 'وجه مرتبك' },
+        { name: '🙁', imageUrl: '🙁', nameAr: 'وجه عابس قليلاً' },
+        { name: '☹️', imageUrl: '☹️', nameAr: 'وجه عابس' },
+        { name: '😣', imageUrl: '😣', nameAr: 'وجه مثابر' },
+        { name: '😖', imageUrl: '😖', nameAr: 'وجه مرتبك' },
+        { name: '😫', imageUrl: '😫', nameAr: 'وجه متعب' },
+        { name: '😩', imageUrl: '😩', nameAr: 'وجه يئن' },
+        { name: '🥺', imageUrl: '🥺', nameAr: 'وجه متوسل' },
+        { name: '😢', imageUrl: '😢', nameAr: 'وجه باكي' },
+        { name: '😭', imageUrl: '😭', nameAr: 'وجه يبكي بصوت عالي' },
+        { name: '😤', imageUrl: '😤', nameAr: 'وجه بخار من الأنف' },
+        { name: '😠', imageUrl: '😠', nameAr: 'وجه غاضب' },
+        { name: '😡', imageUrl: '😡', nameAr: 'وجه أحمر غاضب' },
+        { name: '🤬', imageUrl: '🤬', nameAr: 'وجه بكلمات سيئة' },
+        { name: '🤯', imageUrl: '🤯', nameAr: 'رأس منفجر' },
+        { name: '😳', imageUrl: '😳', nameAr: 'وجه محمر' },
+        { name: '🥵', imageUrl: '🥵', nameAr: 'وجه حار' },
+        { name: '🥶', imageUrl: '🥶', nameAr: 'وجه بارد' },
+        { name: '😱', imageUrl: '😱', nameAr: 'وجه يصرخ من الخوف' },
+        { name: '😨', imageUrl: '😨', nameAr: 'وجه خائف' },
+        { name: '😰', imageUrl: '😰', nameAr: 'وجه قلق بعرق' },
+        { name: '😥', imageUrl: '😥', nameAr: 'وجه حزين لكن مرتاح' },
+        { name: '😓', imageUrl: '😓', nameAr: 'وجه مرهق' },
+        { name: '🤗', imageUrl: '🤗', nameAr: 'وجه معانق' },
+        { name: '🤤', imageUrl: '🤤', nameAr: 'وجه يسيل لعابه' },
+        { name: '😪', imageUrl: '😪', nameAr: 'وجه نعسان' },
+        { name: '😴', imageUrl: '😴', nameAr: 'وجه نائم' },
+        { name: '🥱', imageUrl: '🥱', nameAr: 'وجه يتثاءب' },
+        { name: '😷', imageUrl: '😷', nameAr: 'وجه بكمامة طبية' },
+        { name: '🤒', imageUrl: '🤒', nameAr: 'وجه بحمى' },
+        { name: '🤕', imageUrl: '🤕', nameAr: 'وجه بضمادة' },
+        { name: '🤢', imageUrl: '🤢', nameAr: 'وجه يتقيأ' },
+        { name: '🤮', imageUrl: '🤮', nameAr: 'وجه يتقيأ' },
+        { name: '🤧', imageUrl: '🤧', nameAr: 'وجه يعطس' },
+        { name: '🥸', imageUrl: '🥸', nameAr: 'وجه متنكر' }
+      ]},
+      
+      // Hearts and Love (قلوب وحب)
+      { category: 'hearts', stickers: [
+        { name: '❤️', imageUrl: '❤️', nameAr: 'قلب أحمر' },
+        { name: '🧡', imageUrl: '🧡', nameAr: 'قلب برتقالي' },
+        { name: '💛', imageUrl: '💛', nameAr: 'قلب أصفر' },
+        { name: '💚', imageUrl: '💚', nameAr: 'قلب أخضر' },
+        { name: '💙', imageUrl: '💙', nameAr: 'قلب أزرق' },
+        { name: '💜', imageUrl: '💜', nameAr: 'قلب بنفسجي' },
+        { name: '🖤', imageUrl: '🖤', nameAr: 'قلب أسود' },
+        { name: '🤍', imageUrl: '🤍', nameAr: 'قلب أبيض' },
+        { name: '🤎', imageUrl: '🤎', nameAr: 'قلب بني' },
+        { name: '💔', imageUrl: '💔', nameAr: 'قلب مكسور' },
+        { name: '❣️', imageUrl: '❣️', nameAr: 'تعجب قلب' },
+        { name: '💕', imageUrl: '💕', nameAr: 'قلبان' },
+        { name: '💞', imageUrl: '💞', nameAr: 'قلوب دوارة' },
+        { name: '💓', imageUrl: '💓', nameAr: 'قلب نابض' },
+        { name: '💗', imageUrl: '💗', nameAr: 'قلب متنامي' },
+        { name: '💖', imageUrl: '💖', nameAr: 'قلب لامع' },
+        { name: '💘', imageUrl: '💘', nameAr: 'قلب بسهم' },
+        { name: '💝', imageUrl: '💝', nameAr: 'قلب بشريطة' },
+        { name: '💟', imageUrl: '💟', nameAr: 'زخرفة قلب' }
+      ]},
+      
+      // Food and Drinks (طعام ومشروبات)
+      { category: 'food', stickers: [
+        { name: '🍎', imageUrl: '🍎', nameAr: 'تفاحة حمراء' },
+        { name: '🍊', imageUrl: '🍊', nameAr: 'برتقالة' },
+        { name: '🍌', imageUrl: '🍌', nameAr: 'موزة' },
+        { name: '🍇', imageUrl: '🍇', nameAr: 'عنب' },
+        { name: '🍓', imageUrl: '🍓', nameAr: 'فراولة' },
+        { name: '🥝', imageUrl: '🥝', nameAr: 'كيوي' },
+        { name: '🍅', imageUrl: '🍅', nameAr: 'طماطم' },
+        { name: '🥕', imageUrl: '🥕', nameAr: 'جزر' },
+        { name: '🌽', imageUrl: '🌽', nameAr: 'ذرة' },
+        { name: '🌶️', imageUrl: '🌶️', nameAr: 'فلفل حار' },
+        { name: '🥒', imageUrl: '🥒', nameAr: 'خيار' },
+        { name: '🥬', imageUrl: '🥬', nameAr: 'خس' },
+        { name: '🥦', imageUrl: '🥦', nameAr: 'بروكلي' },
+        { name: '🧄', imageUrl: '🧄', nameAr: 'ثوم' },
+        { name: '🧅', imageUrl: '🧅', nameAr: 'بصل' },
+        { name: '🍄', imageUrl: '🍄', nameAr: 'فطر' },
+        { name: '🥜', imageUrl: '🥜', nameAr: 'فول سوداني' },
+        { name: '🌰', imageUrl: '🌰', nameAr: 'كستناء' },
+        { name: '🍞', imageUrl: '🍞', nameAr: 'خبز' },
+        { name: '🥖', imageUrl: '🥖', nameAr: 'باغيت' },
+        { name: '🥨', imageUrl: '🥨', nameAr: 'بريتزل' },
+        { name: '🥯', imageUrl: '🥯', nameAr: 'بيغل' },
+        { name: '🥞', imageUrl: '🥞', nameAr: 'فطائر' },
+        { name: '🧇', imageUrl: '🧇', nameAr: 'وافل' },
+        { name: '🧀', imageUrl: '🧀', nameAr: 'جبن' },
+        { name: '🍖', imageUrl: '🍖', nameAr: 'لحم على العظم' },
+        { name: '🍗', imageUrl: '🍗', nameAr: 'ساق دجاج' },
+        { name: '🥩', imageUrl: '🥩', nameAr: 'قطعة لحم' },
+        { name: '🥓', imageUrl: '🥓', nameAr: 'لحم مقدد' },
+        { name: '🍔', imageUrl: '🍔', nameAr: 'همبرغر' },
+        { name: '🍟', imageUrl: '🍟', nameAr: 'بطاطس مقلية' },
+        { name: '🍕', imageUrl: '🍕', nameAr: 'بيتزا' },
+        { name: '🌭', imageUrl: '🌭', nameAr: 'هوت دوغ' },
+        { name: '🥪', imageUrl: '🥪', nameAr: 'شطيرة' },
+        { name: '🌮', imageUrl: '🌮', nameAr: 'تاكو' },
+        { name: '🌯', imageUrl: '🌯', nameAr: 'بوريتو' },
+        { name: '🥙', imageUrl: '🥙', nameAr: 'خبز محشو' },
+        { name: '🧆', imageUrl: '🧆', nameAr: 'فلافل' },
+        { name: '🥚', imageUrl: '🥚', nameAr: 'بيضة' },
+        { name: '🍳', imageUrl: '🍳', nameAr: 'طبخ' },
+        { name: '🥘', imageUrl: '🥘', nameAr: 'مقلاة طعام' },
+        { name: '🍲', imageUrl: '🍲', nameAr: 'وعاء طعام' },
+        { name: '🥗', imageUrl: '🥗', nameAr: 'سلطة خضراء' },
+        { name: '🍿', imageUrl: '🍿', nameAr: 'فشار' },
+        { name: '🧈', imageUrl: '🧈', nameAr: 'زبدة' },
+        { name: '🧂', imageUrl: '🧂', nameAr: 'ملح' },
+        { name: '🥫', imageUrl: '🥫', nameAr: 'طعام معلب' }
+      ]},
+      
+      // Hands and Gestures (أيدي وإيماءات)
+      { category: 'hands', stickers: [
+        { name: '👋', imageUrl: '👋', nameAr: 'يد تلوح' },
+        { name: '🤚', imageUrl: '🤚', nameAr: 'ظهر اليد مرفوع' },
+        { name: '🖐️', imageUrl: '🖐️', nameAr: 'يد مفتوحة' },
+        { name: '✋', imageUrl: '✋', nameAr: 'يد مرفوعة' },
+        { name: '🖖', imageUrl: '🖖', nameAr: 'تحية فولكان' },
+        { name: '👌', imageUrl: '👌', nameAr: 'إشارة موافق' },
+        { name: '🤌', imageUrl: '🤌', nameAr: 'أصابع مقروصة' },
+        { name: '🤏', imageUrl: '🤏', nameAr: 'يد تقرص' },
+        { name: '✌️', imageUrl: '✌️', nameAr: 'إشارة النصر' },
+        { name: '🤞', imageUrl: '🤞', nameAr: 'أصابع متقاطعة' },
+        { name: '🤟', imageUrl: '🤟', nameAr: 'إشارة أحبك' },
+        { name: '🤘', imageUrl: '🤘', nameAr: 'إشارة الروك' },
+        { name: '🤙', imageUrl: '🤙', nameAr: 'اتصل بي' },
+        { name: '👈', imageUrl: '👈', nameAr: 'سبابة تشير يساراً' },
+        { name: '👉', imageUrl: '👉', nameAr: 'سبابة تشير يميناً' },
+        { name: '👆', imageUrl: '👆', nameAr: 'سبابة تشير فوق' },
+        { name: '👇', imageUrl: '👇', nameAr: 'سبابة تشير تحت' },
+        { name: '☝️', imageUrl: '☝️', nameAr: 'سبابة تشير فوق' },
+        { name: '👍', imageUrl: '👍', nameAr: 'إبهام لأعلى' },
+        { name: '👎', imageUrl: '👎', nameAr: 'إبهام لأسفل' },
+        { name: '✊', imageUrl: '✊', nameAr: 'قبضة مرفوعة' },
+        { name: '👊', imageUrl: '👊', nameAr: 'قبضة قادمة' },
+        { name: '🤛', imageUrl: '🤛', nameAr: 'قبضة يسرى' },
+        { name: '🤜', imageUrl: '🤜', nameAr: 'قبضة يمنى' },
+        { name: '👏', imageUrl: '👏', nameAr: 'يدان تصفقان' },
+        { name: '🙌', imageUrl: '🙌', nameAr: 'يدان مرفوعتان' },
+        { name: '👐', imageUrl: '👐', nameAr: 'يدان مفتوحتان' },
+        { name: '🤲', imageUrl: '🤲', nameAr: 'كفان مرفوعان' },
+        { name: '🤝', imageUrl: '🤝', nameAr: 'مصافحة' },
+        { name: '🙏', imageUrl: '🙏', nameAر: 'يدان متضرعتان' }
+      ]},
+      
+      // Animals and Nature (حيوانات وطبيعة)
+      { category: 'animals', stickers: [
+        { name: '🐶', imageUrl: '🐶', nameAr: 'وجه كلب' },
+        { name: '🐱', imageUrl: '🐱', nameAr: 'وجه قط' },
+        { name: '🐭', imageUrl: '🐭', nameAr: 'وجه فأر' },
+        { name: '🐹', imageUrl: '🐹', nameAr: 'وجه هامستر' },
+        { name: '🐰', imageUrl: '🐰', nameAr: 'وجه أرنب' },
+        { name: '🦊', imageUrl: '🦊', nameAr: 'وجه ثعلب' },
+        { name: '🐻', imageUrl: '🐻', nameAr: 'وجه دب' },
+        { name: '🐼', imageUrl: '🐼', nameAr: 'وجه باندا' },
+        { name: '🐨', imageUrl: '🐨', nameAr: 'كوالا' },
+        { name: '🐯', imageUrl: '🐯', nameAr: 'وجه نمر' },
+        { name: '🦁', imageUrl: '🦁', nameAr: 'وجه أسد' },
+        { name: '🐮', imageUrl: '🐮', nameAr: 'وجه بقرة' },
+        { name: '🐷', imageUrl: '🐷', nameAr: 'وجه خنزير' },
+        { name: '🐸', imageUrl: '🐸', nameAr: 'وجه ضفدع' },
+        { name: '🐵', imageUrl: '🐵', nameAr: 'وجه قرد' },
+        { name: '🙈', imageUrl: '🙈', nameAr: 'قرد لا يرى الشر' },
+        { name: '🙉', imageUrl: '🙉', nameAr: 'قرد لا يسمع الشر' },
+        { name: '🙊', imageUrl: '🙊', nameAr: 'قرد لا يتكلم الشر' },
+        { name: '🐒', imageUrl: '🐒', nameAr: 'قرد' },
+        { name: '🦍', imageUrl: '🦍', nameAr: 'غوريلا' },
+        { name: '🦧', imageUrl: '🦧', nameAr: 'أورانغوتان' },
+        { name: '🐕', imageUrl: '🐕', nameAr: 'كلب' },
+        { name: '🐩', imageUrl: '🐩', nameAr: 'بودل' },
+        { name: '🦮', imageUrl: '🦮', nameAر: 'كلب مرشد' },
+        { name: '🐈', imageUrl: '🐈', nameAr: 'قط' },
+        { name: '🦁', imageUrl: '🦁', nameAr: 'أسد' },
+        { name: '🐅', imageUrl: '🐅', nameAr: 'نمر' },
+        { name: '🐆', imageUrl: '🐆', nameAr: 'فهد' },
+        { name: '🐴', imageUrl: '🐴', nameAr: 'وجه حصان' },
+        { name: '🐎', imageUrl: '🐎', nameAr: 'حصان' },
+        { name: '🦄', imageUrl: '🦄', nameAr: 'يونيكورن' },
+        { name: '🦓', imageUrl: '🦓', nameAr: 'حمار وحشي' },
+        { name: '🦒', imageUrl: '🦒', nameAr: 'زرافة' },
+        { name: '🐘', imageUrl: '🐘', nameAr: 'فيل' },
+        { name: '🦏', imageUrl: '🦏', nameAr: 'وحيد القرن' },
+        { name: '🦛', imageUrl: '🦛', nameAr: 'فرس النهر' },
+        { name: '🐪', imageUrl: '🐪', nameAr: 'جمل' },
+        { name: '🐫', imageUrl: '🐫', nameAr: 'جمل ذو سنامين' },
+        { name: '🦙', imageUrl: '🦙', nameAr: 'لاما' },
+        { name: '🦘', imageUrl: '🦘', nameAr: 'كنغر' },
+        { name: '🐃', imageUrl: '🐃', nameAr: 'جاموس مائي' },
+        { name: '🐂', imageUrl: '🐂', nameAr: 'ثور' },
+        { name: '🐄', imageUrl: '🐄', nameAr: 'بقرة' },
+        { name: '🐖', imageUrl: '🐖', nameAr: 'خنزير' },
+        { name: '🐗', imageUrl: '🐗', nameAr: 'خنزير بري' },
+        { name: '🐏', imageUrl: '🐏', nameAr: 'كبش' },
+        { name: '🐑', imageUrl: '🐑', nameAr: 'خروف' },
+        { name: '🐐', imageUrl: '🐐', nameAr: 'ماعز' },
+        { name: '🦌', imageUrl: '🦌', nameAr: 'غزال' },
+        { name: '🐺', imageUrl: '🐺', nameAr: 'ذئب' },
+        { name: '🦝', imageUrl: '🦝', nameAr: 'راكون' },
+        { name: '🦨', imageUrl: '🦨', nameAr: 'ظربان' },
+        { name: '🦡', imageUrl: '🦡', nameAr: 'غرير' },
+        { name: '🐾', imageUrl: '🐾', nameAr: 'آثار أقدام' }
+      ]},
+      
+      // Sports and Activities (رياضة وأنشطة)
+      { category: 'sports', stickers: [
+        { name: '⚽', imageUrl: '⚽', nameAr: 'كرة قدم' },
+        { name: '🏀', imageUrl: '🏀', nameAr: 'كرة سلة' },
+        { name: '🏈', imageUrl: '🏈', nameAr: 'كرة قدم أمريكية' },
+        { name: '⚾', imageUrl: '⚾', nameAr: 'بيسبول' },
+        { name: '🥎', imageUrl: '🥎', nameAr: 'سوفت بول' },
+        { name: '🎾', imageUrl: '🎾', nameAr: 'تنس' },
+        { name: '🏐', imageUrl: '🏐', nameAr: 'كرة طائرة' },
+        { name: '🏉', imageUrl: '🏉', nameAr: 'رغبي' },
+        { name: '🥏', imageUrl: '🥏', nameAr: 'قرص طائر' },
+        { name: '🎱', imageUrl: '🎱', nameAr: 'بلياردو' },
+        { name: '🪀', imageUrl: '🪀', nameAr: 'يو-يو' },
+        { name: '🏓', imageUrl: '🏓', nameAr: 'تنس طاولة' },
+        { name: '🏸', imageUrl: '🏸', nameAr: 'باد منتن' },
+        { name: '🏒', imageUrl: '🏒', nameAr: 'هوكي' },
+        { name: '🏑', imageUrl: '🏑', nameAr: 'هوكي ميداني' },
+        { name: '🥍', imageUrl: '🥍', nameAr: 'لاكروس' },
+        { name: '🏏', imageUrl: '🏏', nameAr: 'كريكت' },
+        { name: '🥅', imageUrl: '🥅', nameAr: 'مرمى' },
+        { name: '⛳', imageUrl: '⛳', nameAr: 'علم في حفرة' },
+        { name: '🪁', imageUrl: '🪁', nameAr: 'طائرة ورقية' },
+        { name: '🏹', imageUrl: '🏹', nameAr: 'قوس وسهم' },
+        { name: '🎣', imageUrl: '🎣', nameAr: 'صيد سمك' },
+        { name: '🤿', imageUrl: '🤿', nameAr: 'قناع غوص' },
+        { name: '🥊', imageUrl: '🥊', nameAr: 'قفاز ملاكمة' },
+        { name: '🥋', imageUrl: '🥋', nameAr: 'زي فنون قتالية' },
+        { name: '🎽', imageUrl: '🎽', nameAr: 'قميص جري' },
+        { name: '🛹', imageUrl: '🛹', nameAr: 'لوح تزلج' },
+        { name: '🛼', imageUrl: '🛼', nameAr: 'حذاء تزلج' },
+        { name: '🛷', imageUrl: '🛷', nameAr: 'زحافة' },
+        { name: '⛸️', imageUrl: '⛸️', nameAr: 'حذاء تزلج على الجليد' },
+        { name: '🥌', imageUrl: '🥌', nameAr: 'حجر كيرلنغ' },
+        { name: '🎿', imageUrl: '🎿', nameAr: 'تزلج' }
+      ]},
+      
+      // Transportation (مواصلات)
+      { category: 'transport', stickers: [
+        { name: '🚗', imageUrl: '🚗', nameAr: 'سيارة' },
+        { name: '🚕', imageUrl: '🚕', nameAr: 'تاكسي' },
+        { name: '🚙', imageUrl: '🚙', nameAr: 'سيارة دفع رباعي' },
+        { name: '🚌', imageUrl: '🚌', nameAr: 'حافلة' },
+        { name: '🚎', imageUrl: '🚎', nameAr: 'ترولي باص' },
+        { name: '🏎️', imageUrl: '🏎️', nameAr: 'سيارة سباق' },
+        { name: '🚓', imageUrl: '🚓', nameAr: 'سيارة شرطة' },
+        { name: '🚑', imageUrl: '🚑', nameAr: 'إسعاف' },
+        { name: '🚒', imageUrl: '🚒', nameAر: 'شاحنة إطفاء' },
+        { name: '🚐', imageUrl: '🚐', nameAr: 'ميني باص' },
+        { name: '🛻', imageUrl: '🛻', nameAr: 'شاحنة صغيرة' },
+        { name: '🚚', imageUrl: '🚚', nameAr: 'شاحنة توصيل' },
+        { name: '🚛', imageUrl: '🚛', nameAr: 'شاحنة مقطورة' },
+        { name: '🚜', imageUrl: '🚜', nameAr: 'جرار' },
+        { name: '🏍️', imageUrl: '🏍️', nameAr: 'دراجة نارية' },
+        { name: '🛵', imageUrl: '🛵', nameAr: 'سكوتر' },
+        { name: '🚲', imageUrl: '🚲', nameAr: 'دراجة' },
+        { name: '🛴', imageUrl: '🛴', nameAr: 'سكوتر ركل' },
+        { name: '🚁', imageUrl: '🚁', nameAr: 'مروحية' },
+        { name: '✈️', imageUrl: '✈️', nameAr: 'طائرة' },
+        { name: '🛫', imageUrl: '🛫', nameAr: 'طائرة تقلع' },
+        { name: '🛬', imageUrl: '🛬', nameAr: 'طائرة تهبط' },
+        { name: '🪂', imageUrl: '🪂', nameAr: 'مظلة هبوط' },
+        { name: '💺', imageUrl: '💺', nameAr: 'مقعد' },
+        { name: '🚀', imageUrl: '🚀', nameAr: 'صاروخ' },
+        { name: '🛸', imageUrl: '🛸', nameAr: 'طبق طائر' }
+      ]},
+      
+      // Business and Money (أعمال ومال)
+      { category: 'business', stickers: [
+        { name: '💰', imageUrl: '💰', nameAr: 'كيس نقود' },
+        { name: '💴', imageUrl: '💴', nameAr: 'ين ياباني' },
+        { name: '💵', imageUrl: '💵', nameAr: 'دولار' },
+        { name: '💶', imageUrl: '💶', nameAر: 'يورو' },
+        { name: '💷', imageUrl: '💷', nameAr: 'جنيه إسترليني' },
+        { name: '💸', imageUrl: '💸', nameAr: 'نقود بأجنحة' },
+        { name: '💳', imageUrl: '💳', nameAr: 'بطاقة ائتمان' },
+        { name: '🧾', imageUrl: '🧾', nameAr: 'إيصال' },
+        { name: '💎', imageUrl: '💎', nameAr: 'جوهرة' },
+        { name: '⚖️', imageUrl: '⚖️', nameAر: 'ميزان' },
+        { name: '🔧', imageUrl: '🔧', nameAr: 'مفتاح ربط' },
+        { name: '🔨', imageUrl: '🔨', nameAr: 'مطرقة' },
+        { name: '⚒️', imageUrl: '⚒️', nameAr: 'مطرقة ومعول' },
+        { name: '🛠️', imageUrl: '🛠️', nameAr: 'مطرقة ومفتاح ربط' },
+        { name: '⛏️', imageUrl: '⛏️', nameAr: 'معول' },
+        { name: '🔩', imageUrl: '🔩', nameAr: 'صامولة ومسمار' },
+        { name: '⚙️', imageUrl: '⚙️', nameAr: 'ترس' },
+        { name: '🧰', imageUrl: '🧰', nameAr: 'صندوق أدوات' },
+        { name: '🧲', imageUrl: '🧲', nameAr: 'مغناطيس' },
+        { name: '📈', imageUrl: '📈', nameAr: 'مخطط بياني صاعد' },
+        { name: '📉', imageUrl: '📉', nameAr: 'مخطط بياني هابط' },
+        { name: '📊', imageUrl: '📊', nameAr: 'مخطط بياني' }
+      ]},
+      
+      // Technology (تكنولوجيا)
+      { category: 'technology', stickers: [
+        { name: '📱', imageUrl: '📱', nameAr: 'هاتف محمول' },
+        { name: '💻', imageUrl: '💻', nameAr: 'لابتوب' },
+        { name: '🖥️', imageUrl: '🖥️', nameAr: 'كمبيوتر مكتبي' },
+        { name: '🖨️', imageUrl: '🖨️', nameAr: 'طابعة' },
+        { name: '⌨️', imageUrl: '⌨️', nameAr: 'لوحة مفاتيح' },
+        { name: '🖱️', imageUrl: '🖱️', nameAr: 'فأرة كمبيوتر' },
+        { name: '💽', imageUrl: '💽', nameAr: 'قرص مضغوط' },
+        { name: '💾', imageUrl: '💾', nameAr: 'قرص مرن' },
+        { name: '💿', imageUrl: '💿', nameAr: 'قرص بصري' },
+        { name: '📀', imageUrl: '📀', nameAr: 'دي في دي' },
+        { name: '🎥', imageUrl: '🎥', nameAr: 'كاميرا أفلام' },
+        { name: '📹', imageUrl: '📹', nameAr: 'كاميرا فيديو' },
+        { name: '📷', imageUrl: '📷', nameAr: 'كاميرا' },
+        { name: '📸', imageUrl: '📸', nameAr: 'كاميرا بفلاش' },
+        { name: '📻', imageUrl: '📻', nameAر: 'راديو' },
+        { name: '🎙️', imageUrl: '🎙️', nameAr: 'ميكروفون استوديو' },
+        { name: '⏱️', imageUrl: '⏱️', nameAr: 'ساعة توقيت' },
+        { name: '⏲️', imageUrl: '⏲️', nameAr: 'مؤقت' },
+        { name: '⏰', imageUrl: '⏰', nameAr: 'منبه' },
+        { name: '⌚', imageUrl: '⌚', nameAr: 'ساعة' },
+        { name: '📲', imageUrl: '📲', nameAr: 'هاتف بسهم' },
+        { name: '☎️', imageUrl: '☎️', nameAr: 'هاتف' },
+        { name: '📞', imageUrl: '📞', nameAr: 'سماعة هاتف' },
+        { name: '🔋', imageUrl: '🔋', nameAr: 'بطارية' },
+        { name: '🔌', imageUrl: '🔌', nameAr: 'قابس كهربائي' },
+        { name: '💡', imageUrl: '💡', nameAr: 'مصباح' },
+        { name: '🔦', imageUrl: '🔦', nameAr: 'كشاف' }
+      ]},
+      
+      // Weather and Nature (طقس وطبيعة)
+      { category: 'weather', stickers: [
+        { name: '☀️', imageUrl: '☀️', nameAr: 'شمس' },
+        { name: '🌞', imageUrl: '🌞', nameAr: 'شمس بوجه' },
+        { name: '🌝', imageUrl: '🌝', nameAr: 'قمر بدر بوجه' },
+        { name: '🌛', imageUrl: '🌛', nameAr: 'هلال بوجه' },
+        { name: '🌜', imageUrl: '🌜', nameAr: 'هلال بوجه' },
+        { name: '🌚', imageUrl: '🌚', nameAr: 'قمر محاق بوجه' },
+        { name: '🌕', imageUrl: '🌕', nameAr: 'قمر بدر' },
+        { name: '🌙', imageUrl: '🌙', nameAr: 'هلال' },
+        { name: '⭐', imageUrl: '⭐', nameAr: 'نجمة' },
+        { name: '🌟', imageUrl: '🌟', nameAr: 'نجمة متوهجة' },
+        { name: '✨', imageUrl: '✨', nameAr: 'بريق' },
+        { name: '⚡', imageUrl: '⚡', nameAr: 'برق' },
+        { name: '☄️', imageUrl: '☄️', nameAr: 'مذنب' },
+        { name: '💥', imageUrl: '💥', nameAr: 'انفجار' },
+        { name: '🔥', imageUrl: '🔥', nameAr: 'نار' },
+        { name: '🌪️', imageUrl: '🌪️', nameAr: 'إعصار' },
+        { name: '🌈', imageUrl: '🌈', nameAr: 'قوس قزح' },
+        { name: '☁️', imageUrl: '☁️', nameAr: 'سحابة' },
+        { name: '⛅', imageUrl: '⛅', nameAr: 'شمس خلف سحابة' },
+        { name: '⛈️', imageUrl: '⛈️', nameAr: 'سحابة برق ومطر' },
+        { name: '🌧️', imageUrl: '🌧️', nameAr: 'سحابة مطر' },
+        { name: '❄️', imageUrl: '❄️', nameAr: 'ندفة ثلج' },
+        { name: '☃️', imageUrl: '☃️', nameAr: 'رجل ثلج' },
+        { name: '⛄', imageUrl: '⛄', nameAr: 'رجل ثلج بدون ثلج' },
+        { name: '☔', imageUrl: '☔', nameAr: 'مظلة بقطرات مطر' },
+        { name: '💧', imageUrl: '💧', nameAr: 'قطرة ماء' },
+        { name: '🌊', imageUrl: '🌊', nameAr: 'موجة مياه' }
+      ]},
+      
+      // Travel and Places (سفر وأماكن)
+      { category: 'travel', stickers: [
+        { name: '🏔️', imageUrl: '🏔️', nameAr: 'جبل مثلج' },
+        { name: '⛰️', imageUrl: '⛰️', nameAr: 'جبل' },
+        { name: '🌋', imageUrl: '🌋', nameAr: 'بركان' },
+        { name: '🏕️', imageUrl: '🏕️', nameAr: 'تخييم' },
+        { name: '🏖️', imageUrl: '🏖️', nameAr: 'شاطئ بمظلة' },
+        { name: '🏜️', imageUrl: '🏜️', nameAr: 'صحراء' },
+        { name: '🏝️', imageUrl: '🏝️', nameAr: 'جزيرة صحراوية' },
+        { name: '🏞️', imageUrl: '🏞️', nameAr: 'حديقة وطنية' },
+        { name: '🏟️', imageUrl: '🏟️', nameAr: 'استاد' },
+        { name: '🏛️', imageUrl: '🏛️', nameAr: 'مبنى كلاسيكي' },
+        { name: '🏗️', imageUrl: '🏗️', nameAر: 'مبنى قيد الإنشاء' },
+        { name: '🏘️', imageUrl: '🏘️', nameAr: 'منازل' },
+        { name: '🏠', imageUrl: '🏠', nameAr: 'منزل' },
+        { name: '🏡', imageUrl: '🏡', nameAr: 'منزل بحديقة' },
+        { name: '🏢', imageUrl: '🏢', nameAr: 'مبنى مكاتب' },
+        { name: '🏥', imageUrl: '🏥', nameAr: 'مستشفى' },
+        { name: '🏦', imageUrl: '🏦', nameAر: 'بنك' },
+        { name: '🏨', imageUrl: '🏨', nameAr: 'فندق' },
+        { name: '🏪', imageUrl: '🏪', nameAr: 'متجر صغير' },
+        { name: '🏫', imageUrl: '🏫', nameAr: 'مدرسة' },
+        { name: '🏬', imageUrl: '🏬', nameAr: 'متجر كبير' },
+        { name: '🏭', imageUrl: '🏭', nameAr: 'مصنع' },
+        { name: '🏯', imageUrl: '🏯', nameAr: 'قلعة يابانية' },
+        { name: '🏰', imageUrl: '🏰', nameAr: 'قلعة' },
+        { name: '💒', imageUrl: '💒', nameAr: 'زفاف' },
+        { name: '🗼', imageUrl: '🗼', nameAr: 'برج طوكيو' },
+        { name: '🗽', imageUrl: '🗽', nameAr: 'تمثال الحرية' },
+        { name: '⛪', imageUrl: '⛪', nameAr: 'كنيسة' },
+        { name: '🕌', imageUrl: '🕌', nameAr: 'مسجد' },
+        { name: '🕋', imageUrl: '🕋', nameAr: 'كعبة' }
+      ]},
+      
+      // Symbols and Signs (رموز وعلامات)
+      { category: 'symbols', stickers: [
+        { name: '💯', imageUrl: '💯', nameAr: 'مئة نقطة' },
+        { name: '💢', imageUrl: '💢', nameAr: 'رمز غضب' },
+        { name: '💬', imageUrl: '💬', nameAr: 'فقاعة كلام' },
+        { name: '💭', imageUrl: '💭', nameAr: 'فقاعة فكر' },
+        { name: '💤', imageUrl: '💤', nameAr: 'رمز نوم' },
+        { name: '💨', imageUrl: '💨', nameAr: 'اندفاع' },
+        { name: '🌟', imageUrl: '🌟', nameAr: 'نجمة متوهجة' },
+        { name: '💫', imageUrl: '💫', nameAr: 'دوامة' },
+        { name: '🌠', imageUrl: '🌠', nameAr: 'نجمة متساقطة' },
+        { name: '🎆', imageUrl: '🎆', nameAr: 'ألعاب نارية' },
+        { name: '🎇', imageUrl: '🎇', nameAr: 'شرارة' },
+        { name: '🎉', imageUrl: '🎉', nameAr: 'منفاخ حفلة' },
+        { name: '🎊', imageUrl: '🎊', nameAr: 'كرة كونفيتي' },
+        { name: '🎈', imageUrl: '🎈', nameAr: 'بالون' },
+        { name: '🎀', imageUrl: '🎀', nameAr: 'شريطة' },
+        { name: '🎁', imageUrl: '🎁', nameAr: 'هدية ملفوفة' },
+        { name: '🔮', imageUrl: '🔮', nameAr: 'كرة بلورية' },
+        { name: '🧿', imageUrl: '🧿', nameAر: 'عين نازار' },
+        { name: '📿', imageUrl: '📿', nameAr: 'مسبحة' }
+      ]},
+      
+      // Flags (أعلام)
+      { category: 'flags', stickers: [
+        { name: '🇸🇦', imageUrl: '🇸🇦', nameAr: 'علم السعودية' },
+        { name: '🇦🇪', imageUrl: '🇦🇪', nameAr: 'علم الإمارات' },
+        { name: '🇪🇬', imageUrl: '🇪🇬', nameAr: 'علم مصر' },
+        { name: '🇯🇴', imageUrl: '🇯🇴', nameAr: 'علم الأردن' },
+        { name: '🇱🇧', imageUrl: '🇱🇧', nameAr: 'علم لبنان' },
+        { name: '🇸🇾', imageUrl: '🇸🇾', nameAr: 'علم سوريا' },
+        { name: '🇮🇶', imageUrl: '🇮🇶', nameAr: 'علم العراق' },
+        { name: '🇰🇼', imageUrl: '🇰🇼', nameAr: 'علم الكويت' },
+        { name: '🇧🇭', imageUrl: '🇧🇭', nameAr: 'علم البحرين' },
+        { name: '🇶🇦', imageUrl: '🇶🇦', nameAr: 'علم قطر' },
+        { name: '🇴🇲', imageUrl: '🇴🇲', nameAر: 'علم عمان' },
+        { name: '🇾🇪', imageUrl: '🇾🇪', nameAr: 'علم اليمن' },
+        { name: '🇵🇸', imageUrl: '🇵🇸', nameAr: 'علم فلسطين' },
+        { name: '🇲🇦', imageUrl: '🇲🇦', nameAr: 'علم المغرب' },
+        { name: '🇩🇿', imageUrl: '🇩🇿', nameAr: 'علم الجزائر' },
+        { name: '🇹🇳', imageUrl: '🇹🇳', nameAر: 'علم تونس' },
+        { name: '🇱🇾', imageUrl: '🇱🇾', nameAr: 'علم ليبيا' },
+        { name: '🇸🇩', imageUrl: '🇸🇩', nameAr: 'علم السودان' },
+        { name: '🇸🇴', imageUrl: '🇸🇴', nameAr: 'علم الصومال' },
+        { name: '🇩🇯', imageUrl: '🇩🇯', nameAr: 'علم جيبوتي' },
+        { name: '🇲🇷', imageUrl: '🇲🇷', nameAr: 'علم موريتانيا' },
+        { name: '🇰🇲', imageUrl: '🇰🇲', nameAr: 'علم جزر القمر' },
+        { name: '🇹🇷', imageUrl: '🇹🇷', nameAr: 'علم تركيا' },
+        { name: '🇮🇷', imageUrl: '🇮🇷', nameAr: 'علم إيران' }
+      ]}
+    ];
+
+    // Add all stickers to storage
+    let sortOrder = 0;
+    stickerCategories.forEach(categoryData => {
+      categoryData.stickers.forEach(sticker => {
+        this.stickers.push({
+          id: `sticker-${sortOrder}`,
+          name: sticker.name,
+          imageUrl: sticker.imageUrl,
+          category: categoryData.category,
+          isActive: true,
+          sortOrder: sortOrder++,
+          createdAt: new Date()
+        });
+      });
+    });
+
+    console.log(`📦 تم تحميل ${this.stickers.length} ملصق مجاني في ${stickerCategories.length} فئات`);
+  }
+
   // Admin management methods for MemStorage
   async getAllUsers(): Promise<User[]> {
     return Array.from(this.users.values());
@@ -2323,7 +2836,22 @@ export class MemStorage implements IStorage {
 
   // Stickers implementation for MemStorage
   async getAllStickers(): Promise<any[]> {
-    return [];
+    return this.stickers.filter(sticker => sticker.isActive);
+  }
+
+  async getStickersByCategory(category?: string): Promise<Sticker[]> {
+    if (!category) return this.stickers;
+    return this.stickers.filter(sticker => sticker.category === category);
+  }
+
+  async addSticker(sticker: any): Promise<any> {
+    const newSticker = {
+      id: randomUUID(),
+      ...sticker,
+      createdAt: new Date()
+    };
+    this.stickers.push(newSticker);
+    return newSticker;
   }
   
   // Cart implementation for MemStorage

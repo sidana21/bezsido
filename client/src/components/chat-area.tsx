@@ -878,15 +878,6 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mobile-touch-target"
-            data-testid="button-emoji"
-          >
-            <Smile className="h-5 w-5" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
             onClick={() => setShowStickers(!showStickers)}
             className={`mobile-touch-target ${
               showStickers 
@@ -992,25 +983,160 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
         {/* Stickers Panel */}
         {showStickers && (
-          <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 max-h-64 overflow-y-auto">
-            <div className="mb-3">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الملصقات</h3>
-              <div className="grid grid-cols-6 gap-2">
-                {stickers.map((sticker) => (
-                  <button
-                    key={sticker.id}
-                    onClick={() => sendSticker(sticker)}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-3xl flex items-center justify-center"
-                    title={sticker.name}
-                    data-testid={`sticker-${sticker.id}`}
-                  >
-                    {sticker.imageUrl}
-                  </button>
-                ))}
-              </div>
-              {stickers.length === 0 && (
+          <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 max-h-80 overflow-y-auto">
+            <div className="p-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">الملصقات المجانية</h3>
+              
+              {/* Stickers by Category */}
+              {stickers.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Emotions Category */}
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">🙂 التعابير والوجوه</h4>
+                    <div className="grid grid-cols-8 gap-1">
+                      {stickers.filter(s => s.category === 'emotions').slice(0, 24).map((sticker) => (
+                        <button
+                          key={sticker.id}
+                          onClick={() => sendSticker(sticker)}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-2xl flex items-center justify-center"
+                          title={sticker.name}
+                          data-testid={`sticker-${sticker.id}`}
+                        >
+                          {sticker.imageUrl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Hearts Category */}
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">❤️ القلوب والحب</h4>
+                    <div className="grid grid-cols-8 gap-1">
+                      {stickers.filter(s => s.category === 'hearts').slice(0, 16).map((sticker) => (
+                        <button
+                          key={sticker.id}
+                          onClick={() => sendSticker(sticker)}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-2xl flex items-center justify-center"
+                          title={sticker.name}
+                          data-testid={`sticker-${sticker.id}`}
+                        >
+                          {sticker.imageUrl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Hands Category */}
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">👋 الأيدي والإيماءات</h4>
+                    <div className="grid grid-cols-8 gap-1">
+                      {stickers.filter(s => s.category === 'hands').slice(0, 16).map((sticker) => (
+                        <button
+                          key={sticker.id}
+                          onClick={() => sendSticker(sticker)}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-2xl flex items-center justify-center"
+                          title={sticker.name}
+                          data-testid={`sticker-${sticker.id}`}
+                        >
+                          {sticker.imageUrl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Animals Category */}
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">🐶 الحيوانات</h4>
+                    <div className="grid grid-cols-8 gap-1">
+                      {stickers.filter(s => s.category === 'animals').slice(0, 16).map((sticker) => (
+                        <button
+                          key={sticker.id}
+                          onClick={() => sendSticker(sticker)}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-2xl flex items-center justify-center"
+                          title={sticker.name}
+                          data-testid={`sticker-${sticker.id}`}
+                        >
+                          {sticker.imageUrl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Food Category */}
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">🍎 الطعام والمشروبات</h4>
+                    <div className="grid grid-cols-8 gap-1">
+                      {stickers.filter(s => s.category === 'food').slice(0, 16).map((sticker) => (
+                        <button
+                          key={sticker.id}
+                          onClick={() => sendSticker(sticker)}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-2xl flex items-center justify-center"
+                          title={sticker.name}
+                          data-testid={`sticker-${sticker.id}`}
+                        >
+                          {sticker.imageUrl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sports Category */}
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">⚽ الرياضة والأنشطة</h4>
+                    <div className="grid grid-cols-8 gap-1">
+                      {stickers.filter(s => s.category === 'sports').slice(0, 16).map((sticker) => (
+                        <button
+                          key={sticker.id}
+                          onClick={() => sendSticker(sticker)}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-2xl flex items-center justify-center"
+                          title={sticker.name}
+                          data-testid={`sticker-${sticker.id}`}
+                        >
+                          {sticker.imageUrl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Business Category */}
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">💰 الأعمال والمال</h4>
+                    <div className="grid grid-cols-8 gap-1">
+                      {stickers.filter(s => s.category === 'business').slice(0, 16).map((sticker) => (
+                        <button
+                          key={sticker.id}
+                          onClick={() => sendSticker(sticker)}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-2xl flex items-center justify-center"
+                          title={sticker.name}
+                          data-testid={`sticker-${sticker.id}`}
+                        >
+                          {sticker.imageUrl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Flags Category */}
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">🇸🇦 الأعلام العربية</h4>
+                    <div className="grid grid-cols-8 gap-1">
+                      {stickers.filter(s => s.category === 'flags').map((sticker) => (
+                        <button
+                          key={sticker.id}
+                          onClick={() => sendSticker(sticker)}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-2xl flex items-center justify-center"
+                          title={sticker.name}
+                          data-testid={`sticker-${sticker.id}`}
+                        >
+                          {sticker.imageUrl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
                 <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                  لا توجد ملصقات متاحة
+                  جاري تحميل الملصقات...
                 </div>
               )}
             </div>
