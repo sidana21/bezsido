@@ -573,8 +573,8 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     }
 
     // الحصول على معرف المحادثة والمستخدم الآخر
-    const currentChat = chats.find(chat => chat.id === chatId);
-    if (!currentChat) {
+    const currentChatForCall = chats?.find((chat: any) => chat?.id === chatId);
+    if (!currentChatForCall) {
       toast({
         title: "خطأ",
         description: "لم يتم العثور على المحادثة",
@@ -584,7 +584,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     }
 
     // العثور على المستخدم الآخر في المحادثة
-    const otherUserId = currentChat.participants?.find((id: string) => id !== currentUser.id);
+    const otherUserId = currentChatForCall.participants?.find((id: string) => id !== currentUser.id);
     if (!otherUserId) {
       toast({
         title: "خطأ",
