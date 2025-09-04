@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { FeaturesProvider } from "@/hooks/use-features";
 import Chat from "@/pages/chat";
 import Status from "@/pages/status";
+import Calls from "@/pages/calls";
 import Stores from "@/pages/stores";
 import ProductDetail from "@/pages/product-detail";
 import MyStore from "@/pages/my-store";
@@ -94,6 +95,7 @@ function Router() {
             <Route path="/" component={Chat} />
             <Route path="/chat/:chatId" component={Chat} />
             <Route path="/status" component={Status} />
+            <Route path="/calls" component={Calls} />
             <Route path="/stores" component={Stores} />
             <Route path="/product/:productId" component={ProductDetail} />
             <Route path="/my-store" component={MyStore} />

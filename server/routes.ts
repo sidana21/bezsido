@@ -528,6 +528,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to promote user to admin" });
     }
   });
+
+  // Development endpoint to create sample call history
+  app.post("/api/dev/create-sample-calls", requireAuth, async (req: any, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    try {
+      const currentUserId = req.userId;
+      
+      // Get all users to create calls with
+      const allUsers = await storage.getAllUsers();
+      const otherUsers = allUsers.filter(user => user.id !== currentUserId);
+      
+      if (otherUsers.length === 0) {
+        return res.status(400).json({ message: "Need at least one other user to create sample calls" });
+      }
+      
+      const sampleCalls = [];
+      
+      // Create various types of sample calls
+      for (let i = 0; i < Math.min(5, otherUsers.length); i++) {
+        const otherUser = otherUsers[i];
+        
+        // Outgoing call (ended)
+        const outgoingCall = await storage.createCall({
+          callerId: currentUserId,
+          receiverId: otherUser.id,
+          status: 'ended',
+          callType: 'voice',
+          startedAt: new Date(Date.now() - (i + 1) * 3600000), // i+1 hours ago
+          endedAt: new Date(Date.now() - (i + 1) * 3600000 + 120000), // 2 minutes duration
+          duration: 120 // 2 minutes
+        });
+        sampleCalls.push(outgoingCall);
+        
+        // Incoming call (missed)
+        const missedCall = await storage.createCall({
+          callerId: otherUser.id,
+          receiverId: currentUserId,
+          status: 'missed',
+          callType: 'voice',
+          startedAt: new Date(Date.now() - (i + 2) * 1800000), // Different timing
+          endedAt: null,
+          duration: 0
+        });
+        sampleCalls.push(missedCall);
+        
+        // Video call (if first user)
+        if (i === 0) {
+          const videoCall = await storage.createCall({
+            callerId: currentUserId,
+            receiverId: otherUser.id,
+            status: 'ended',
+            callType: 'video',
+            startedAt: new Date(Date.now() - 7200000), // 2 hours ago
+            endedAt: new Date(Date.now() - 7200000 + 300000), // 5 minutes duration
+            duration: 300 // 5 minutes
+          });
+          sampleCalls.push(videoCall);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Created ${sampleCalls.length} sample calls`,
+        calls: sampleCalls.length
+      });
+    } catch (error) {
+      console.error('Error creating sample calls:', error);
+      res.status(500).json({ message: "Failed to create sample calls" });
+    }
+  });
   
   // Session recovery endpoint for advanced user protection
   app.post("/api/auth/recover-session", async (req, res) => {

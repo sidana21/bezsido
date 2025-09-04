@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { Link } from "wouter";
-import { MessageSquare, Users, TrendingUp, Store, ShoppingCart, Sparkles } from "lucide-react";
+import { MessageSquare, Users, Phone, TrendingUp, Store, ShoppingCart, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,15 @@ export function BottomNavigation() {
       color: "from-purple-500 to-pink-600",
       activeColor: "from-purple-600 to-pink-700",
       hasSpecialEffect: true
+    },
+    {
+      label: "المكالمات",
+      icon: Phone,
+      href: "/calls",
+      isActive: location === "/calls",
+      featureId: "messaging",
+      color: "from-green-500 to-emerald-600",
+      activeColor: "from-green-600 to-emerald-700"
     },
     {
       label: "المتاجر",
