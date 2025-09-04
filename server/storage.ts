@@ -1722,7 +1722,169 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStickersByCategory(category?: string): Promise<Sticker[]> {
-    return [];
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(stickers).where(eq(stickers.isActive, true));
+      
+      if (category) {
+        query = query.where(eq(stickers.category, category));
+      }
+      
+      const result = await query.orderBy(stickers.sortOrder);
+      return result;
+    } catch (error) {
+      console.error('Error getting stickers by category:', error);
+      return [];
+    }
+  }
+
+  async initializeDefaultStickers(): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log('Initializing default stickers in database...');
+      
+      // Check if stickers already exist
+      const existingStickers = await db.select().from(stickers).limit(1);
+      if (existingStickers.length > 0) {
+        console.log('Stickers already initialized, skipping...');
+        return;
+      }
+
+      const stickerCategories = [
+        // Emotions and Faces (وجوه وتعابير)
+        { category: 'emotions', stickers: [
+          { name: '😀', imageUrl: '😀', nameAr: 'وجه مبتسم' },
+          { name: '😃', imageUrl: '😃', nameAr: 'وجه مبتسم بعينين مفتوحتين' },
+          { name: '😄', imageUrl: '😄', nameAr: 'وجه مبتسم بفم مفتوح' },
+          { name: '😁', imageUrl: '😁', nameAr: 'وجه مبتسم بعينين ضاحكتين' },
+          { name: '😆', imageUrl: '😆', nameAr: 'وجه ضاحك' },
+          { name: '😅', imageUrl: '😅', nameAr: 'وجه مبتسم بعرق' },
+          { name: '🤣', imageUrl: '🤣', nameAr: 'وجه يدحرج من الضحك' },
+          { name: '😂', imageUrl: '😂', nameAr: 'وجه بدموع الفرح' },
+          { name: '😊', imageUrl: '😊', nameAr: 'وجه مبتسم بعينين مبتسمتين' },
+          { name: '😇', imageUrl: '😇', nameAr: 'وجه مبتسم بهالة' },
+          { name: '🥰', imageUrl: '🥰', nameAr: 'وجه مبتسم بقلوب' },
+          { name: '😍', imageUrl: '😍', nameAr: 'وجه بعينين قلب' },
+          { name: '🤩', imageUrl: '🤩', nameAr: 'وجه مذهول بنجوم' },
+          { name: '😘', imageUrl: '😘', nameAr: 'وجه يرسل قبلة' },
+          { name: '😗', imageUrl: '😗', nameAr: 'وجه يقبل' },
+          { name: '☺️', imageUrl: '☺️', nameAr: 'وجه مبتسم' },
+          { name: '😚', imageUrl: '😚', nameAr: 'وجه يقبل بعينين مغلقتين' },
+          { name: '😙', imageUrl: '😙', nameAr: 'وجه يقبل بعينين مبتسمتين' },
+          { name: '🥲', imageUrl: '🥲', nameAr: 'وجه مبتسم بدمعة' },
+          { name: '😋', imageUrl: '😋', nameAr: 'وجه يتذوق طعاماً لذيذاً' }
+        ]},
+        
+        // Hearts and Love (قلوب وحب)
+        { category: 'hearts', stickers: [
+          { name: '❤️', imageUrl: '❤️', nameAr: 'قلب أحمر' },
+          { name: '🧡', imageUrl: '🧡', nameAr: 'قلب برتقالي' },
+          { name: '💛', imageUrl: '💛', nameAr: 'قلب أصفر' },
+          { name: '💚', imageUrl: '💚', nameAr: 'قلب أخضر' },
+          { name: '💙', imageUrl: '💙', nameAr: 'قلب أزرق' },
+          { name: '💜', imageUrl: '💜', nameAr: 'قلب بنفسجي' },
+          { name: '🖤', imageUrl: '🖤', nameAr: 'قلب أسود' },
+          { name: '🤍', imageUrl: '🤍', nameAr: 'قلب أبيض' },
+          { name: '🤎', imageUrl: '🤎', nameAr: 'قلب بني' },
+          { name: '💔', imageUrl: '💔', nameAr: 'قلب مكسور' },
+          { name: '❣️', imageUrl: '❣️', nameAr: 'علامة تعجب قلب' },
+          { name: '💕', imageUrl: '💕', nameAr: 'قلبان وردي' },
+          { name: '💞', imageUrl: '💞', nameAr: 'قلوب دوارة' },
+          { name: '💓', imageUrl: '💓', nameAr: 'قلب نابض' },
+          { name: '💗', imageUrl: '💗', nameAr: 'قلب نامي' },
+          { name: '💖', imageUrl: '💖', nameAr: 'قلب لامع' },
+          { name: '💘', imageUrl: '💘', nameAr: 'قلب بسهم' },
+          { name: '💝', imageUrl: '💝', nameAr: 'قلب بشريطة' }
+        ]},
+        
+        // Animals (حيوانات)
+        { category: 'animals', stickers: [
+          { name: '🐶', imageUrl: '🐶', nameAr: 'وجه كلب' },
+          { name: '🐱', imageUrl: '🐱', nameAr: 'وجه قط' },
+          { name: '🐭', imageUrl: '🐭', nameAr: 'وجه فأر' },
+          { name: '🐹', imageUrl: '🐹', nameAr: 'وجه هامستر' },
+          { name: '🐰', imageUrl: '🐰', nameAr: 'وجه أرنب' },
+          { name: '🦊', imageUrl: '🦊', nameAr: 'وجه ثعلب' },
+          { name: '🐻', imageUrl: '🐻', nameAr: 'وجه دب' },
+          { name: '🐼', imageUrl: '🐼', nameAr: 'وجه باندا' },
+          { name: '🐨', imageUrl: '🐨', nameAr: 'وجه كوالا' },
+          { name: '🐯', imageUrl: '🐯', nameAr: 'وجه نمر' },
+          { name: '🦁', imageUrl: '🦁', nameAr: 'وجه أسد' },
+          { name: '🐮', imageUrl: '🐮', nameAr: 'وجه بقرة' },
+          { name: '🐷', imageUrl: '🐷', nameAr: 'وجه خنزير' },
+          { name: '🐸', imageUrl: '🐸', nameAr: 'وجه ضفدع' }
+        ]},
+
+        // Food and Drinks (طعام ومشروبات)
+        { category: 'food', stickers: [
+          { name: '🍎', imageUrl: '🍎', nameAr: 'تفاحة حمراء' },
+          { name: '🍊', imageUrl: '🍊', nameAr: 'برتقالة' },
+          { name: '🍌', imageUrl: '🍌', nameAr: 'موزة' },
+          { name: '🍇', imageUrl: '🍇', nameAr: 'عنب' },
+          { name: '🍓', imageUrl: '🍓', nameAر: 'فراولة' },
+          { name: '🥝', imageUrl: '🥝', nameAr: 'كيوي' },
+          { name: '🍅', imageUrl: '🍅', nameAr: 'طماطم' },
+          { name: '🥑', imageUrl: '🥑', nameAr: 'أفوكادو' },
+          { name: '🍞', imageUrl: '🍞', nameAr: 'خبز' },
+          { name: '🥖', imageUrl: '🥖', nameAr: 'باغيت' },
+          { name: '🧀', imageUrl: '🧀', nameAr: 'جبنة' },
+          { name: '🥛', imageUrl: '🥛', nameAr: 'كوب حليب' },
+          { name: '☕', imageUrl: '☕', nameAr: 'قهوة ساخنة' },
+          { name: '🍵', imageUrl: '🍵', nameAر: 'شاي' },
+          { name: '🧃', imageUrl: '🧃', nameAr: 'صندوق عصير' }
+        ]},
+
+        // Arab Countries (دول عربية)
+        { category: 'flags', stickers: [
+          { name: '🇸🇦', imageUrl: '🇸🇦', nameAr: 'علم السعودية' },
+          { name: '🇦🇪', imageUrl: '🇦🇪', nameAr: 'علم الإمارات' },
+          { name: '🇪🇬', imageUrl: '🇪🇬', nameAr: 'علم مصر' },
+          { name: '🇯🇴', imageUrl: '🇯🇴', nameAr: 'علم الأردن' },
+          { name: '🇱🇧', imageUrl: '🇱🇧', nameAr: 'علم لبنان' },
+          { name: '🇸🇾', imageUrl: '🇸🇾', nameAr: 'علم سوريا' },
+          { name: '🇮🇶', imageUrl: '🇮🇶', nameAr: 'علم العراق' },
+          { name: '🇰🇼', imageUrl: '🇰🇼', nameAr: 'علم الكويت' },
+          { name: '🇧🇭', imageUrl: '🇧🇭', nameAr: 'علم البحرين' },
+          { name: '🇶🇦', imageUrl: '🇶🇦', nameAr: 'علم قطر' },
+          { name: '🇴🇲', imageUrl: '🇴🇲', nameAr: 'علم عمان' },
+          { name: '🇾🇪', imageUrl: '🇾🇪', nameAr: 'علم اليمن' },
+          { name: '🇵🇸', imageUrl: '🇵🇸', nameAr: 'علم فلسطين' },
+          { name: '🇲🇦', imageUrl: '🇲🇦', nameAr: 'علم المغرب' },
+          { name: '🇩🇿', imageUrl: '🇩🇿', nameAr: 'علم الجزائر' }
+        ]}
+      ];
+
+      // Add all stickers to database
+      let sortOrder = 0;
+      for (const categoryData of stickerCategories) {
+        for (const sticker of categoryData.stickers) {
+          await db.insert(stickers)
+            .values({
+              id: randomUUID(),
+              name: sticker.name,
+              imageUrl: sticker.imageUrl,
+              category: categoryData.category,
+              isActive: true,
+              sortOrder: sortOrder++,
+              createdAt: new Date()
+            })
+            .onConflictDoNothing();
+        }
+      }
+
+      console.log(`📦 تم تحميل ${sortOrder} ملصق مجاني في ${stickerCategories.length} فئات في قاعدة البيانات`);
+    } catch (error) {
+      console.error('Error initializing default stickers:', error);
+      // Don't throw - this is not critical
+    }
   }
 
   // Admin dashboard stats for DatabaseStorage

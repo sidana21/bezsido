@@ -48,6 +48,19 @@ app.use((req, res, next) => {
     console.error('Warning: Failed to initialize default features:', error);
   }
 
+  // Initialize default stickers on startup
+  try {
+    console.log('Initializing default stickers...');
+    if (typeof storage.initializeDefaultStickers === 'function') {
+      await storage.initializeDefaultStickers();
+      console.log('Default stickers initialized successfully');
+    } else {
+      console.log('Stickers initialization not available in current storage type');
+    }
+  } catch (error) {
+    console.error('Warning: Failed to initialize default stickers:', error);
+  }
+
   // Initialize admin user (with data protection)
   try {
     console.log('Initializing admin user...');
