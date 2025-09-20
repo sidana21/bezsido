@@ -379,16 +379,6 @@ export default function MyStore() {
   };
 
   const handleAddProduct = (data: any) => {
-    // Validate that image is uploaded if required
-    if (!productImageUrl) {
-      toast({
-        title: "صورة المنتج مطلوبة",
-        description: "يرجى إضافة صورة للمنتج قبل النشر",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     // Validate all required fields
     if (!data.name || !data.description || !data.price || !data.category) {
       toast({
@@ -399,6 +389,8 @@ export default function MyStore() {
       return;
     }
     
+    console.log('Product data:', data);
+    console.log('Product image URL:', productImageUrl);
     addProductMutation.mutate(data);
   };
 
