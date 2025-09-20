@@ -415,10 +415,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center mb-2">
+          <div className="inline-flex items-center justify-center mb-0">
             <img src={appIconUrl} alt="BizChat" className="w-48 h-48 object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">BizChat</h1>
+          <h1 className="text-3xl font-bold text-white mb-2 -mt-2">BizChat</h1>
           <p className="text-green-100 text-sm animate-pulse bg-gradient-to-r from-green-200 to-emerald-200 bg-clip-text text-transparent font-semibold">
             🌟 اكتشف عالماً جديداً من الفرص التجارية واربط منتجاتك بالأسواق العربية 🚀
           </p>
