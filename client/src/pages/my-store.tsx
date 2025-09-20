@@ -343,23 +343,6 @@ export default function MyStore() {
     }
   };
 
-  // Handle camera capture
-  const handleCameraCapture = () => {
-    const input = document.getElementById('product-image-upload') as HTMLInputElement;
-    if (input) {
-      input.setAttribute('capture', 'environment'); // Use back camera
-      input.click();
-    }
-  };
-
-  // Handle gallery selection
-  const handleGallerySelect = () => {
-    const input = document.getElementById('product-image-upload') as HTMLInputElement;
-    if (input) {
-      input.removeAttribute('capture'); // Remove capture to allow gallery
-      input.click();
-    }
-  };
 
   // Simple button click handler
   const handleButtonClick = () => {
@@ -1007,52 +990,18 @@ export default function MyStore() {
 
                 <div className="space-y-2">
                   <Label>صورة المنتج</Label>
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-                    {(productImageUrl || editingProduct.imageUrl) ? (
-                      <div className="relative">
-                        <img
-                          src={productImageUrl || editingProduct.imageUrl}
-                          alt="صورة المنتج"
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={() => setProductImageUrl("")}
-                          data-testid="button-remove-edit-image"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <div className="flex gap-2 justify-center">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCameraCapture}
-                            className="flex-1 max-w-32"
-                            data-testid="button-edit-camera-capture"
-                          >
-                            📷 كاميرا
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleGallerySelect}
-                            className="flex-1 max-w-32"
-                            data-testid="button-edit-gallery-select"
-                          >
-                            🖼️ استوديو
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    الصورة الحالية: {editingProduct.imageUrl ? 'موجودة' : 'غير متاحة'}
                   </div>
+                  {editingProduct.imageUrl && (
+                    <div className="relative">
+                      <img
+                        src={editingProduct.imageUrl}
+                        alt="صورة المنتج"
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end space-x-2 space-x-reverse">
