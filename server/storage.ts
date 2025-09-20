@@ -2089,6 +2089,17 @@ export class MemStorage implements IStorage {
   private adminCredentials: AdminCredentials | undefined;
   private calls = new Map<string, Call>();
   private stickers: any[] = [];
+  private stores = new Map<string, Store>();
+  private products = new Map<string, Product>();
+  private affiliateLinks = new Map<string, AffiliateLink>();
+  private commissions = new Map<string, Commission>();
+  private contacts = new Map<string, Contact>();
+  private cartItems = new Map<string, CartItem>();
+  private orders = new Map<string, Order>();
+  private orderItems = new Map<string, OrderItem>();
+  private verificationRequests = new Map<string, VerificationRequest>();
+  private storyLikes = new Map<string, StoryLike>();
+  private storyComments = new Map<string, StoryComment>();
 
   constructor() {
     // Initialize only default features - NO MOCK DATA
@@ -3185,6 +3196,294 @@ export class MemStorage implements IStorage {
     }
     // ترتيب حسب التاريخ من الأحدث للأقدم
     return callHistory.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  }
+
+  // Store methods
+  async getStores(location?: string, category?: string): Promise<Store[]> {
+    let storesList = Array.from(this.stores.values());
+    
+    if (location) {
+      storesList = storesList.filter(store => store.location === location);
+    }
+    
+    if (category) {
+      storesList = storesList.filter(store => store.category === category);
+    }
+    
+    return storesList;
+  }
+
+  async getAllStores(): Promise<Store[]> {
+    return Array.from(this.stores.values());
+  }
+
+  async getStore(storeId: string): Promise<Store | undefined> {
+    return this.stores.get(storeId);
+  }
+
+  async getUserStore(userId: string): Promise<Store | undefined> {
+    return Array.from(this.stores.values()).find(store => store.userId === userId);
+  }
+
+  async createStore(store: InsertStore): Promise<Store> {
+    const newStore: Store = {
+      id: randomUUID(),
+      ...store,
+      isActive: store.isActive ?? true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.stores.set(newStore.id, newStore);
+    return newStore;
+  }
+
+  async updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined> {
+    const store = this.stores.get(storeId);
+    if (!store) return undefined;
+
+    const updatedStore = { ...store, ...updates, updatedAt: new Date() };
+    this.stores.set(storeId, updatedStore);
+    return updatedStore;
+  }
+
+  async updateStoreStatus(storeId: string, isActive: boolean): Promise<Store | undefined> {
+    return this.updateStore(storeId, { isActive });
+  }
+
+  async deleteStore(storeId: string): Promise<boolean> {
+    return this.stores.delete(storeId);
+  }
+
+  // Product methods
+  async getProducts(location?: string, category?: string): Promise<Product[]> {
+    let productsList = Array.from(this.products.values());
+    
+    if (location) {
+      productsList = productsList.filter(product => product.location === location);
+    }
+    
+    if (category) {
+      productsList = productsList.filter(product => product.category === category);
+    }
+    
+    return productsList;
+  }
+
+  async getProduct(productId: string): Promise<Product | undefined> {
+    return this.products.get(productId);
+  }
+
+  async getUserProducts(userId: string): Promise<Product[]> {
+    return Array.from(this.products.values()).filter(product => product.userId === userId);
+  }
+
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const newProduct: Product = {
+      id: randomUUID(),
+      ...product,
+      isActive: product.isActive ?? true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.products.set(newProduct.id, newProduct);
+    return newProduct;
+  }
+
+  async updateProduct(productId: string, updates: Partial<InsertProduct>): Promise<Product | undefined> {
+    const product = this.products.get(productId);
+    if (!product) return undefined;
+
+    const updatedProduct = { ...product, ...updates, updatedAt: new Date() };
+    this.products.set(productId, updatedProduct);
+    return updatedProduct;
+  }
+
+  async deleteProduct(productId: string): Promise<boolean> {
+    return this.products.delete(productId);
+  }
+
+  // Affiliate methods (stub implementation)
+  async createAffiliateLink(affiliateLink: InsertAffiliateLink): Promise<AffiliateLink> {
+    const newLink: AffiliateLink = {
+      id: randomUUID(),
+      ...affiliateLink,
+      clicks: 0,
+      conversions: 0,
+      createdAt: new Date(),
+    };
+    this.affiliateLinks.set(newLink.id, newLink);
+    return newLink;
+  }
+
+  async getUserAffiliateLinks(userId: string): Promise<AffiliateLink[]> {
+    return Array.from(this.affiliateLinks.values()).filter(link => link.userId === userId);
+  }
+
+  async getAffiliateLink(linkId: string): Promise<AffiliateLink | undefined> {
+    return this.affiliateLinks.get(linkId);
+  }
+
+  async trackClick(linkId: string): Promise<void> {
+    const link = this.affiliateLinks.get(linkId);
+    if (link) {
+      link.clicks += 1;
+      this.affiliateLinks.set(linkId, link);
+    }
+  }
+
+  async trackConversion(linkId: string, amount: number): Promise<void> {
+    const link = this.affiliateLinks.get(linkId);
+    if (link) {
+      link.conversions += 1;
+      this.affiliateLinks.set(linkId, link);
+    }
+  }
+
+  // Commission methods (stub implementation)
+  async getUserCommissions(userId: string): Promise<Commission[]> {
+    return Array.from(this.commissions.values()).filter(commission => commission.userId === userId);
+  }
+
+  async getTotalCommissions(userId: string): Promise<number> {
+    return Array.from(this.commissions.values())
+      .filter(commission => commission.userId === userId)
+      .reduce((total, commission) => total + commission.amount, 0);
+  }
+
+  async getCommissionsByStatus(userId: string, status: string): Promise<Commission[]> {
+    return Array.from(this.commissions.values())
+      .filter(commission => commission.userId === userId && commission.status === status);
+  }
+
+  // Contact methods (stub implementation)
+  async getUserContacts(userId: string): Promise<Contact[]> {
+    return Array.from(this.contacts.values()).filter(contact => contact.userId === userId);
+  }
+
+  async addContact(userId: string, contactPhoneNumber: string): Promise<Contact> {
+    const newContact: Contact = {
+      id: randomUUID(),
+      userId,
+      contactPhoneNumber,
+      addedAt: new Date(),
+    };
+    this.contacts.set(newContact.id, newContact);
+    return newContact;
+  }
+
+  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+    return this.getUserByPhoneNumber(phoneNumber);
+  }
+
+  // Cart methods (stub implementation)
+  async getCartItems(userId: string): Promise<CartItem[]> {
+    return Array.from(this.cartItems.values()).filter(item => item.userId === userId);
+  }
+
+  async addToCart(userId: string, productId: string, quantity: number): Promise<CartItem> {
+    const newCartItem: CartItem = {
+      id: randomUUID(),
+      userId,
+      productId,
+      quantity,
+      addedAt: new Date(),
+    };
+    this.cartItems.set(newCartItem.id, newCartItem);
+    return newCartItem;
+  }
+
+  async removeFromCart(userId: string, cartItemId: string): Promise<void> {
+    this.cartItems.delete(cartItemId);
+  }
+
+  async updateCartItemQuantity(userId: string, cartItemId: string, quantity: number): Promise<CartItem | undefined> {
+    const cartItem = this.cartItems.get(cartItemId);
+    if (cartItem && cartItem.userId === userId) {
+      cartItem.quantity = quantity;
+      this.cartItems.set(cartItemId, cartItem);
+      return cartItem;
+    }
+    return undefined;
+  }
+
+  async clearCart(userId: string): Promise<void> {
+    for (const [id, item] of this.cartItems.entries()) {
+      if (item.userId === userId) {
+        this.cartItems.delete(id);
+      }
+    }
+  }
+
+  // Order methods (stub implementation)
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const newOrder: Order = {
+      id: randomUUID(),
+      ...order,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.orders.set(newOrder.id, newOrder);
+    return newOrder;
+  }
+
+  async getUserOrders(userId: string): Promise<Order[]> {
+    return Array.from(this.orders.values()).filter(order => order.buyerId === userId);
+  }
+
+  async getSellerOrders(sellerId: string): Promise<Order[]> {
+    return Array.from(this.orders.values()).filter(order => order.sellerId === sellerId);
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return Array.from(this.orders.values());
+  }
+
+  async getOrder(orderId: string): Promise<Order | undefined> {
+    return this.orders.get(orderId);
+  }
+
+  async updateOrderStatus(orderId: string, status: string): Promise<Order | undefined> {
+    const order = this.orders.get(orderId);
+    if (order) {
+      order.status = status;
+      order.updatedAt = new Date();
+      this.orders.set(orderId, order);
+      return order;
+    }
+    return undefined;
+  }
+
+  async cancelOrder(orderId: string): Promise<Order | undefined> {
+    return this.updateOrderStatus(orderId, 'cancelled');
+  }
+
+  // Verification methods (stub implementation)
+  async getUserVerificationRequests(userId: string): Promise<VerificationRequest[]> {
+    return Array.from(this.verificationRequests.values()).filter(req => req.userId === userId);
+  }
+
+  async getAllVerificationRequests(): Promise<VerificationRequest[]> {
+    return Array.from(this.verificationRequests.values());
+  }
+
+  async createVerificationRequest(request: InsertVerificationRequest): Promise<VerificationRequest> {
+    const newRequest: VerificationRequest = {
+      id: randomUUID(),
+      ...request,
+      submittedAt: new Date(),
+    };
+    this.verificationRequests.set(newRequest.id, newRequest);
+    return newRequest;
+  }
+
+  async updateVerificationRequest(requestId: string, updates: Partial<VerificationRequest>): Promise<VerificationRequest | undefined> {
+    const request = this.verificationRequests.get(requestId);
+    if (request) {
+      Object.assign(request, updates);
+      this.verificationRequests.set(requestId, request);
+      return request;
+    }
+    return undefined;
   }
 }
 
