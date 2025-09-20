@@ -1204,19 +1204,21 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
       </Dialog>
 
       {/* Voice Call Component */}
-      {voiceCalls.isCallModalOpen && voiceCalls.activeCall && (
-        <VoiceCall
-          call={voiceCalls.activeCall}
-          currentUser={currentUser as any}
-          onAccept={() => voiceCalls.acceptCall(voiceCalls.activeCall!.id)}
-          onReject={() => voiceCalls.rejectCall(voiceCalls.activeCall!.id)}
-          onEnd={() => voiceCalls.endCall(voiceCalls.activeCall!.id)}
-          onClose={voiceCalls.closeCallModal}
-          isAccepting={voiceCalls.isAcceptingCall}
-          isRejecting={voiceCalls.isRejectingCall}
-          isEnding={voiceCalls.isEndingCall}
-        />
-      )}
+      <FeatureGuard feature="voice_calls">
+        {voiceCalls.isCallModalOpen && voiceCalls.activeCall && (
+          <VoiceCall
+            call={voiceCalls.activeCall}
+            currentUser={currentUser as any}
+            onAccept={() => voiceCalls.acceptCall(voiceCalls.activeCall!.id)}
+            onReject={() => voiceCalls.rejectCall(voiceCalls.activeCall!.id)}
+            onEnd={() => voiceCalls.endCall(voiceCalls.activeCall!.id)}
+            onClose={voiceCalls.closeCallModal}
+            isAccepting={voiceCalls.isAcceptingCall}
+            isRejecting={voiceCalls.isRejectingCall}
+            isEnding={voiceCalls.isEndingCall}
+          />
+        )}
+      </FeatureGuard>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
+import { FeatureGuard } from "@/hooks/use-features";
 
 interface CallRecord {
   id: string;
@@ -156,7 +157,8 @@ export default function Calls() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-testid="calls-page">
+    <FeatureGuard feature="voice_calls">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-testid="calls-page">
       {/* العنوان */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-4">
         <div className="flex items-center justify-between">
@@ -302,8 +304,9 @@ export default function Calls() {
         )}
       </div>
       
-      {/* إضافة padding في الأسفل للتنقل السفلي */}
-      <div className="h-20"></div>
-    </div>
+        {/* إضافة padding في الأسفل للتنقل السفلي */}
+        <div className="h-20"></div>
+      </div>
+    </FeatureGuard>
   );
 }
