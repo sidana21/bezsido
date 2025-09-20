@@ -16,6 +16,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { useToast } from "@/hooks/use-toast";
 import { useVoiceCalls } from '@/hooks/use-voice-calls';
 import { VoiceCall } from './voice-call';
+import { useFeatureEnabled, FeatureGuard } from '@/hooks/use-features';
 
 interface ChatAreaProps {
   chatId: string | null;
@@ -769,29 +770,31 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           >
             <Search className="h-5 w-5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleStartCall()}
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target"
-            data-testid="button-call"
-          >
-            <Phone className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              toast({
-                title: "مكالمات الفيديو",
-                description: "ميزة مكالمات الفيديو ستكون متاحة قريباً!",
-              });
-            }}
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target hidden sm:flex"
-            data-testid="button-video-call"
-          >
-            <Video className="h-5 w-5" />
-          </Button>
+          <FeatureGuard feature="voice_calls">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleStartCall()}
+              className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target"
+              data-testid="button-call"
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                toast({
+                  title: "مكالمات الفيديو",
+                  description: "ميزة مكالمات الفيديو ستكون متاحة قريباً!",
+                });
+              }}
+              className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 mobile-touch-target hidden sm:flex"
+              data-testid="button-video-call"
+            >
+              <Video className="h-5 w-5" />
+            </Button>
+          </FeatureGuard>
           <Button
             variant="ghost"
             size="icon"

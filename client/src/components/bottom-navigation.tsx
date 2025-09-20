@@ -48,7 +48,7 @@ export function BottomNavigation() {
       icon: Phone,
       href: "/calls",
       isActive: location === "/calls",
-      featureId: "messaging",
+      featureId: "voice_calls",
       color: "from-green-500 to-emerald-600",
       activeColor: "from-green-600 to-emerald-700"
     },
