@@ -124,6 +124,7 @@ export interface IStorage {
   getFeature(featureId: string): Promise<AppFeature | undefined>;
   updateFeature(featureId: string, updates: Partial<InsertAppFeature>): Promise<AppFeature | undefined>;
   initializeDefaultFeatures(): Promise<void>;
+  initializeDefaultStickers(): Promise<void>;
   
   // Admin management methods
   getAllUsers(): Promise<User[]>;

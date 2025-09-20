@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { storage } from "./storage";
+import { storage, type IStorage } from "./storage";
 import { AdminManager } from "./admin-manager";
 
 const app = express();
@@ -51,8 +51,8 @@ app.use((req, res, next) => {
   // Initialize default stickers on startup
   try {
     console.log('Initializing default stickers...');
-    if (typeof storage.initializeDefaultStickers === 'function') {
-      await storage.initializeDefaultStickers();
+    if (typeof (storage as any).initializeDefaultStickers === 'function') {
+      await (storage as any).initializeDefaultStickers();
       console.log('Default stickers initialized successfully');
     } else {
       console.log('Stickers initialization not available in current storage type');
@@ -65,7 +65,7 @@ app.use((req, res, next) => {
   try {
     console.log('Initializing admin user...');
     console.log('🔒 Data Protection Mode: ON - Real user data will be preserved');
-    const adminManager = new AdminManager(storage);
+    const adminManager = new AdminManager(storage as IStorage);
     await adminManager.ensureAdminUser();
     console.log('Admin user initialized successfully');
   } catch (error) {
