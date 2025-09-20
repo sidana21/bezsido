@@ -32,7 +32,6 @@ type StoreFormData = z.infer<typeof storeFormSchema>;
 export default function MyStore() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const [lastStoreStatus, setLastStoreStatus] = useState<string | null>(null);
   const [productImageUrl, setProductImageUrl] = useState<string>("");
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -262,10 +261,9 @@ export default function MyStore() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
       toast({
-        title: "تم إضافة المنتج",
-        description: "تم إضافة المنتج بنجاح!",
+        title: "تم نشر المنتج",
+        description: "تم نشر المنتج على المتجر بنجاح!",
       });
-      setIsAddProductDialogOpen(false);
       setProductImageUrl(""); // Reset image URL
       productForm.reset();
     },
@@ -399,6 +397,21 @@ export default function MyStore() {
     addProductMutation.mutate(data);
   };
 
+  // دالة نشر المنتج الجديدة
+  const handlePublishProduct = () => {
+    const productData = {
+      name: "منتج جديد",
+      description: "وصف منتج تلقائي تم نشره على المتجر",
+      price: "1000",
+      category: userStore?.category || "متنوع",
+      imageUrl: "",
+      location: currentUser?.location || userStore?.location || "",
+      isActive: true,
+    };
+
+    addProductMutation.mutate(productData);
+  };
+
   // Toggle product active status
   const toggleProductStatus = useMutation({
     mutationFn: async ({ productId, currentStatus }: { productId: string; currentStatus: boolean }) => {
@@ -456,14 +469,6 @@ export default function MyStore() {
     },
   });
 
-  // Reset image when dialog closes
-  const handleCloseAddProductDialog = (open: boolean) => {
-    setIsAddProductDialogOpen(open);
-    if (!open) {
-      setProductImageUrl("");
-      productForm.reset();
-    }
-  };
 
   const openEditDialog = () => {
     if (userStore) {
@@ -791,176 +796,15 @@ export default function MyStore() {
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   <span>منتجات المتجر ({storeProducts.length})</span>
-                  <Dialog open={isAddProductDialogOpen} onOpenChange={handleCloseAddProductDialog}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" 
-                        data-testid="button-add-product"
-                        disabled={userStore.status !== 'approved' && !currentUser?.isVerified}
-                      >
-                        <Plus className="w-4 h-4 ml-2" />
-                        إضافة منتج
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md" data-testid="add-product-modal">
-                      <DialogHeader>
-                        <DialogTitle>إضافة منتج جديد</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={productForm.handleSubmit(handleAddProduct)} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="productName">اسم المنتج *</Label>
-                          <Input
-                            id="productName"
-                            {...productForm.register("name")}
-                            placeholder="سماعة بلوتوث"
-                            data-testid="input-product-name"
-                          />
-                          {productForm.formState.errors.name && (
-                            <p className="text-sm text-red-500">{productForm.formState.errors.name.message}</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="productDescription">وصف المنتج *</Label>
-                          <Textarea
-                            id="productDescription"
-                            {...productForm.register("description")}
-                            placeholder="وصف تفصيلي للمنتج..."
-                            data-testid="input-product-description"
-                          />
-                          {productForm.formState.errors.description && (
-                            <p className="text-sm text-red-500">{productForm.formState.errors.description.message}</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="productPrice">السعر (دج) *</Label>
-                          <Input
-                            id="productPrice"
-                            {...productForm.register("price")}
-                            placeholder="5000"
-                            type="number"
-                            data-testid="input-product-price"
-                          />
-                          {productForm.formState.errors.price && (
-                            <p className="text-sm text-red-500">{productForm.formState.errors.price.message}</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="productCategory">فئة المنتج *</Label>
-                          <Input
-                            id="productCategory"
-                            {...productForm.register("category")}
-                            placeholder="إلكترونيات، ملابس، طعام..."
-                            data-testid="input-product-category"
-                          />
-                          {productForm.formState.errors.category && (
-                            <p className="text-sm text-red-500">{productForm.formState.errors.category.message}</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>صورة المنتج</Label>
-                          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-                            {productImageUrl ? (
-                              <div className="relative">
-                                <img
-                                  src={productImageUrl}
-                                  alt="صورة المنتج"
-                                  className="w-full h-32 object-cover rounded-lg"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  className="absolute top-2 right-2"
-                                  onClick={() => setProductImageUrl("")}
-                                  data-testid="button-remove-image"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="text-center">
-                                {uploadProductImageMutation.isPending ? (
-                                  <div className="flex flex-col items-center space-y-2">
-                                    <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                    </div>
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                      جاري تحميل الصورة...
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-3">
-                                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                      اختر طريقة إضافة الصورة:
-                                    </div>
-                                    <div className="flex gap-2 justify-center">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleCameraCapture}
-                                        className="flex-1 max-w-32"
-                                        data-testid="button-camera-capture"
-                                      >
-                                        📷 كاميرا
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleGallerySelect}
-                                        className="flex-1 max-w-32"
-                                        data-testid="button-gallery-select"
-                                      >
-                                        🖼️ استوديو
-                                      </Button>
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      JPG, PNG, GIF حتى 5MB
-                                    </div>
-                                  </div>
-                                )}
-                                <input
-                                  id="product-image-upload"
-                                  type="file"
-                                  accept="image/*"
-                                  capture="environment"
-                                  onChange={handleProductImageChange}
-                                  className="hidden"
-                                  data-testid="input-product-image"
-                                  disabled={uploadProductImageMutation.isPending}
-                                  multiple={false}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end space-x-2 space-x-reverse">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => handleCloseAddProductDialog(false)}
-                            data-testid="button-cancel-product"
-                          >
-                            إلغاء
-                          </Button>
-                          <Button
-                            type="submit"
-                            disabled={addProductMutation.isPending}
-                            className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]"
-                            data-testid="button-submit-product"
-                          >
-                            {addProductMutation.isPending ? "جاري الإضافة..." : "إضافة المنتج"}
-                          </Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                  <Button 
+                    className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" 
+                    data-testid="button-publish-product"
+                    disabled={userStore.status !== 'approved' && !currentUser?.isVerified}
+                    onClick={handlePublishProduct}
+                  >
+                    <Plus className="w-4 h-4 ml-2" />
+                    نشر منتج
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
