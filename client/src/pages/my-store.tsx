@@ -32,6 +32,7 @@ type StoreFormData = z.infer<typeof storeFormSchema>;
 export default function MyStore() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const [lastStoreStatus, setLastStoreStatus] = useState<string | null>(null);
   const [productImageUrl, setProductImageUrl] = useState<string>("");
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -261,9 +262,10 @@ export default function MyStore() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
       toast({
-        title: "تم نشر المنتج",
-        description: "تم نشر المنتج على المتجر بنجاح!",
+        title: "تم إضافة المنتج",
+        description: "تم إضافة المنتج إلى متجرك بنجاح!",
       });
+      setIsAddProductDialogOpen(false);
       setProductImageUrl(""); // Reset image URL
       productForm.reset();
     },
@@ -380,19 +382,31 @@ export default function MyStore() {
     addProductMutation.mutate(data);
   };
 
-  // دالة نشر المنتج الجديدة
-  const handlePublishProduct = () => {
-    const productData = {
-      name: "منتج جديد",
-      description: "وصف منتج تلقائي تم نشره على المتجر",
-      price: "1000",
-      category: userStore?.category || "متنوع",
-      imageUrl: "",
-      location: currentUser?.location || userStore?.location || "",
-      isActive: true,
-    };
+  // Reset image when dialog closes
+  const handleCloseAddProductDialog = (open: boolean) => {
+    setIsAddProductDialogOpen(open);
+    if (!open) {
+      setProductImageUrl("");
+      productForm.reset();
+    }
+  };
 
-    addProductMutation.mutate(productData);
+  // Handle camera capture - محسن
+  const handleCameraCapture = () => {
+    const input = document.getElementById('product-image-upload') as HTMLInputElement;
+    if (input) {
+      input.setAttribute('capture', 'environment'); // Use back camera
+      input.click();
+    }
+  };
+
+  // Handle gallery selection - محسن 
+  const handleGallerySelect = () => {
+    const input = document.getElementById('product-image-upload') as HTMLInputElement;
+    if (input) {
+      input.removeAttribute('capture'); // Remove capture to allow gallery
+      input.click();
+    }
   };
 
   // Toggle product active status
@@ -779,15 +793,213 @@ export default function MyStore() {
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   <span>منتجات المتجر ({storeProducts.length})</span>
-                  <Button 
-                    className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" 
-                    data-testid="button-publish-product"
-                    disabled={userStore.status !== 'approved' && !currentUser?.isVerified}
-                    onClick={handlePublishProduct}
-                  >
-                    <Plus className="w-4 h-4 ml-2" />
-                    نشر منتج
-                  </Button>
+                  <Dialog open={isAddProductDialogOpen} onOpenChange={handleCloseAddProductDialog}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" 
+                        data-testid="button-add-product"
+                        disabled={userStore.status !== 'approved' && !currentUser?.isVerified}
+                      >
+                        <Plus className="w-4 h-4 ml-2" />
+                        إضافة منتج جديد
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" data-testid="add-product-modal">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-center">✨ إضافة منتج جديد ✨</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={productForm.handleSubmit(handleAddProduct)} className="space-y-6">
+                        {/* اسم المنتج */}
+                        <div className="space-y-2">
+                          <Label htmlFor="productName" className="text-base font-semibold">اسم المنتج *</Label>
+                          <Input
+                            id="productName"
+                            {...productForm.register("name")}
+                            placeholder="مثال: سماعة بلوتوث لاسلكية"
+                            data-testid="input-product-name"
+                            className="text-lg p-3 border-2 focus:border-blue-400"
+                          />
+                          {productForm.formState.errors.name && (
+                            <p className="text-sm text-red-500 font-medium">{productForm.formState.errors.name.message}</p>
+                          )}
+                        </div>
+
+                        {/* وصع المنتج */}
+                        <div className="space-y-2">
+                          <Label htmlFor="productDescription" className="text-base font-semibold">وصف المنتج *</Label>
+                          <Textarea
+                            id="productDescription"
+                            {...productForm.register("description")}
+                            placeholder="اكتب وصفاً تفصيلياً للمنتج ومميزاته..."
+                            data-testid="input-product-description"
+                            className="min-h-[100px] text-base p-3 border-2 focus:border-blue-400"
+                            rows={4}
+                          />
+                          {productForm.formState.errors.description && (
+                            <p className="text-sm text-red-500 font-medium">{productForm.formState.errors.description.message}</p>
+                          )}
+                        </div>
+
+                        {/* السعر والفئة */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="productPrice" className="text-base font-semibold">السعر (دج) *</Label>
+                            <Input
+                              id="productPrice"
+                              {...productForm.register("price")}
+                              placeholder="5000"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              data-testid="input-product-price"
+                              className="text-lg p-3 border-2 focus:border-blue-400"
+                            />
+                            {productForm.formState.errors.price && (
+                              <p className="text-sm text-red-500 font-medium">{productForm.formState.errors.price.message}</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="productCategory" className="text-base font-semibold">فئة المنتج *</Label>
+                            <Input
+                              id="productCategory"
+                              {...productForm.register("category")}
+                              placeholder="إلكترونيات"
+                              data-testid="input-product-category"
+                              className="text-lg p-3 border-2 focus:border-blue-400"
+                            />
+                            {productForm.formState.errors.category && (
+                              <p className="text-sm text-red-500 font-medium">{productForm.formState.errors.category.message}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* صورة المنتج - محسنة */}
+                        <div className="space-y-2">
+                          <Label className="text-base font-semibold">صورة المنتج 📷</Label>
+                          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                            {productImageUrl ? (
+                              <div className="relative group">
+                                <div className="relative overflow-hidden rounded-lg shadow-lg">
+                                  <img
+                                    src={productImageUrl}
+                                    alt="صورة المنتج"
+                                    className="w-full h-48 object-cover transition-transform group-hover:scale-105"
+                                  />
+                                  <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-30 transition-opacity"></div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="absolute top-2 right-2 shadow-lg hover:scale-105 transition-transform"
+                                  onClick={() => setProductImageUrl("")}
+                                  data-testid="button-remove-image"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                                <div className="absolute bottom-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                  ✓ تم الرفع
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-center">
+                                {uploadProductImageMutation.isPending ? (
+                                  <div className="flex flex-col items-center space-y-4">
+                                    <div className="relative">
+                                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center animate-pulse">
+                                        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                                      </div>
+                                    </div>
+                                    <div className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                                      🚀 جاري رفع الصورة...
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      يرجى الانتظار قليلاً
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-4">
+                                    <div className="text-base font-medium text-gray-700 dark:text-gray-300 mb-4">
+                                      🎨 اختر طريقة إضافة الصورة:
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="lg"
+                                        onClick={handleCameraCapture}
+                                        className="h-20 flex flex-col gap-2 border-2 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                                        data-testid="button-camera-capture"
+                                      >
+                                        <span className="text-2xl">📷</span>
+                                        <span className="font-medium">كاميرا</span>
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="lg"
+                                        onClick={handleGallerySelect}
+                                        className="h-20 flex flex-col gap-2 border-2 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
+                                        data-testid="button-gallery-select"
+                                      >
+                                        <span className="text-2xl">🖼️</span>
+                                        <span className="font-medium">معرض الصور</span>
+                                      </Button>
+                                    </div>
+                                    <div className="text-sm text-gray-500 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                                      📄 الصيغ المدعومة: JPG, PNG, GIF حتى 5MB
+                                    </div>
+                                  </div>
+                                )}
+                                <input
+                                  id="product-image-upload"
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleProductImageChange}
+                                  className="hidden"
+                                  data-testid="input-product-image"
+                                  disabled={uploadProductImageMutation.isPending}
+                                  multiple={false}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* أزرار الحفظ */}
+                        <div className="flex justify-end space-x-3 space-x-reverse pt-4 border-t">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleCloseAddProductDialog(false)}
+                            data-testid="button-cancel-product"
+                            className="px-6 py-2 font-medium"
+                          >
+                            ❌ إلغاء
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={addProductMutation.isPending || uploadProductImageMutation.isPending}
+                            className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-2 font-bold shadow-lg hover:shadow-xl transition-all"
+                            data-testid="button-submit-product"
+                          >
+                            {addProductMutation.isPending ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                                جاري الإضافة...
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-5 h-5 ml-2" />
+                                ✨ إضافة المنتج ✨
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </CardTitle>
               </CardHeader>
               <CardContent>
