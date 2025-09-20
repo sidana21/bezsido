@@ -791,7 +791,7 @@ export default function MyStore() {
                       <Button 
                         className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]" 
                         data-testid="button-add-product"
-                        disabled={userStore.status !== 'approved'}
+                        disabled={userStore.status !== 'approved' && !currentUser?.isVerified}
                       >
                         <Plus className="w-4 h-4 ml-2" />
                         إضافة منتج
