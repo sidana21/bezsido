@@ -396,8 +396,6 @@ export default function MyStore() {
       return;
     }
     
-    console.log('Product data:', data);
-    console.log('Product image URL:', productImageUrl);
     addProductMutation.mutate(data);
   };
 
