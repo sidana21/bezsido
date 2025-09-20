@@ -128,10 +128,17 @@ export default function MyStore() {
       price: "",
       category: "",
       imageUrl: "",
-      location: currentUser?.location || "",
+      location: "",
       isActive: true,
     },
   });
+
+  // Update product form location when currentUser data is available
+  useEffect(() => {
+    if (currentUser?.location) {
+      productForm.setValue("location", currentUser.location);
+    }
+  }, [currentUser, productForm]);
 
   // Update edit form when store data changes
   useEffect(() => {
