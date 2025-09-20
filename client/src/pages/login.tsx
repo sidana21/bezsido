@@ -302,9 +302,9 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center mb-4">
-              <img src={appIconUrl} alt="BizChat" className="w-40 h-40 object-contain" />
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center mb-2">
+              <img src={appIconUrl} alt="BizChat" className="w-48 h-48 object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">إنشاء حساب جديد</h1>
             <p className="text-green-100 text-sm animate-pulse bg-gradient-to-r from-green-200 to-emerald-200 bg-clip-text text-transparent font-semibold">
@@ -414,9 +414,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#075e54] flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
-            <img src={appIconUrl} alt="BizChat" className="w-28 h-28 object-contain" />
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center mb-2">
+            <img src={appIconUrl} alt="BizChat" className="w-48 h-48 object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">BizChat</h1>
           <p className="text-green-100 text-sm animate-pulse bg-gradient-to-r from-green-200 to-emerald-200 bg-clip-text text-transparent font-semibold">
