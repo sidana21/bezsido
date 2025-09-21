@@ -40,10 +40,26 @@ import {
   type AppFeature,
   type InsertAppFeature,
   type Call,
-  type InsertCall
+  type InsertCall,
+  type NeighborhoodGroup,
+  type InsertNeighborhoodGroup,
+  type HelpRequest,
+  type InsertHelpRequest,
+  type PointTransaction,
+  type InsertPointTransaction,
+  type DailyMission,
+  type InsertDailyMission,
+  type UserMission,
+  type InsertUserMission,
+  type Reminder,
+  type InsertReminder,
+  type CustomerTag,
+  type InsertCustomerTag,
+  type QuickReply,
+  type InsertQuickReply
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests, cartItems, stickers, products, affiliateLinks, commissions, contacts, orders, orderItems, calls } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests, cartItems, stickers, products, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -190,6 +206,61 @@ export interface IStorage {
   
   // Admin dashboard stats
   getAdminDashboardStats(): Promise<any>;
+  
+  // Neighborhood Groups - مجموعات الحي
+  getNeighborhoodGroups(location?: string): Promise<NeighborhoodGroup[]>;
+  getNeighborhoodGroup(groupId: string): Promise<NeighborhoodGroup | undefined>;
+  createNeighborhoodGroup(group: InsertNeighborhoodGroup): Promise<NeighborhoodGroup>;
+  joinNeighborhoodGroup(groupId: string, userId: string): Promise<void>;
+  leaveNeighborhoodGroup(groupId: string, userId: string): Promise<void>;
+  getUserNeighborhoodGroups(userId: string): Promise<NeighborhoodGroup[]>;
+  
+  // Help Requests - طلبات المساعدة
+  getHelpRequests(groupId?: string, status?: string): Promise<HelpRequest[]>;
+  getHelpRequest(requestId: string): Promise<HelpRequest | undefined>;
+  createHelpRequest(request: InsertHelpRequest): Promise<HelpRequest>;
+  acceptHelpRequest(requestId: string, helperId: string): Promise<HelpRequest | undefined>;
+  completeHelpRequest(requestId: string, rating?: number, feedback?: string): Promise<HelpRequest | undefined>;
+  cancelHelpRequest(requestId: string): Promise<HelpRequest | undefined>;
+  getUserHelpRequests(userId: string): Promise<HelpRequest[]>;
+  getUserHelperRequests(helperId: string): Promise<HelpRequest[]>;
+  
+  // Points System - نظام النقاط
+  getUserPoints(userId: string): Promise<number>;
+  addPoints(userId: string, points: number, reason: string, relatedId?: string, relatedType?: string): Promise<void>;
+  deductPoints(userId: string, points: number, reason: string, relatedId?: string, relatedType?: string): Promise<void>;
+  getPointTransactions(userId: string): Promise<PointTransaction[]>;
+  updateUserStreak(userId: string): Promise<void>;
+  getTopUsers(limit?: number): Promise<User[]>;
+  
+  // Daily Missions - المهام اليومية
+  getDailyMissions(category?: string): Promise<DailyMission[]>;
+  getUserDailyMissions(userId: string, date: string): Promise<UserMission[]>;
+  updateMissionProgress(userId: string, missionId: string, increment?: number): Promise<UserMission | undefined>;
+  completeMission(userId: string, missionId: string): Promise<UserMission | undefined>;
+  initializeDailyMissions(): Promise<void>;
+  resetDailyMissions(userId: string, date: string): Promise<void>;
+  
+  // Reminders - التذكيرات
+  getReminders(userId: string): Promise<Reminder[]>;
+  createReminder(reminder: InsertReminder): Promise<Reminder>;
+  markReminderComplete(reminderId: string): Promise<void>;
+  getDueReminders(): Promise<Reminder[]>;
+  deleteReminder(reminderId: string): Promise<void>;
+  
+  // Customer Tags - تصنيفات العملاء
+  getCustomerTags(userId: string): Promise<CustomerTag[]>;
+  getContactTag(userId: string, contactId: string): Promise<CustomerTag | undefined>;
+  setCustomerTag(tag: InsertCustomerTag): Promise<CustomerTag>;
+  updateCustomerTag(tagId: string, updates: Partial<InsertCustomerTag>): Promise<CustomerTag | undefined>;
+  deleteCustomerTag(tagId: string): Promise<void>;
+  
+  // Quick Replies - الردود السريعة
+  getQuickReplies(userId: string, category?: string): Promise<QuickReply[]>;
+  createQuickReply(reply: InsertQuickReply): Promise<QuickReply>;
+  updateQuickReply(replyId: string, updates: Partial<InsertQuickReply>): Promise<QuickReply | undefined>;
+  incrementQuickReplyUsage(replyId: string): Promise<void>;
+  deleteQuickReply(replyId: string): Promise<void>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
@@ -2075,6 +2146,467 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+
+  // Neighborhood Groups - مجموعات الحي
+  async getNeighborhoodGroups(location?: string): Promise<NeighborhoodGroup[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(neighborhoodGroups).where(eq(neighborhoodGroups.isActive, true));
+      
+      if (location) {
+        query = query.where(eq(neighborhoodGroups.location, location));
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error('خطأ في جلب مجموعات الحي:', error);
+      return [];
+    }
+  }
+
+  async getNeighborhoodGroup(groupId: string): Promise<NeighborhoodGroup | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(neighborhoodGroups).where(eq(neighborhoodGroups.id, groupId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('خطأ في جلب مجموعة الحي:', error);
+      return undefined;
+    }
+  }
+
+  async createNeighborhoodGroup(group: InsertNeighborhoodGroup): Promise<NeighborhoodGroup> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.insert(neighborhoodGroups).values({
+        ...group,
+        id: randomUUID(),
+        members: [group.createdBy],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('خطأ في إنشاء مجموعة الحي:', error);
+      throw error;
+    }
+  }
+
+  async joinNeighborhoodGroup(groupId: string, userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const group = await this.getNeighborhoodGroup(groupId);
+      if (group && !group.members.includes(userId)) {
+        const updatedMembers = [...group.members, userId];
+        await db.update(neighborhoodGroups)
+          .set({ members: updatedMembers, updatedAt: new Date() })
+          .where(eq(neighborhoodGroups.id, groupId));
+      }
+    } catch (error) {
+      console.error('خطأ في الانضمام لمجموعة الحي:', error);
+      throw error;
+    }
+  }
+
+  async leaveNeighborhoodGroup(groupId: string, userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const group = await this.getNeighborhoodGroup(groupId);
+      if (group) {
+        const updatedMembers = group.members.filter(id => id !== userId);
+        await db.update(neighborhoodGroups)
+          .set({ members: updatedMembers, updatedAt: new Date() })
+          .where(eq(neighborhoodGroups.id, groupId));
+      }
+    } catch (error) {
+      console.error('خطأ في ترك مجموعة الحي:', error);
+      throw error;
+    }
+  }
+
+  async getUserNeighborhoodGroups(userId: string): Promise<NeighborhoodGroup[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select()
+        .from(neighborhoodGroups)
+        .where(sql`${neighborhoodGroups.members} ? ${userId}`);
+      
+      return result;
+    } catch (error) {
+      console.error('خطأ في جلب مجموعات المستخدم:', error);
+      return [];
+    }
+  }
+
+  // Help Requests - طلبات المساعدة
+  async getHelpRequests(groupId?: string, status?: string): Promise<HelpRequest[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(helpRequests);
+      
+      if (groupId) {
+        query = query.where(eq(helpRequests.groupId, groupId));
+      }
+      
+      if (status) {
+        query = query.where(eq(helpRequests.status, status));
+      }
+      
+      return await query.orderBy(sql`${helpRequests.createdAt} DESC`);
+    } catch (error) {
+      console.error('خطأ في جلب طلبات المساعدة:', error);
+      return [];
+    }
+  }
+
+  async getHelpRequest(requestId: string): Promise<HelpRequest | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(helpRequests).where(eq(helpRequests.id, requestId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('خطأ في جلب طلب المساعدة:', error);
+      return undefined;
+    }
+  }
+
+  async createHelpRequest(request: InsertHelpRequest): Promise<HelpRequest> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.insert(helpRequests).values({
+        ...request,
+        id: randomUUID(),
+        status: 'open',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('خطأ في إنشاء طلب المساعدة:', error);
+      throw error;
+    }
+  }
+
+  async acceptHelpRequest(requestId: string, helperId: string): Promise<HelpRequest | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(helpRequests)
+        .set({
+          status: 'in_progress',
+          helperId,
+          acceptedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(helpRequests.id, requestId))
+        .returning();
+      
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('خطأ في قبول طلب المساعدة:', error);
+      throw error;
+    }
+  }
+
+  async completeHelpRequest(requestId: string, rating?: number, feedback?: string): Promise<HelpRequest | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(helpRequests)
+        .set({
+          status: 'completed',
+          rating,
+          feedback,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(helpRequests.id, requestId))
+        .returning();
+      
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('خطأ في إكمال طلب المساعدة:', error);
+      throw error;
+    }
+  }
+
+  async cancelHelpRequest(requestId: string): Promise<HelpRequest | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(helpRequests)
+        .set({
+          status: 'cancelled',
+          updatedAt: new Date(),
+        })
+        .where(eq(helpRequests.id, requestId))
+        .returning();
+      
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('خطأ في إلغاء طلب المساعدة:', error);
+      throw error;
+    }
+  }
+
+  async getUserHelpRequests(userId: string): Promise<HelpRequest[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      return await db.select()
+        .from(helpRequests)
+        .where(eq(helpRequests.userId, userId))
+        .orderBy(sql`${helpRequests.createdAt} DESC`);
+    } catch (error) {
+      console.error('خطأ في جلب طلبات المساعدة للمستخدم:', error);
+      return [];
+    }
+  }
+
+  async getUserHelperRequests(helperId: string): Promise<HelpRequest[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      return await db.select()
+        .from(helpRequests)
+        .where(eq(helpRequests.helperId, helperId))
+        .orderBy(sql`${helpRequests.createdAt} DESC`);
+    } catch (error) {
+      console.error('خطأ في جلب طلبات المساعدة للمساعد:', error);
+      return [];
+    }
+  }
+
+  // Points System - نظام النقاط
+  async getUserPoints(userId: string): Promise<number> {
+    try {
+      const user = await this.getUser(userId);
+      return user?.points || 0;
+    } catch (error) {
+      console.error('خطأ في جلب نقاط المستخدم:', error);
+      return 0;
+    }
+  }
+
+  async addPoints(userId: string, points: number, reason: string, relatedId?: string, relatedType?: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Update user points
+      const user = await this.getUser(userId);
+      if (user) {
+        await db.update(users)
+          .set({ points: (user.points || 0) + points, updatedAt: new Date() })
+          .where(eq(users.id, userId));
+      }
+      
+      // Add transaction record
+      await db.insert(pointTransactions).values({
+        id: randomUUID(),
+        userId,
+        points,
+        type: 'earned',
+        reason,
+        relatedId,
+        relatedType,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      console.error('خطأ في إضافة النقاط:', error);
+      throw error;
+    }
+  }
+
+  async deductPoints(userId: string, points: number, reason: string, relatedId?: string, relatedType?: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Update user points
+      const user = await this.getUser(userId);
+      if (user) {
+        const newPoints = Math.max(0, (user.points || 0) - points);
+        await db.update(users)
+          .set({ points: newPoints, updatedAt: new Date() })
+          .where(eq(users.id, userId));
+      }
+      
+      // Add transaction record
+      await db.insert(pointTransactions).values({
+        id: randomUUID(),
+        userId,
+        points: -points,
+        type: 'spent',
+        reason,
+        relatedId,
+        relatedType,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      console.error('خطأ في خصم النقاط:', error);
+      throw error;
+    }
+  }
+
+  async getPointTransactions(userId: string): Promise<PointTransaction[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      return await db.select()
+        .from(pointTransactions)
+        .where(eq(pointTransactions.userId, userId))
+        .orderBy(sql`${pointTransactions.createdAt} DESC`);
+    } catch (error) {
+      console.error('خطأ في جلب معاملات النقاط:', error);
+      return [];
+    }
+  }
+
+  async updateUserStreak(userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const user = await this.getUser(userId);
+      if (user) {
+        const today = new Date();
+        const lastStreakDate = user.lastStreakDate;
+        
+        let newStreak = user.streak || 0;
+        
+        if (!lastStreakDate || this.isNextDay(lastStreakDate, today)) {
+          newStreak += 1;
+        } else if (!this.isSameDay(lastStreakDate, today)) {
+          newStreak = 1;
+        }
+        
+        await db.update(users)
+          .set({ 
+            streak: newStreak,
+            lastStreakDate: today,
+            updatedAt: new Date() 
+          })
+          .where(eq(users.id, userId));
+      }
+    } catch (error) {
+      console.error('خطأ في تحديث التسلسل:', error);
+      throw error;
+    }
+  }
+
+  private isSameDay(date1: Date, date2: Date): boolean {
+    return date1.toDateString() === date2.toDateString();
+  }
+
+  private isNextDay(date1: Date, date2: Date): boolean {
+    const nextDay = new Date(date1);
+    nextDay.setDate(date1.getDate() + 1);
+    return this.isSameDay(nextDay, date2);
+  }
+
+  async getTopUsers(limit = 10): Promise<User[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      return await db.select()
+        .from(users)
+        .orderBy(sql`${users.points} DESC`)
+        .limit(limit);
+    } catch (error) {
+      console.error('خطأ في جلب أفضل المستخدمين:', error);
+      return [];
+    }
+  }
+
+  // Placeholder implementations for remaining methods
+  async getDailyMissions(category?: string): Promise<DailyMission[]> { return []; }
+  async getUserDailyMissions(userId: string, date: string): Promise<UserMission[]> { return []; }
+  async updateMissionProgress(userId: string, missionId: string, increment = 1): Promise<UserMission | undefined> { return undefined; }
+  async completeMission(userId: string, missionId: string): Promise<UserMission | undefined> { return undefined; }
+  async initializeDailyMissions(): Promise<void> { }
+  async resetDailyMissions(userId: string, date: string): Promise<void> { }
+  async getReminders(userId: string): Promise<Reminder[]> { return []; }
+  async createReminder(reminder: InsertReminder): Promise<Reminder> { throw new Error('Not implemented'); }
+  async markReminderComplete(reminderId: string): Promise<void> { }
+  async getDueReminders(): Promise<Reminder[]> { return []; }
+  async deleteReminder(reminderId: string): Promise<void> { }
+  async getCustomerTags(userId: string): Promise<CustomerTag[]> { return []; }
+  async getContactTag(userId: string, contactId: string): Promise<CustomerTag | undefined> { return undefined; }
+  async setCustomerTag(tag: InsertCustomerTag): Promise<CustomerTag> { throw new Error('Not implemented'); }
+  async updateCustomerTag(tagId: string, updates: Partial<InsertCustomerTag>): Promise<CustomerTag | undefined> { return undefined; }
+  async deleteCustomerTag(tagId: string): Promise<void> { }
+  async getQuickReplies(userId: string, category?: string): Promise<QuickReply[]> { return []; }
+  async createQuickReply(reply: InsertQuickReply): Promise<QuickReply> { throw new Error('Not implemented'); }
+  async updateQuickReply(replyId: string, updates: Partial<InsertQuickReply>): Promise<QuickReply | undefined> { return undefined; }
+  async incrementQuickReplyUsage(replyId: string): Promise<void> { }
+  async deleteQuickReply(replyId: string): Promise<void> { }
 }
 
 // Memory Storage Implementation - fallback when no database

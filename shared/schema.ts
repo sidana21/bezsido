@@ -14,6 +14,9 @@ export const users = pgTable("users", {
   verifiedAt: timestamp("verified_at"), // When account was verified
   isAdmin: boolean("is_admin").default(false), // Admin privileges
   lastSeen: timestamp("last_seen").defaultNow(),
+  points: integer("points").default(0), // نقاط المستخدم
+  streak: integer("streak").default(0), // عدد الأيام المتتالية للنشاط
+  lastStreakDate: timestamp("last_streak_date"), // آخر يوم حصل فيه على نقاط
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -95,6 +98,9 @@ export const insertUserSchema = createInsertSchema(users).omit({
   isVerified: true,
   verifiedAt: true,
   lastSeen: true,
+  points: true,
+  streak: true,
+  lastStreakDate: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -456,3 +462,181 @@ export const insertCallSchema = createInsertSchema(calls).omit({
 
 export type InsertCall = z.infer<typeof insertCallSchema>;
 export type Call = typeof calls.$inferSelect;
+
+// مجموعات الحي - Neighborhood Groups
+export const neighborhoodGroups = pgTable("neighborhood_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // اسم المجموعة
+  location: text("location").notNull(), // المنطقة/الحي
+  description: text("description"), // وصف المجموعة
+  createdBy: varchar("created_by").notNull().references(() => users.id), // منشئ المجموعة
+  members: jsonb("members").$type<string[]>().default([]), // قائمة أعضاء المجموعة
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// طلبات المساعدة - Help Requests
+export const helpRequests = pgTable("help_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // طالب المساعدة
+  groupId: varchar("group_id").notNull().references(() => neighborhoodGroups.id), // المجموعة
+  title: text("title").notNull(), // عنوان الطلب
+  description: text("description").notNull(), // وصف المساعدة المطلوبة
+  category: text("category").notNull(), // نوع المساعدة: repair, delivery, advice, other
+  urgency: text("urgency").notNull().default("normal"), // normal, urgent, emergency
+  location: text("location").notNull(), // الموقع المحدد
+  budget: decimal("budget"), // الميزانية المتوقعة (اختياري)
+  images: jsonb("images").$type<string[]>().default([]), // صور توضيحية
+  status: text("status").notNull().default("open"), // open, in_progress, completed, cancelled
+  helperId: varchar("helper_id").references(() => users.id), // الشخص الذي يساعد
+  acceptedAt: timestamp("accepted_at"), // وقت قبول المساعدة
+  completedAt: timestamp("completed_at"), // وقت إنهاء المساعدة
+  rating: integer("rating"), // تقييم من 1-5
+  feedback: text("feedback"), // تعليق على الخدمة
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// معاملات النقاط - Point Transactions
+export const pointTransactions = pgTable("point_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  points: integer("points").notNull(), // النقاط المضافة (+) أو المخصومة (-)
+  type: text("type").notNull(), // earned, spent, bonus, penalty
+  reason: text("reason").notNull(), // سبب المعاملة
+  relatedId: varchar("related_id"), // معرف مرتبط (طلب مساعدة، مهمة، إلخ)
+  relatedType: text("related_type"), // help_request, mission, order, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// المهام اليومية - Daily Missions
+export const dailyMissions = pgTable("daily_missions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(), // عنوان المهمة
+  description: text("description").notNull(), // وصف المهمة
+  category: text("category").notNull(), // social, help, business, activity
+  points: integer("points").notNull(), // النقاط المكتسبة
+  targetCount: integer("target_count").default(1), // عدد المرات المطلوبة
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// مهام المستخدم اليومية - User Daily Missions
+export const userMissions = pgTable("user_missions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  missionId: varchar("mission_id").notNull().references(() => dailyMissions.id),
+  progress: integer("progress").default(0), // التقدم الحالي
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  date: text("date").notNull(), // تاريخ المهمة YYYY-MM-DD
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// التذكيرات - Reminders
+export const reminders = pgTable("reminders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // المستخدم الذي وضع التذكير
+  chatId: varchar("chat_id").references(() => chats.id), // المحادثة المرتبطة
+  contactId: varchar("contact_id").references(() => contacts.id), // جهة الاتصال المرتبطة
+  title: text("title").notNull(), // عنوان التذكير
+  description: text("description"), // وصف التذكير
+  reminderAt: timestamp("reminder_at").notNull(), // وقت التذكير
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// تصنيفات العملاء - Customer Tags
+export const customerTags = pgTable("customer_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // صاحب العمل
+  contactId: varchar("contact_id").notNull().references(() => contacts.id), // العميل
+  tag: text("tag").notNull(), // lead, customer, vip, lost
+  notes: text("notes"), // ملاحظات إضافية
+  lastInteraction: timestamp("last_interaction").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// الردود السريعة - Quick Replies
+export const quickReplies = pgTable("quick_replies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // صاحب الردود
+  title: text("title").notNull(), // عنوان الرد السريع
+  content: text("content").notNull(), // محتوى الرد
+  category: text("category").notNull().default("general"), // general, greeting, pricing, delivery
+  usageCount: integer("usage_count").default(0), // عدد مرات الاستخدام
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for new tables
+export const insertNeighborhoodGroupSchema = createInsertSchema(neighborhoodGroups).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
+  id: true,
+  status: true,
+  acceptedAt: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPointTransactionSchema = createInsertSchema(pointTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDailyMissionSchema = createInsertSchema(dailyMissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserMissionSchema = createInsertSchema(userMissions).omit({
+  id: true,
+  completedAt: true,
+  createdAt: true,
+});
+
+export const insertReminderSchema = createInsertSchema(reminders).omit({
+  id: true,
+  completedAt: true,
+  createdAt: true,
+});
+
+export const insertCustomerTagSchema = createInsertSchema(customerTags).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuickReplySchema = createInsertSchema(quickReplies).omit({
+  id: true,
+  usageCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for new tables
+export type InsertNeighborhoodGroup = z.infer<typeof insertNeighborhoodGroupSchema>;
+export type NeighborhoodGroup = typeof neighborhoodGroups.$inferSelect;
+export type InsertHelpRequest = z.infer<typeof insertHelpRequestSchema>;
+export type HelpRequest = typeof helpRequests.$inferSelect;
+export type InsertPointTransaction = z.infer<typeof insertPointTransactionSchema>;
+export type PointTransaction = typeof pointTransactions.$inferSelect;
+export type InsertDailyMission = z.infer<typeof insertDailyMissionSchema>;
+export type DailyMission = typeof dailyMissions.$inferSelect;
+export type InsertUserMission = z.infer<typeof insertUserMissionSchema>;
+export type UserMission = typeof userMissions.$inferSelect;
+export type InsertReminder = z.infer<typeof insertReminderSchema>;
+export type Reminder = typeof reminders.$inferSelect;
+export type InsertCustomerTag = z.infer<typeof insertCustomerTagSchema>;
+export type CustomerTag = typeof customerTags.$inferSelect;
+export type InsertQuickReply = z.infer<typeof insertQuickReplySchema>;
+export type QuickReply = typeof quickReplies.$inferSelect;
