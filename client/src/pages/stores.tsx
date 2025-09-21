@@ -25,16 +25,17 @@ export default function Stores() {
     queryKey: ["/api/user/current"],
   });
 
+  // Fetch all products from all stores for AliExpress-style display
+  const { data: allProducts = [], isLoading: isLoadingProducts } = useQuery<any[]>({
+    queryKey: ["/api/products", currentUser?.location],
+    queryFn: () => apiRequest(`/api/products?location=${encodeURIComponent(currentUser?.location || '')}`),
+    enabled: !!currentUser,
+  });
+
   const { data: stores = [], isLoading: isLoadingStores } = useQuery<StoreWithOwner[]>({
     queryKey: ["/api/stores", currentUser?.location],
     queryFn: () => apiRequest(`/api/stores?location=${encodeURIComponent(currentUser?.location || '')}`),
     enabled: !!currentUser,
-  });
-
-  const { data: storeProducts = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
-    queryKey: ["/api/products", selectedStore?.id],
-    queryFn: () => apiRequest(`/api/products/store/${selectedStore?.id}`),
-    enabled: !!selectedStore,
   });
 
   const { data: cartItems = [] } = useQuery<any[]>({
@@ -114,9 +115,13 @@ export default function Stores() {
     },
   });
 
-  const filteredStores = stores.filter(store =>
-    store?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    store?.category?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter products instead of stores for AliExpress-style search
+  const filteredProducts = allProducts.filter(product =>
+    product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product?.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product?.store?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product?.owner?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product?.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
 
@@ -144,8 +149,8 @@ export default function Stores() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-white to-white/90 bg-clip-text">المتاجر</h1>
-              <p className="text-white/80 text-sm">اكتشف أفضل المتاجر في منطقتك</p>
+              <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-white to-white/90 bg-clip-text">متجر BizChat</h1>
+              <p className="text-white/80 text-sm">اكتشف آلاف المنتجات من متاجر موثوقة</p>
             </div>
           </div>
           <Link href="/cart">
@@ -172,11 +177,11 @@ export default function Stores() {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5"></div>
           <div className="relative flex items-center gap-4 mb-4">
             <div className="p-4 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl shadow-lg">
-              <MapPin className="w-8 h-8 text-white" />
+              <Package className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">المتاجر في {currentUser?.location}</h2>
-              <p className="text-gray-600 dark:text-gray-300 text-lg">اكتشف المتاجر والخدمات المحلية الرائعة</p>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">منتجات من {currentUser?.location}</h2>
+              <p className="text-gray-600 dark:text-gray-300 text-lg">آلاف المنتجات من متاجر محلية موثوقة</p>
             </div>
           </div>
         </div>
@@ -188,7 +193,7 @@ export default function Stores() {
           </div>
           <Input
             type="text"
-            placeholder="ابحث عن متجر أو فئة..."
+            placeholder="ابحث عن منتج، متجر أو فئة..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pr-16 text-lg h-16 rounded-2xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl focus:shadow-2xl transition-all duration-300 focus:scale-[1.02]"
@@ -218,234 +223,131 @@ export default function Stores() {
           </div>
         </div>
 
-        {/* Loading State - Premium */}
-        {isLoadingStores && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-6 animate-pulse">
-                <div className="h-64 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-2xl mb-6"></div>
-                <div className="space-y-4">
-                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-xl w-3/4"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg w-full"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg w-2/3"></div>
+        {/* Loading State - Premium Products Grid */}
+        {isLoadingProducts && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden animate-pulse">
+                <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600"></div>
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Stores Grid - Beautiful Grid Layout */}
-        {!isLoadingStores && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredStores.map((store) => (
+        {/* Products Grid - AliExpress Style */}
+        {!isLoadingProducts && filteredProducts.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {filteredProducts.map((product) => (
               <div
-                key={store.id}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
-                data-testid={`store-card-${store.id}`}
+                key={product.id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer transform"
+                data-testid={`product-card-${product.id}`}
+                onClick={() => {/* TODO: Navigate to product detail */}}
               >
-                {/* Store Image - Larger and more prominent */}
-                <div className="relative h-48 overflow-hidden">
-                  {store.imageUrl ? (
+                {/* Product Image - AliExpress Style */}
+                <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
+                  {product.imageUrl ? (
                     <img
-                      src={store.imageUrl}
-                      alt={store.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      data-testid={`img-store-${store.id}`}
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      data-testid={`img-product-${product.id}`}
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-                      <Store className="w-16 h-16 text-white" />
+                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center">
+                      <Package className="w-12 h-12 text-gray-400" />
                     </div>
                   )}
                   
-                  {/* Status Badge - Floating */}
-                  <div className="absolute top-3 right-3">
-                    <Badge
-                      variant={store.isOpen ? "default" : "secondary"}
-                      className={`${store.isOpen ? "bg-green-500 text-white" : "bg-gray-500 text-white"} backdrop-blur-sm bg-opacity-90`}
+                  {/* Wishlist Button */}
+                  <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-8 h-8 p-0 bg-white/80 hover:bg-white rounded-full shadow-md"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // TODO: Add to wishlist
+                      }}
                     >
-                      <Clock className="w-3 h-3 mr-1" />
-                      {store.isOpen ? "مفتوح" : "مغلق"}
-                    </Badge>
+                      <Heart className="w-4 h-4 text-gray-600" />
+                    </Button>
                   </div>
 
-                  {/* Verification Badge */}
-                  {store.isVerified && (
-                    <div className="absolute top-3 left-3">
-                      <div className="bg-blue-500 text-white rounded-full p-2 backdrop-blur-sm bg-opacity-90" title="متجر موثق">
-                        <ShieldCheck className="w-4 h-4" data-testid={`badge-verified-store-${store.id}`} />
-                      </div>
-                    </div>
-                  )}
+                  {/* Quick Actions */}
+                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <Button
+                      size="sm"
+                      className="bg-whatsapp-green hover:bg-green-600 text-white shadow-md h-8 px-3"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCartMutation.mutate({ productId: product.id });
+                      }}
+                      disabled={addToCartMutation.isPending}
+                      data-testid={`button-add-cart-${product.id}`}
+                    >
+                      <ShoppingCart className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Store Content */}
-                <div className="p-5">
-                  {/* Store Header */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-bold text-xl text-gray-800 dark:text-white group-hover:text-whatsapp-green transition-colors">
-                        {store?.name || 'اسم المتجر'}
-                      </h3>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">4.8</span>
-                      </div>
+                {/* Product Info - AliExpress Style */}
+                <div className="p-3 space-y-2">
+                  {/* Product Price - Most Prominent */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-lg font-bold text-red-500">
+                      {parseInt(product?.price || '0').toLocaleString()} دج
                     </div>
-                    
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
-                      {store?.description || 'وصف المتجر'}
-                    </p>
-                    
-                    {/* Owner Info */}
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>بواسطة {store?.owner?.name || 'صاحب المتجر'}</span>
-                      {store?.owner?.isVerified && (
-                        <ShieldCheck className="w-3 h-3 text-blue-500" data-testid={`badge-verified-owner-${store.id}`} />
-                      )}
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-yellow-400 fill-current" />
+                      <span className="text-xs text-gray-500">4.8</span>
                     </div>
                   </div>
-
-                  {/* Store Details */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <MapPin className="w-4 h-4 text-red-500" />
-                      <span>{store?.location || 'الموقع غير محدد'}</span>
-                    </div>
-                    
-                    {store?.phoneNumber && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Phone className="w-4 h-4 text-green-500" />
-                        <span>{store?.phoneNumber}</span>
-                      </div>
+                  
+                  {/* Product Name */}
+                  <h3 className="font-medium text-sm text-gray-800 dark:text-white line-clamp-2 leading-4 group-hover:text-whatsapp-green transition-colors">
+                    {product?.name || 'اسم المنتج'}
+                  </h3>
+                  
+                  {/* Store Name - Like AliExpress */}
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Store className="w-3 h-3" />
+                    <span className="truncate">
+                      {product?.store?.name || product?.owner?.name || 'متجر'}
+                    </span>
+                    {(product?.store?.isVerified || product?.owner?.isVerified) && (
+                      <ShieldCheck className="w-3 h-3 text-blue-500 flex-shrink-0" />
                     )}
                   </div>
-
+                  
                   {/* Category Badge */}
-                  <div className="mb-4">
-                    <Badge 
-                      variant="outline" 
-                      className="text-xs bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900 dark:to-blue-900 border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300"
-                    >
-                      {store?.category || 'التصنيف'}
-                    </Badge>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      className="flex-1 bg-gradient-to-r from-whatsapp-green to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                      onClick={() => startChatMutation.mutate(store.userId)}
-                      disabled={startChatMutation.isPending}
-                      data-testid={`button-contact-${store.id}`}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-1" />
-                      تواصل
-                    </Button>
-                    
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="flex-1 border-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                          onClick={() => setSelectedStore(store)}
-                          data-testid={`button-view-${store.id}`}
-                        >
-                          <Package className="w-4 h-4 mr-1" />
-                          المنتجات
-                        </Button>
-                      </DialogTrigger>
-                        
-                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-                        <DialogHeader>
-                          <DialogTitle className="text-xl">
-                            منتجات {selectedStore?.name || 'المتجر'}
-                          </DialogTitle>
-                        </DialogHeader>
-                        
-                        <div className="flex-1 overflow-y-auto">
-                          {isLoadingProducts ? (
-                            <div className="text-center py-8">جاري التحميل...</div>
-                          ) : storeProducts.length === 0 ? (
-                            <div className="text-center py-8">
-                              <Package className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                              <p className="text-gray-500">لا توجد منتجات في هذا المتجر حالياً</p>
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {storeProducts?.map((product) => product && (
-                                <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow" data-testid={`product-card-${product.id}`}>
-                                  <CardHeader className="p-0">
-                                    {product.imageUrl && (
-                                      <img
-                                        src={product.imageUrl}
-                                        alt={product?.name || 'منتج'}
-                                        className="w-full h-32 object-cover"
-                                      />
-                                    )}
-                                    {!product.imageUrl && (
-                                      <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                                        <Package className="w-8 h-8 text-gray-400" />
-                                      </div>
-                                    )}
-                                  </CardHeader>
-                                  <CardContent className="p-4">
-                                    <div className="space-y-3">
-                                      <div>
-                                        <h3 className="font-semibold text-lg">{product?.name || 'اسم المنتج'}</h3>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                                          {product?.description || 'وصف المنتج'}
-                                        </p>
-                                      </div>
-                                      
-                                      <div className="flex justify-between items-center">
-                                        <Badge variant="outline" className="text-xs">
-                                          {product?.category || 'تصنيف'}
-                                        </Badge>
-                                        <div className="text-lg font-bold text-whatsapp-green">
-                                          {parseInt(product?.price || '0').toLocaleString()} دج
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="flex gap-2">
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="flex-1"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            addToCartMutation.mutate({ productId: product?.id });
-                                          }}
-                                          disabled={addToCartMutation.isPending}
-                                          data-testid={`button-add-to-cart-${product.id}`}
-                                        >
-                                          <ShoppingCart className="w-3 h-3 mr-1" />
-                                          {addToCartMutation.isPending ? "جاري..." : "أضف للسلة"}
-                                        </Button>
-                                        
-                                        <Link href={`/product/${product.id}`}>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="flex-1 min-w-fit"
-                                            data-testid={`button-view-details-${product.id}`}
-                                          >
-                                            عرض التفاصيل
-                                          </Button>
-                                        </Link>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                  <Badge 
+                    variant="secondary" 
+                    className="text-xs h-5 px-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  >
+                    {product?.category || 'تصنيف'}
+                  </Badge>
+                  
+                  {/* Quick Buy Button */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-2 h-7 text-xs border-gray-200 hover:border-whatsapp-green hover:text-whatsapp-green transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      buyNowMutation.mutate({ product, sellerId: product.userId });
+                    }}
+                    disabled={buyNowMutation.isPending}
+                    data-testid={`button-buy-now-${product.id}`}
+                  >
+                    <MessageCircle className="w-3 h-3 mr-1" />
+                    اشتري الآن
+                  </Button>
                 </div>
               </div>
             ))}
@@ -453,22 +355,22 @@ export default function Stores() {
         )}
 
         {/* Empty State - Premium */}
-        {!isLoadingStores && filteredStores.length === 0 && (
+        {!isLoadingProducts && filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl">
-              <Store className="w-16 h-16 text-gray-400" />
+              <Package className="w-16 h-16 text-gray-400" />
             </div>
             <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-              {searchQuery ? "لا توجد متاجر تطابق البحث" : "لا توجد متاجر في هذه المنطقة حالياً"}
+              {searchQuery ? "لا توجد منتجات تطابق البحث" : "لا توجد منتجات في هذه المنطقة حالياً"}
             </h3>
             {!searchQuery && (
               <p className="text-gray-500 text-lg mb-8">
-                كن أول من ينشئ متجراً في منطقتك واستفد من فرصة ذهبية!
+                كن أول من يعرض منتجاته في هذه المنطقة!
               </p>
             )}
             <Link href="/my-store">
               <Button className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-                إنشاء متجر جديد
+                أضف منتجاتك
               </Button>
             </Link>
           </div>
