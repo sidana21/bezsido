@@ -1,6 +1,7 @@
 // Email service supporting both SendGrid and Gmail with secure environment variables
 import nodemailer from 'nodemailer';
 import { MailService } from '@sendgrid/mail';
+import { EmailConfigManager } from '../email-config-manager';
 
 interface EmailParams {
   to: string;
@@ -13,21 +14,26 @@ class EmailService {
   private sendGridService?: MailService;
   private gmailTransporter?: any;
   private fromEmail: string;
+  private emailConfigManager: EmailConfigManager;
 
   constructor() {
+    this.emailConfigManager = new EmailConfigManager();
     this.fromEmail = process.env.FROM_EMAIL || 'noreply@example.com';
     this.initializeServices();
   }
 
   private initializeServices() {
-    // Initialize SendGrid if API key is available
+    let serviceInitialized = false;
+
+    // أولاً: التحقق من متغيرات البيئة (الأولوية للأمان)
     if (process.env.SENDGRID_API_KEY) {
       this.sendGridService = new MailService();
       this.sendGridService.setApiKey(process.env.SENDGRID_API_KEY);
-      console.log('✅ SendGrid email service initialized');
+      this.fromEmail = process.env.FROM_EMAIL || this.fromEmail;
+      console.log('✅ SendGrid initialized from environment variables');
+      serviceInitialized = true;
     }
 
-    // Initialize Gmail if credentials are available
     if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
       this.gmailTransporter = nodemailer.createTransport({
         service: 'gmail',
@@ -36,12 +42,38 @@ class EmailService {
           pass: process.env.GMAIL_APP_PASSWORD,
         },
       });
-      this.fromEmail = process.env.GMAIL_USER || 'almardanivlog@gmail.com';
-      console.log('✅ Gmail email service initialized');
+      this.fromEmail = process.env.GMAIL_USER;
+      console.log('✅ Gmail initialized from environment variables');
+      serviceInitialized = true;
     }
 
-    if (!this.sendGridService && !this.gmailTransporter) {
-      console.warn('⚠️ No email service configured. Please set up either SendGrid or Gmail environment variables.');
+    // ثانياً: إذا لم توجد متغيرات البيئة، استخدم الإعدادات المحفوظة
+    if (!serviceInitialized) {
+      const savedCredentials = this.emailConfigManager.getEmailCredentials();
+      if (savedCredentials) {
+        if (savedCredentials.service === 'sendgrid' && savedCredentials.apiKey) {
+          this.sendGridService = new MailService();
+          this.sendGridService.setApiKey(savedCredentials.apiKey);
+          this.fromEmail = savedCredentials.fromEmail;
+          console.log('✅ SendGrid initialized from saved configuration');
+          serviceInitialized = true;
+        } else if (savedCredentials.service === 'gmail' && savedCredentials.user && savedCredentials.password) {
+          this.gmailTransporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: savedCredentials.user,
+              pass: savedCredentials.password,
+            },
+          });
+          this.fromEmail = savedCredentials.fromEmail;
+          console.log('✅ Gmail initialized from saved configuration');
+          serviceInitialized = true;
+        }
+      }
+    }
+
+    if (!serviceInitialized) {
+      console.warn('⚠️ No email service configured. Please set up email credentials in admin panel or environment variables.');
     }
   }
 
@@ -158,6 +190,32 @@ class EmailService {
     if (this.sendGridService) return 'SendGrid';
     if (this.gmailTransporter) return 'Gmail';
     return 'None';
+  }
+
+  // إعادة تهيئة الخدمة بعد تحديث الإعدادات
+  public reinitializeService(): void {
+    this.sendGridService = undefined;
+    this.gmailTransporter = undefined;
+    this.initializeServices();
+  }
+
+  // الحصول على حالة الخدمة مع التفاصيل
+  public getServiceStatus(): { 
+    hasService: boolean; 
+    service: string; 
+    fromEmail: string; 
+    configSource: string;
+    savedConfigStatus: any;
+  } {
+    const savedStatus = this.emailConfigManager.getStatus();
+    return {
+      hasService: this.getAvailableService() !== 'None',
+      service: this.getAvailableService(),
+      fromEmail: this.fromEmail,
+      configSource: this.getAvailableService() !== 'None' ? 
+        (process.env.SENDGRID_API_KEY || process.env.GMAIL_USER ? 'environment' : 'saved') : 'none',
+      savedConfigStatus: savedStatus
+    };
   }
 
   // Test email service connection

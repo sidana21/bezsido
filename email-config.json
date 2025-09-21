@@ -1,0 +1,10 @@
+{
+  "service": "gmail",
+  "config": {
+    "user": "",
+    "password": "",
+    "fromEmail": ""
+  },
+  "isConfigured": false,
+  "lastUpdated": ""
+}

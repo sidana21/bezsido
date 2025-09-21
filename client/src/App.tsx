@@ -31,6 +31,7 @@ import { UsersManagement } from "@/pages/admin/users-management";
 import { StoresManagement } from "@/pages/admin/stores-management";
 import { OrdersManagement } from "@/pages/admin/orders-management";
 import { FeaturesManagement } from "@/pages/admin/features-management";
+import EmailSettings from "@/pages/admin/email-settings";
 import { AdminProtectedRoute } from "@/components/admin/admin-protected-route";
 
 function Router() {
@@ -75,6 +76,11 @@ function Router() {
         <Route path="/admin/features">
           <AdminProtectedRoute>
             <FeaturesManagement />
+          </AdminProtectedRoute>
+        </Route>
+        <Route path="/admin/email-settings">
+          <AdminProtectedRoute>
+            <EmailSettings />
           </AdminProtectedRoute>
         </Route>
         <Route path="/admin/settings">

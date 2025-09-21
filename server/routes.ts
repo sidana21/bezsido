@@ -50,6 +50,7 @@ import {
 import { randomUUID } from "crypto";
 import { emailService } from "./services/emailService";
 import { AdminManager } from "./admin-manager";
+import { EmailConfigManager } from "./email-config-manager";
 
 // Rate limiting for OTP endpoints to prevent abuse
 class SimpleRateLimiter {
@@ -4019,6 +4020,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting invoice:", error);
       res.status(500).json({ message: "Failed to delete invoice" });
+    }
+  });
+
+  // إدارة إعدادات البريد الإلكتروني
+  const emailConfigManager = new EmailConfigManager();
+
+  // الحصول على حالة إعدادات البريد الإلكتروني
+  app.get("/api/admin/email-config/status", requireAuth, async (req: any, res) => {
+    try {
+      // التحقق من صلاحيات الإدارة
+      if (!req.user?.isAdmin) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      
+      const status = emailConfigManager.getStatus();
+      const serviceStatus = emailService.getServiceStatus();
+      
+      res.json({
+        ...status,
+        currentService: serviceStatus.service,
+        hasActiveService: serviceStatus.hasService,
+        fromEmail: serviceStatus.fromEmail,
+        configSource: serviceStatus.configSource
+      });
+    } catch (error) {
+      console.error("Error getting email config status:", error);
+      res.status(500).json({ message: "Failed to get email configuration status" });
+    }
+  });
+
+  // تحديث إعدادات Gmail
+  app.post("/api/admin/email-config/gmail", requireAuth, async (req: any, res) => {
+    try {
+      // التحقق من صلاحيات الإدارة  
+      if (!req.user?.isAdmin) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      
+      const { user, password, fromEmail } = req.body;
+      
+      if (!user || !password) {
+        return res.status(400).json({ message: "Gmail user and password are required" });
+      }
+      
+      // حفظ الإعدادات
+      const success = emailConfigManager.updateGmailConfig(user, password, fromEmail);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to save Gmail configuration" });
+      }
+      
+      // إعادة تهيئة خدمة البريد الإلكتروني
+      emailService.reinitializeService();
+      
+      // اختبار الاتصال
+      const testResult = await emailService.testConnection();
+      
+      res.json({
+        message: "Gmail configuration saved successfully",
+        testResult
+      });
+    } catch (error) {
+      console.error("Error saving Gmail config:", error);
+      res.status(500).json({ message: "Failed to save Gmail configuration" });
+    }
+  });
+
+  // تحديث إعدادات SendGrid
+  app.post("/api/admin/email-config/sendgrid", requireAuth, async (req: any, res) => {
+    try {
+      // التحقق من صلاحيات الإدارة
+      if (!req.user?.isAdmin) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      
+      const { apiKey, fromEmail } = req.body;
+      
+      if (!apiKey || !fromEmail) {
+        return res.status(400).json({ message: "SendGrid API key and from email are required" });
+      }
+      
+      // حفظ الإعدادات
+      const success = emailConfigManager.updateSendGridConfig(apiKey, fromEmail);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to save SendGrid configuration" });
+      }
+      
+      // إعادة تهيئة خدمة البريد الإلكتروني
+      emailService.reinitializeService();
+      
+      // اختبار الاتصال
+      const testResult = await emailService.testConnection();
+      
+      res.json({
+        message: "SendGrid configuration saved successfully",
+        testResult
+      });
+    } catch (error) {
+      console.error("Error saving SendGrid config:", error);
+      res.status(500).json({ message: "Failed to save SendGrid configuration" });
+    }
+  });
+
+  // اختبار إرسال بريد إلكتروني تجريبي
+  app.post("/api/admin/email-config/test", requireAuth, async (req: any, res) => {
+    try {
+      // التحقق من صلاحيات الإدارة
+      if (!req.user?.isAdmin) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      
+      const { testEmail } = req.body;
+      
+      if (!testEmail) {
+        return res.status(400).json({ message: "Test email address is required" });
+      }
+      
+      // إرسال OTP تجريبي
+      const testOtp = emailService.generateOTP();
+      const success = await emailService.sendOTP(testEmail, testOtp, "مستخدم تجريبي");
+      
+      if (success) {
+        res.json({ 
+          message: "Test email sent successfully", 
+          otp: testOtp,
+          service: emailService.getAvailableService()
+        });
+      } else {
+        res.status(500).json({ message: "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ message: "Failed to send test email" });
     }
   });
 

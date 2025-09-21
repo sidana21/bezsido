@@ -10,7 +10,8 @@ import {
   Settings2,
   LogOut,
   Menu,
-  X
+  X,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -54,6 +55,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       title: 'إدارة الميزات',
       icon: Settings2,
       href: '/admin/features',
+    },
+    {
+      title: 'إعدادات البريد الإلكتروني',
+      icon: Mail,
+      href: '/admin/email-settings',
     },
     {
       title: 'الإعدادات',
