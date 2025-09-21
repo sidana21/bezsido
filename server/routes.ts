@@ -99,6 +99,36 @@ const audioUpload = multer({
   }
 });
 
+// Phone number normalization utility
+function normalizePhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return phoneNumber;
+  
+  // Remove all spaces, dashes, dots, and parentheses
+  let normalized = phoneNumber.replace(/[\s\-\.\(\)]/g, '');
+  
+  // Handle Algerian numbers specifically
+  if (normalized.startsWith('00213')) {
+    // 00213 -> +213
+    normalized = '+' + normalized.substring(2);
+  } else if (normalized.startsWith('213') && !normalized.startsWith('+213')) {
+    // 213 -> +213
+    normalized = '+' + normalized;
+  } else if (normalized.startsWith('0') && !normalized.startsWith('00')) {
+    // 0555123456 -> +213555123456 (Algerian local format)
+    normalized = '+213' + normalized.substring(1);
+  } else if (!normalized.startsWith('+') && normalized.length === 9) {
+    // 555123456 -> +213555123456 (Algerian without prefix)
+    normalized = '+213' + normalized;
+  } else if (!normalized.startsWith('+')) {
+    // Add + if it's missing but looks like international format
+    if (normalized.length >= 10) {
+      normalized = '+' + normalized;
+    }
+  }
+  
+  return normalized;
+}
+
 // Middleware to check authentication
 const requireAuth = async (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -175,14 +205,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { phoneNumber } = req.body;
       
       if (!phoneNumber) {
-        return res.status(400).json({ message: "Phone number is required" });
+        return res.status(400).json({ message: "رقم الهاتف مطلوب" });
+      }
+      
+      // Normalize phone number to avoid format inconsistencies
+      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber.trim());
+      
+      // Validate phone number format after normalization
+      if (!normalizedPhoneNumber.startsWith('+') || normalizedPhoneNumber.length < 10) {
+        return res.status(400).json({ 
+          message: "تأكد من صحة تنسيق رقم الهاتف (مثال: +213xxxxxxxxx)" 
+        });
       }
       
       // Generate 6-digit OTP
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       
       const otpData = insertOtpSchema.parse({
-        phoneNumber,
+        phoneNumber: normalizedPhoneNumber,
         code,
         expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
         isUsed: false,
@@ -191,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createOtpCode(otpData);
       
       // Store last OTP for development
-      (global as any).lastOtp = { phoneNumber, code, timestamp: Date.now() };
+      (global as any).lastOtp = { phoneNumber: normalizedPhoneNumber, code, timestamp: Date.now() };
       
       let smsDelivered = false;
       let smsError = null;
@@ -205,11 +245,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await client.messages.create({
             body: `رمز التحقق الخاص بك في BizChat هو: ${code}`,
             from: process.env.TWILIO_PHONE_NUMBER,
-            to: phoneNumber
+            to: normalizedPhoneNumber
           });
           
           smsDelivered = true;
-          console.log(`✅ SMS sent successfully to ${phoneNumber}: ${code}`);
+          console.log(`✅ SMS sent successfully to ${normalizedPhoneNumber}: ${code}`);
         } catch (twilioError: any) {
           smsError = twilioError.message;
           console.error('❌ Twilio SMS error:', twilioError);
@@ -392,9 +432,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const cleanPhoneNumber = phoneNumber.trim();
+      const cleanPhoneNumber = normalizePhoneNumber(phoneNumber.trim());
       const cleanName = name.trim();
       const cleanLocation = location.trim();
+      
+      // Additional phone number validation after normalization
+      if (!cleanPhoneNumber.startsWith('+') || cleanPhoneNumber.length < 10) {
+        return res.status(400).json({ 
+          success: false,
+          message: "تأكد من صحة تنسيق رقم الهاتف (مثال: +213xxxxxxxxx)" 
+        });
+      }
       
       // Check if user already exists
       let user = await storage.getUserByPhoneNumber(cleanPhoneNumber);
