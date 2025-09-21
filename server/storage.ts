@@ -77,7 +77,7 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
-  getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined>;
   updateUserOnlineStatus(id: string, isOnline: boolean): Promise<void>;
@@ -85,7 +85,7 @@ export interface IStorage {
   
   // Authentication
   createOtpCode(otp: InsertOtp): Promise<OtpCode>;
-  verifyOtpCode(phoneNumber: string, code: string): Promise<boolean>;
+  verifyOtpCode(email: string, code: string): Promise<boolean>;
   createSession(session: InsertSession): Promise<Session>;
   getSessionByToken(token: string): Promise<Session | undefined>;
   deleteSession(token: string): Promise<void>;
@@ -284,17 +284,17 @@ export class DatabaseStorage implements IStorage {
     return this.getUser(id);
   }
 
-  async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+  async getUserByEmail(email: string): Promise<User | undefined> {
     try {
       if (!db) {
         const dbModule = await import('./db');
         db = dbModule.db;
       }
       
-      const result = await db.select().from(users).where(eq(users.phoneNumber, phoneNumber)).limit(1);
+      const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
       return result[0] || undefined;
     } catch (error) {
-      console.error('Error getting user by phone:', error);
+      console.error('Error getting user by email:', error);
       return undefined;
     }
   }
@@ -409,7 +409,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> {
+  async verifyOtpCode(email: string, code: string): Promise<boolean> {
     try {
       if (!db) {
         const dbModule = await import('./db');
@@ -418,7 +418,7 @@ export class DatabaseStorage implements IStorage {
       
       const result = await db.select().from(otpCodes)
         .where(and(
-          eq(otpCodes.phoneNumber, phoneNumber),
+          eq(otpCodes.email, email),
           eq(otpCodes.code, code),
           eq(otpCodes.isUsed, false)
         ))
