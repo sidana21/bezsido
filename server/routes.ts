@@ -469,45 +469,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: error?.name,
         phoneNumber: req.body?.phoneNumber,
         hasStorage: !!storage,
+        storageType: storage ? storage.constructor.name : null,
         environment: process.env.NODE_ENV,
+        databaseUrl: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
         timestamp: new Date().toISOString()
       };
       
       console.error('❌ User creation error details:', errorDetails);
       
-      // Handle specific database errors
+      // Handle unique constraint violations (duplicate phone)
       if (error.code === '23505') {
-        if (error.constraint?.includes('phone_number') || error.constraint?.includes('phoneNumber')) {
-          return res.status(400).json({ 
+        if (error.constraint?.includes('phone_number') || error.constraint?.includes('phoneNumber') || error.message?.includes('phone')) {
+          return res.status(409).json({ 
             success: false,
-            message: "رقم الهاتف مستخدم بالفعل" 
+            message: "هذا الرقم مسجل بالفعل، يمكنك تسجيل الدخول مباشرة" 
           });
         }
+        return res.status(409).json({ 
+          success: false,
+          message: "البيانات مكررة، تحقق من المعلومات المدخلة" 
+        });
+      }
+      
+      // Handle missing table errors (common on Render with failed migrations)
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        return res.status(503).json({ 
+          success: false,
+          message: "خطأ في إعداد قاعدة البيانات. يرجى التواصل مع الدعم الفني" 
+        });
       }
       
       // Handle validation errors
       if (error.name === 'ZodError') {
+        const zodIssues = error.issues?.map((issue: any) => issue.message).join(', ') || 'بيانات غير صحيحة';
         return res.status(400).json({ 
           success: false,
-          message: "البيانات المدخلة غير صحيحة",
-          details: process.env.NODE_ENV === 'development' ? error.message : "تحقق من صحة البيانات المدخلة"
+          message: "تحقق من البيانات المدخلة",
+          details: process.env.NODE_ENV === 'development' ? zodIssues : "تأكد من أن جميع الحقول مكتملة وصحيحة"
         });
       }
       
       // Handle database connection errors
-      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.message?.includes('connection')) {
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
+          error.message?.includes('connection') || error.message?.includes('ECONNREFUSED') ||
+          error.message?.includes('timeout')) {
         return res.status(503).json({ 
           success: false,
-          message: "مشكلة في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى" 
+          message: "مشكلة في الاتصال بقاعدة البيانات. الخدمة مؤقتاً غير متاحة" 
         });
       }
       
-      // Generic error response with better error details
+      // Handle authentication/permission errors
+      if (error.code === '28P01' || error.code === '28000') {
+        return res.status(503).json({ 
+          success: false,
+          message: "خطأ في إعدادات قاعدة البيانات. يرجى التواصل مع الدعم الفني" 
+        });
+      }
+      
+      // Handle storage-specific errors
+      if (!storage) {
+        return res.status(503).json({ 
+          success: false,
+          message: "نظام التخزين غير متاح حالياً. يرجى المحاولة لاحقاً" 
+        });
+      }
+      
+      // Handle phone number format errors
+      if (error.message?.includes('phone') || error.message?.includes('format')) {
+        return res.status(400).json({ 
+          success: false,
+          message: "تأكد من صحة تنسيق رقم الهاتف (مثال: +213xxxxxxxxx)" 
+        });
+      }
+      
+      // Enhanced generic error response with more context
+      let userMessage = "حدث خطأ غير متوقع أثناء إنشاء الحساب";
+      
+      // Provide more specific guidance based on error patterns
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        userMessage = "مشكلة في الشبكة، تحقق من الاتصال وحاول مرة أخرى";
+      } else if (error.message?.includes('permission') || error.message?.includes('access')) {
+        userMessage = "خطأ في الصلاحيات، يرجى التواصل مع الدعم الفني";
+      } else if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+        userMessage = "خدمة التخزين غير مكونة بشكل صحيح";
+      }
+      
       res.status(500).json({ 
         success: false,
-        message: "حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة مرة أخرى",
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        errorCode: error.code || 'UNKNOWN_ERROR'
+        message: userMessage,
+        errorCode: error.code || 'UNKNOWN_ERROR',
+        debug: process.env.NODE_ENV === 'development' ? {
+          message: error.message,
+          stack: error.stack,
+          hasDatabase: !!process.env.DATABASE_URL,
+          storageType: storage ? storage.constructor.name : 'none'
+        } : undefined
       });
     }
   });
