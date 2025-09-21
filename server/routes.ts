@@ -3174,6 +3174,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Invoice Routes - الفواتير الفورية
+  app.get("/api/invoices", requireAuth, async (req: any, res: any) => {
+    try {
+      const { status } = req.query;
+      const invoices = await storage.getUserInvoices(req.userId, status);
+      res.json(invoices);
+    } catch (error) {
+      console.error("Error getting invoices:", error);
+      res.status(500).json({ message: "Failed to get invoices" });
+    }
+  });
+
+  app.get("/api/invoices/stats", requireAuth, async (req: any, res: any) => {
+    try {
+      const stats = await storage.getInvoiceStats(req.userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error getting invoice stats:", error);
+      res.status(500).json({ message: "Failed to get invoice stats" });
+    }
+  });
+
+  app.get("/api/invoices/:invoiceId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { invoiceId } = req.params;
+      // Security: Only allow user to access their own invoices
+      const invoiceData = await storage.getInvoiceWithItems(invoiceId, req.userId);
+      
+      if (!invoiceData) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      res.json(invoiceData);
+    } catch (error) {
+      console.error("Error getting invoice:", error);
+      res.status(500).json({ message: "Failed to get invoice" });
+    }
+  });
+
+  app.post("/api/invoices", requireAuth, async (req: any, res: any) => {
+    try {
+      const { items, ...invoiceData } = req.body;
+      
+      const invoiceDataWithUser = insertInvoiceSchema.parse({
+        ...invoiceData,
+        userId: req.userId
+      });
+      
+      const invoiceItems = items.map((item: any) => 
+        insertInvoiceItemSchema.parse(item)
+      );
+      
+      const invoice = await storage.createInvoice(invoiceDataWithUser, invoiceItems);
+      
+      // Award points for creating invoice
+      await storage.addPoints(req.userId, 15, "إنشاء فاتورة جديدة", invoice.id, "invoice_create");
+      
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid invoice data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create invoice" });
+    }
+  });
+
+  app.put("/api/invoices/:invoiceId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { invoiceId } = req.params;
+      // Security: Only allow safe fields to be updated, pass userId for ownership check
+      const invoice = await storage.updateInvoice(invoiceId, req.userId, req.body);
+      
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found or access denied" });
+      }
+      
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error updating invoice:", error);
+      res.status(500).json({ message: "Failed to update invoice" });
+    }
+  });
+
+  app.post("/api/invoices/:invoiceId/send", requireAuth, async (req: any, res: any) => {
+    try {
+      const { invoiceId } = req.params;
+      // Security: Pass userId for ownership check
+      const invoice = await storage.updateInvoiceStatus(invoiceId, "sent", req.userId);
+      
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found or access denied" });
+      }
+      
+      // Award points for sending invoice
+      await storage.addPoints(req.userId, 10, "إرسال فاتورة", invoiceId, "invoice_send");
+      
+      res.json({ message: "Invoice sent successfully", invoice });
+    } catch (error) {
+      console.error("Error sending invoice:", error);
+      res.status(500).json({ message: "Failed to send invoice" });
+    }
+  });
+
+  app.post("/api/invoices/:invoiceId/mark-paid", requireAuth, async (req: any, res: any) => {
+    try {
+      const { invoiceId } = req.params;
+      const { paidAt } = req.body;
+      
+      // Security: Pass userId for ownership check
+      const invoice = await storage.updateInvoiceStatus(
+        invoiceId, 
+        "paid", 
+        req.userId,
+        paidAt ? new Date(paidAt) : new Date()
+      );
+      
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found or access denied" });
+      }
+      
+      // Award points for receiving payment
+      await storage.addPoints(req.userId, 25, "تحصيل فاتورة", invoiceId, "invoice_paid");
+      
+      res.json({ message: "Invoice marked as paid", invoice });
+    } catch (error) {
+      console.error("Error marking invoice as paid:", error);
+      res.status(500).json({ message: "Failed to mark invoice as paid" });
+    }
+  });
+
+  app.delete("/api/invoices/:invoiceId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { invoiceId } = req.params;
+      
+      // Security: Pass userId for ownership check (built into deleteInvoice function)
+      const success = await storage.deleteInvoice(invoiceId, req.userId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Invoice not found or access denied" });
+      }
+      
+      res.json({ message: "Invoice deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      res.status(500).json({ message: "Failed to delete invoice" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

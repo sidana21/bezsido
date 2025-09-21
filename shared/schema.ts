@@ -289,6 +289,40 @@ export const orderItems = pgTable("order_items", {
   subtotal: decimal("subtotal").notNull(), // price * quantity
 });
 
+// Instant Invoices - الفواتير الفورية
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // منشئ الفاتورة
+  invoiceNumber: varchar("invoice_number").notNull().unique(), // رقم الفاتورة
+  customerName: text("customer_name").notNull(), // اسم العميل
+  customerPhone: varchar("customer_phone"), // هاتف العميل
+  customerEmail: text("customer_email"), // إيميل العميل
+  customerAddress: text("customer_address"), // عنوان العميل
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(), // المجموع الفرعي
+  taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).default("0.00"), // معدل الضريبة
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0.00"), // مبلغ الضريبة
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0.00"), // مبلغ الخصم
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(), // المبلغ الإجمالي
+  currency: text("currency").notNull().default("SAR"), // العملة
+  status: text("status").notNull().default("draft"), // draft, sent, paid, overdue, cancelled
+  dueDate: timestamp("due_date"), // تاريخ الاستحقاق
+  paidAt: timestamp("paid_at"), // تاريخ السداد
+  notes: text("notes"), // ملاحظات
+  terms: text("terms"), // شروط الدفع
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const invoiceItems = pgTable("invoice_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  description: text("description").notNull(), // وصف المنتج/الخدمة
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(), // الكمية
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(), // سعر الوحدة
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(), // السعر الإجمالي
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertStoreSchema = createInsertSchema(stores).omit({
   id: true,
   status: true,
@@ -623,6 +657,19 @@ export const insertQuickReplySchema = createInsertSchema(quickReplies).omit({
   updatedAt: true,
 });
 
+// Invoice schemas - مخططات الفواتير
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  invoiceNumber: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types for new tables
 export type InsertNeighborhoodGroup = z.infer<typeof insertNeighborhoodGroupSchema>;
 export type NeighborhoodGroup = typeof neighborhoodGroups.$inferSelect;
@@ -640,3 +687,7 @@ export type InsertCustomerTag = z.infer<typeof insertCustomerTagSchema>;
 export type CustomerTag = typeof customerTags.$inferSelect;
 export type InsertQuickReply = z.infer<typeof insertQuickReplySchema>;
 export type QuickReply = typeof quickReplies.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
+export type InvoiceItem = typeof invoiceItems.$inferSelect;

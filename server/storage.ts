@@ -3084,6 +3084,299 @@ export class DatabaseStorage implements IStorage {
       console.error('Error deleting reminder:', error);
     }
   }
+
+  // Invoice Management Implementation - إدارة الفواتير
+  async createInvoice(invoiceData: InsertInvoice, items: InsertInvoiceItem[]): Promise<Invoice> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Use transaction to ensure atomicity
+      return await db.transaction(async (tx) => {
+        // Generate unique invoice number
+        const invoiceNumber = await this.generateInvoiceNumber(invoiceData.userId);
+        
+        // Calculate and validate items server-side (security: don't trust client totals)
+        const validatedItems = items.map(item => {
+          const quantity = Math.round(parseFloat(item.quantity.toString()) * 100) / 100; // Round to 2 decimals
+          const unitPrice = Math.round(parseFloat(item.unitPrice.toString()) * 100) / 100;
+          const totalPrice = Math.round(quantity * unitPrice * 100) / 100; // Recompute server-side
+          
+          return {
+            ...item,
+            quantity: quantity.toString(),
+            unitPrice: unitPrice.toString(),
+            totalPrice: totalPrice.toString()
+          };
+        });
+        
+        // Calculate totals using integer cents to avoid floating point errors
+        const subtotalCents = validatedItems.reduce((sum, item) => {
+          return sum + Math.round(parseFloat(item.totalPrice) * 100);
+        }, 0);
+        
+        const taxRateCents = Math.round(parseFloat((invoiceData.taxRate || "0.00").toString()) * 100);
+        const taxAmountCents = Math.round((subtotalCents * taxRateCents) / 10000);
+        const discountAmountCents = Math.round(parseFloat((invoiceData.discountAmount || "0.00").toString()) * 100);
+        const totalAmountCents = subtotalCents + taxAmountCents - discountAmountCents;
+        
+        const newInvoice = {
+          id: randomUUID(),
+          ...invoiceData,
+          invoiceNumber,
+          subtotal: (subtotalCents / 100).toFixed(2),
+          taxAmount: (taxAmountCents / 100).toFixed(2),
+          totalAmount: (totalAmountCents / 100).toFixed(2),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        const insertedInvoice = await tx.insert(invoices).values(newInvoice).returning();
+        const invoice = insertedInvoice[0] as Invoice;
+        
+        // Insert invoice items with validated data
+        if (validatedItems.length > 0) {
+          const itemsToInsert = validatedItems.map(item => ({
+            id: randomUUID(),
+            invoiceId: invoice.id,
+            ...item,
+            createdAt: new Date()
+          }));
+          
+          await tx.insert(invoiceItems).values(itemsToInsert);
+        }
+        
+        return invoice;
+      });
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      throw error;
+    }
+  }
+
+  async generateInvoiceNumber(userId: string): Promise<string> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Generate collision-safe invoice number using timestamp and random suffix
+      const year = new Date().getFullYear();
+      const month = String(new Date().getMonth() + 1).padStart(2, '0');
+      const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+      const random = Math.floor(Math.random() * 999).toString().padStart(3, '0');
+      
+      return `INV-${year}${month}-${timestamp}${random}`;
+    } catch (error) {
+      console.error('Error generating invoice number:', error);
+      return `INV-${Date.now()}-${Math.floor(Math.random() * 999)}`;
+    }
+  }
+
+  async getUserInvoices(userId: string, status?: string): Promise<Invoice[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Build query conditions properly using and()
+      const conditions = [eq(invoices.userId, userId)];
+      if (status) {
+        conditions.push(eq(invoices.status, status));
+      }
+      
+      return await db.select()
+        .from(invoices)
+        .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+        .orderBy(sql`${invoices.createdAt} DESC`);
+    } catch (error) {
+      console.error('Error getting user invoices:', error);
+      return [];
+    }
+  }
+
+  async getInvoice(invoiceId: string, userId?: string): Promise<Invoice | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Build conditions with ownership check if userId provided
+      const conditions = [eq(invoices.id, invoiceId)];
+      if (userId) {
+        conditions.push(eq(invoices.userId, userId));
+      }
+      
+      const result = await db.select()
+        .from(invoices)
+        .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+        .limit(1);
+      
+      return result[0] as Invoice;
+    } catch (error) {
+      console.error('Error getting invoice:', error);
+      return undefined;
+    }
+  }
+
+  async getInvoiceWithItems(invoiceId: string, userId?: string): Promise<{ invoice: Invoice; items: InvoiceItem[] } | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Get invoice with ownership check
+      const invoice = await this.getInvoice(invoiceId, userId);
+      if (!invoice) return undefined;
+      
+      const items = await db.select()
+        .from(invoiceItems)
+        .where(eq(invoiceItems.invoiceId, invoiceId));
+      
+      return { invoice, items: items as InvoiceItem[] };
+    } catch (error) {
+      console.error('Error getting invoice with items:', error);
+      return undefined;
+    }
+  }
+
+  async updateInvoiceStatus(invoiceId: string, status: string, userId: string, paidAt?: Date): Promise<Invoice | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const updateData: any = {
+        status,
+        updatedAt: new Date()
+      };
+      
+      if (status === 'paid' && paidAt) {
+        updateData.paidAt = paidAt;
+      }
+      
+      // Update only if user owns the invoice (security: prevent IDOR)
+      const updated = await db.update(invoices)
+        .set(updateData)
+        .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+        .returning();
+      
+      return updated[0] as Invoice;
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+      return undefined;
+    }
+  }
+
+  async updateInvoice(invoiceId: string, userId: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Only allow safe fields to be updated (security: prevent tampering with totals/ownership)
+      const safeUpdates = {
+        customerName: updates.customerName,
+        customerPhone: updates.customerPhone,
+        customerEmail: updates.customerEmail,
+        customerAddress: updates.customerAddress,
+        dueDate: updates.dueDate,
+        notes: updates.notes,
+        terms: updates.terms,
+        currency: updates.currency,
+        updatedAt: new Date()
+      };
+      
+      // Remove undefined fields
+      Object.keys(safeUpdates).forEach(key => {
+        if (safeUpdates[key] === undefined) delete safeUpdates[key];
+      });
+      
+      // Update only if user owns the invoice (security: prevent IDOR)
+      const updated = await db.update(invoices)
+        .set(safeUpdates)
+        .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+        .returning();
+      
+      return updated[0] as Invoice;
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      return undefined;
+    }
+  }
+
+  async deleteInvoice(invoiceId: string, userId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Use transaction to ensure atomicity
+      return await db.transaction(async (tx) => {
+        // Check ownership first (security: prevent IDOR)
+        const invoice = await tx.select()
+          .from(invoices)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+          .limit(1);
+        
+        if (invoice.length === 0) {
+          return false; // Invoice not found or not owned by user
+        }
+        
+        // Delete invoice items first
+        await tx.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
+        
+        // Delete invoice
+        await tx.delete(invoices).where(eq(invoices.id, invoiceId));
+        
+        return true;
+      });
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      return false;
+    }
+  }
+
+  async getInvoiceStats(userId: string): Promise<{ total: number; paid: number; overdue: number; draft: number }> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const stats = await db.select({
+        status: invoices.status,
+        count: sql`count(*)`
+      })
+      .from(invoices)
+      .where(eq(invoices.userId, userId))
+      .groupBy(invoices.status);
+      
+      const result = { total: 0, paid: 0, overdue: 0, draft: 0 };
+      
+      stats.forEach(stat => {
+        const count = parseInt(stat.count?.toString() || '0');
+        result.total += count;
+        if (stat.status === 'paid') result.paid += count;
+        else if (stat.status === 'overdue') result.overdue += count;
+        else if (stat.status === 'draft') result.draft += count;
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('Error getting invoice stats:', error);
+      return { total: 0, paid: 0, overdue: 0, draft: 0 };
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database
