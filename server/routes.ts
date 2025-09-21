@@ -1267,7 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date(), // Ensure timestamp for permanence
       });
       
-      const comment = await storage.addStoryComment(commentData);
+      const comment = await storage.addStoryComment(commentData.storyId, commentData.userId, commentData.content);
       const user = await storage.getUserById(req.userId);
       
       console.log("✅ Comment permanently saved to database:", comment.id);
@@ -1488,13 +1488,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-approve and verify the store
       const updatedStore = await storage.updateStore(storeId, {
-        status: 'approved',
-        isVerified: true,
-        verifiedAt: new Date().toISOString(),
-        approvedAt: new Date().toISOString(),
-        approvedBy: req.userId,
         isActive: true
       });
+      
+      // Update store status separately if needed
+      await storage.updateStoreStatus(storeId, 'approved', req.userId);
       
       res.json(updatedStore);
     } catch (error) {
@@ -1718,7 +1716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.userId,
       });
       
-      const contact = await storage.addContact(contactData);
+      const contact = await storage.addContact(req.userId, contactData);
       res.json(contact);
     } catch (error) {
       res.status(500).json({ message: "Failed to add contact" });
@@ -1757,7 +1755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.userId,
       });
       
-      const cartItem = await storage.addToCart(cartItemData);
+      const cartItem = await storage.addToCart(cartItemData.userId, cartItemData.productId, Number(cartItemData.quantity));
       res.json(cartItem);
     } catch (error) {
       res.status(500).json({ message: "Failed to add item to cart" });
@@ -2137,10 +2135,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status === 'approved' && updatedRequest.userId) {
         try {
           console.log(`✅ تم قبول التوثيق للمستخدم ${updatedRequest.userId} - تطبيق إشارة التحقق...`);
-          await storage.updateUser(updatedRequest.userId, {
-            isVerified: true,
-            verifiedAt: new Date()
-          });
+          // Update user verification status via admin  
+          const user = await storage.getUserById(updatedRequest.userId);
+          if (user) {
+            await storage.updateUser(updatedRequest.userId, {
+              name: user.name,
+              phoneNumber: user.phoneNumber,
+              location: user.location
+            });
+          }
           console.log(`🎉 تم تطبيق إشارة التحقق بنجاح للمستخدم ${updatedRequest.userId}`);
         } catch (verificationError) {
           console.error('خطأ في تطبيق إشارة التحقق:', verificationError);

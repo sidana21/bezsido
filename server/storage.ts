@@ -4017,6 +4017,77 @@ export class MemStorage implements IStorage {
     }
     return undefined;
   }
+
+  // Placeholder implementations for new addictive features - not functional in memory storage
+  async getNeighborhoodGroups(location?: string): Promise<NeighborhoodGroup[]> { return []; }
+  async getNeighborhoodGroup(groupId: string): Promise<NeighborhoodGroup | undefined> { return undefined; }
+  async createNeighborhoodGroup(group: InsertNeighborhoodGroup): Promise<NeighborhoodGroup> { 
+    throw new Error('NeighborhoodGroups require database storage'); 
+  }
+  async joinNeighborhoodGroup(groupId: string, userId: string): Promise<void> { }
+  async leaveNeighborhoodGroup(groupId: string, userId: string): Promise<void> { }
+  async getUserNeighborhoodGroups(userId: string): Promise<NeighborhoodGroup[]> { return []; }
+  
+  async getHelpRequests(groupId?: string, status?: string): Promise<HelpRequest[]> { return []; }
+  async getHelpRequest(requestId: string): Promise<HelpRequest | undefined> { return undefined; }
+  async createHelpRequest(request: InsertHelpRequest): Promise<HelpRequest> { 
+    throw new Error('HelpRequests require database storage'); 
+  }
+  async acceptHelpRequest(requestId: string, helperId: string): Promise<HelpRequest | undefined> { return undefined; }
+  async completeHelpRequest(requestId: string, rating?: number, feedback?: string): Promise<HelpRequest | undefined> { return undefined; }
+  async cancelHelpRequest(requestId: string): Promise<HelpRequest | undefined> { return undefined; }
+  async getUserHelpRequests(userId: string): Promise<HelpRequest[]> { return []; }
+  async getUserHelperRequests(helperId: string): Promise<HelpRequest[]> { return []; }
+  
+  async getUserPoints(userId: string): Promise<number> { return 0; }
+  async addPoints(userId: string, points: number, reason: string, relatedId?: string, relatedType?: string): Promise<void> { }
+  async deductPoints(userId: string, points: number, reason: string, relatedId?: string, relatedType?: string): Promise<void> { }
+  async getPointTransactions(userId: string): Promise<PointTransaction[]> { return []; }
+  async updateUserStreak(userId: string): Promise<void> { }
+  async getTopUsers(limit?: number): Promise<User[]> { return []; }
+  
+  async getDailyMissions(category?: string): Promise<DailyMission[]> { return []; }
+  async getUserDailyMissions(userId: string, date: string): Promise<UserMission[]> { return []; }
+  async updateMissionProgress(userId: string, missionId: string, increment?: number): Promise<UserMission | undefined> { return undefined; }
+  async completeMission(userId: string, missionId: string): Promise<UserMission | undefined> { return undefined; }
+  async initializeDailyMissions(): Promise<void> { }
+  async resetDailyMissions(userId: string, date: string): Promise<void> { }
+  
+  async getReminders(userId: string): Promise<Reminder[]> { return []; }
+  async createReminder(reminder: InsertReminder): Promise<Reminder> { 
+    throw new Error('Reminders require database storage'); 
+  }
+  async markReminderComplete(reminderId: string): Promise<void> { }
+  async getDueReminders(): Promise<Reminder[]> { return []; }
+  async deleteReminder(reminderId: string): Promise<void> { }
+  
+  async getCustomerTags(userId: string): Promise<CustomerTag[]> { return []; }
+  async getContactTag(userId: string, contactId: string): Promise<CustomerTag | undefined> { return undefined; }
+  async setCustomerTag(tag: InsertCustomerTag): Promise<CustomerTag> { 
+    throw new Error('CustomerTags require database storage'); 
+  }
+  async updateCustomerTag(tagId: string, updates: Partial<InsertCustomerTag>): Promise<CustomerTag | undefined> { return undefined; }
+  async deleteCustomerTag(tagId: string): Promise<void> { }
+  
+  async getQuickReplies(userId: string, category?: string): Promise<QuickReply[]> { return []; }
+  async createQuickReply(reply: InsertQuickReply): Promise<QuickReply> { 
+    throw new Error('QuickReplies require database storage'); 
+  }
+  async updateQuickReply(replyId: string, updates: Partial<InsertQuickReply>): Promise<QuickReply | undefined> { return undefined; }
+  async incrementQuickReplyUsage(replyId: string): Promise<void> { }
+  async deleteQuickReply(replyId: string): Promise<void> { }
+  
+  // Admin dashboard stats for MemStorage (placeholder)
+  async getAdminDashboardStats(): Promise<any> {
+    return {
+      pendingVerificationRequests: 0,
+      totalVerificationRequests: 0,
+      totalUsers: this.users.size,
+      totalStores: 0,
+      todayRequests: 0,
+      totalRevenue: 0
+    };
+  }
 }
 
 // Initialize storage with proper error handling - prioritize database storage
