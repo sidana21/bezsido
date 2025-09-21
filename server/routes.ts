@@ -258,25 +258,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('ℹ️ Twilio credentials not configured, showing OTP directly');
       }
       
-      // Show OTP directly in development or if SMS failed
-      const shouldShowOTP = !smsDelivered || process.env.NODE_ENV === 'development';
+      // Only show OTP directly in development mode for security
+      const shouldShowOTP = process.env.NODE_ENV === 'development';
       
       let message = "تم إرسال رمز التحقق عبر الرسائل النصية";
       if (shouldShowOTP) {
         message = smsDelivered ? 
           `تم إرسال الرمز عبر SMS وهو: ${code}` : 
           `رمز التحقق: ${code}`;
+      } else if (!smsDelivered && smsError) {
+        message = "حدث خطأ في إرسال الرسالة النصية، يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني";
       }
       
-      // Log for debugging
-      console.log(`OTP for ${phoneNumber}: ${code} (SMS delivered: ${smsDelivered})`);
+      // Log for debugging (be careful with OTP in production logs)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`OTP for ${normalizedPhoneNumber}: ${code} (SMS delivered: ${smsDelivered})`);
+      } else {
+        console.log(`OTP sent to ${normalizedPhoneNumber} (SMS delivered: ${smsDelivered})`);
+      }
       
       res.json({ 
         success: true, 
         message,
+        // Only include OTP in development mode
         code: shouldShowOTP ? code : undefined,
         showDirectly: shouldShowOTP,
         smsDelivered,
+        // Don't expose SMS errors in production
         smsError: process.env.NODE_ENV === 'development' ? smsError : undefined
       });
     } catch (error) {
@@ -290,22 +298,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { phoneNumber, code } = req.body;
       
       if (!phoneNumber || !code) {
-        return res.status(400).json({ message: "Phone number and code are required" });
+        return res.status(400).json({ message: "رقم الهاتف ورمز التحقق مطلوبان" });
       }
       
-      console.log(`🔍 Verifying OTP for phone: ${phoneNumber}, code: ${code}`);
+      // Normalize phone number to match the format used when storing OTP
+      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber.trim());
       
-      const isValidOtp = await storage.verifyOtpCode(phoneNumber, code);
+      console.log(`🔍 Verifying OTP for normalized phone: ${normalizedPhoneNumber}, code: ${code}`);
+      
+      const isValidOtp = await storage.verifyOtpCode(normalizedPhoneNumber, code);
       
       if (!isValidOtp) {
-        console.log(`❌ Invalid OTP for ${phoneNumber}`);
-        return res.status(400).json({ message: "Invalid or expired OTP" });
+        console.log(`❌ Invalid OTP for ${normalizedPhoneNumber}`);
+        return res.status(400).json({ message: "رمز التحقق غير صحيح أو منتهي الصلاحية" });
       }
       
-      console.log(`✅ OTP verified for ${phoneNumber}`);
+      console.log(`✅ OTP verified for ${normalizedPhoneNumber}`);
       
       // Check if user exists
-      let user = await storage.getUserByPhoneNumber(phoneNumber);
+      let user = await storage.getUserByPhoneNumber(normalizedPhoneNumber);
       console.log(`🔍 User search result for ${phoneNumber}:`, user ? `Found: ${user.name} (${user.id})` : 'Not found');
       
       if (!user) {
@@ -345,17 +356,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Direct login without OTP (temporary for development)
+  // Direct login without OTP (DEVELOPMENT ONLY - SECURITY RISK IN PRODUCTION)
   app.post("/api/auth/direct-login", async (req, res) => {
+    // Only allow in development environment for security
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
     try {
       const { phoneNumber } = req.body;
       
       if (!phoneNumber) {
-        return res.status(400).json({ message: "Phone number is required" });
+        return res.status(400).json({ message: "رقم الهاتف مطلوب" });
       }
       
+      // Normalize phone number to match storage format
+      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber.trim());
+      
       // Check if user exists
-      let user = await storage.getUserByPhoneNumber(phoneNumber);
+      let user = await storage.getUserByPhoneNumber(normalizedPhoneNumber);
       
       if (!user) {
         // User doesn't exist - need profile setup
