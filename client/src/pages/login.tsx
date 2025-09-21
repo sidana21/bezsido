@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [showProfile, setShowProfile] = useState(false);
   const [generatedOtp, setGeneratedOtp] = useState("");
   const [showQuickLogin, setShowQuickLogin] = useState(false);
+  const [signupToken, setSignupToken] = useState("");
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -132,6 +133,7 @@ export default function LoginPage() {
       if (response.success) {
         if (response.needsProfile) {
           // مستخدم جديد - عرض نموذج الملف الشخصي
+          setSignupToken(response.signupToken || "");
           setShowProfile(true);
           setShowOtpInput(false);
           toast({
@@ -180,6 +182,15 @@ export default function LoginPage() {
       return;
     }
 
+    if (!signupToken) {
+      toast({
+        title: "خطأ",
+        description: "رمز التسجيل مفقود. يرجى المحاولة مرة أخرى",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     const cleanEmail = email.trim().toLowerCase();
 
@@ -192,7 +203,8 @@ export default function LoginPage() {
         body: JSON.stringify({ 
           email: cleanEmail,
           name: name.trim(),
-          location
+          location,
+          signupToken
         })
       });
 
@@ -287,10 +299,11 @@ export default function LoginPage() {
                     setShowOtpInput(false);
                     setOtpCode("");
                     setGeneratedOtp("");
+                    setSignupToken("");
                   }}
                   className="w-full text-sm text-muted-foreground hover:text-foreground"
                 >
-                  العودة لإدخال رقم الهاتف
+                  العودة لإدخال البريد الإلكتروني
                 </Button>
               </div>
             </CardContent>
