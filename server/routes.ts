@@ -541,6 +541,279 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Development endpoint to create comprehensive demo data
+  app.post("/api/dev/create-demo-data", async (req: any, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
+    try {
+      console.log('🎨 بدء إنشاء بيانات تجريبية شاملة...');
+      
+      // Create demo users (sellers)
+      console.log('👥 إنشاء مستخدمين تجريبيين...');
+      const demoUsers = [
+        {
+          name: "أحمد التاجر",
+          phoneNumber: "+213771234567",
+          avatar: null,
+          location: "الجزائر"
+        },
+        {
+          name: "فاطمة البائعة",
+          phoneNumber: "+213772345678", 
+          avatar: null,
+          location: "الجزائر"
+        },
+        {
+          name: "محمد صاحب المتجر",
+          phoneNumber: "+213773456789",
+          avatar: null,
+          location: "الجزائر"
+        }
+      ];
+      
+      const users = [];
+      for (const userData of demoUsers) {
+        // Check if user already exists
+        const existingUser = await storage.getUserByPhoneNumber(userData.phoneNumber);
+        if (existingUser) {
+          console.log(`✓ المستخدم ${userData.name} موجود بالفعل`);
+          users.push(existingUser);
+        } else {
+          const newUser = await storage.createUser(userData);
+          console.log(`✓ تم إنشاء المستخدم: ${newUser.name}`);
+          users.push(newUser);
+        }
+      }
+      
+      console.log('🏪 إنشاء متاجر تجريبية...');
+      const stores = [];
+      
+      // Store 1 - Fashion by Ahmed
+      const store1 = await storage.createStore({
+        name: "متجر الأناقة العربية",
+        description: "متجر متخصص في الملابس والإكسسوارات العربية التقليدية والعصرية. نقدم مجموعة متنوعة من المنتجات عالية الجودة التي تناسب جميع الأذواق والمناسبات.",
+        category: "ملابس وموضة",
+        location: "الجزائر",
+        userId: users[0].id,
+        imageUrl: null,
+        phoneNumber: users[0].phoneNumber,
+        isOpen: true,
+        isActive: true
+      });
+      stores.push(store1);
+      console.log(`✓ تم إنشاء متجر: ${store1.name} للبائع ${users[0].name}`);
+      
+      // Store 2 - Tech by Fatima  
+      const store2 = await storage.createStore({
+        name: "متجر التقنية الذكية",
+        description: "أحدث الأجهزة الإلكترونية والتقنية الذكية. أجهزة محمولة، حاسوب، ملحقات تقنية، وكل ما تحتاجه من عالم التكنولوجيا بأفضل الأسعار.",
+        category: "إلكترونيات",
+        location: "الجزائر",
+        userId: users[1].id,
+        imageUrl: null,
+        phoneNumber: users[1].phoneNumber,
+        isOpen: true,
+        isActive: true
+      });
+      stores.push(store2);
+      console.log(`✓ تم إنشاء متجر: ${store2.name} للبائعة ${users[1].name}`);
+      
+      // Store 3 - Food by Mohamed
+      const store3 = await storage.createStore({
+        name: "البيت العربي للمأكولات",
+        description: "مأكولات عربية أصيلة وحلويات تقليدية. نقدم أطباق مميزة من جميع أنحاء العالم العربي بطعم البيت الأصيل.",
+        category: "مأكولات ومشروبات",
+        location: "الجزائر",
+        userId: users[2].id,
+        imageUrl: null,
+        phoneNumber: users[2].phoneNumber,
+        isOpen: true,
+        isActive: true
+      });
+      stores.push(store3);
+      console.log(`✓ تم إنشاء متجر: ${store3.name} للبائع ${users[2].name}`);
+      
+      console.log('📦 إنشاء منتجات متنوعة...');
+      const products = [];
+      
+      // Products for Fashion Store (Ahmed)
+      const fashionProducts = [
+        {
+          name: "جلباب رجالي تقليدي",
+          description: "جلباب أنيق مصنوع من أجود الأقمشة القطنية، مناسب للمناسبات الرسمية والاستخدام اليومي. متوفر بألوان متعددة.",
+          price: "8500.00",
+          category: "ملابس رجالية"
+        },
+        {
+          name: "كافتان نسائي مطرز",
+          description: "كافتان نسائي مطرز بخيوط ذهبية، قطعة فنية تجمع بين الأصالة والعصرية. مثالي للحفلات والمناسبات الخاصة.",
+          price: "12000.00",
+          category: "ملابس نسائية"
+        },
+        {
+          name: "عقد فضة تقليدي",
+          description: "عقد من الفضة الأصيلة بتصميم تقليدي جزائري، قطعة فريدة تضفي لمسة من الأناقة العربية الأصيلة.",
+          price: "4500.00",
+          category: "مجوهرات"
+        }
+      ];
+      
+      for (const productData of fashionProducts) {
+        const product = await storage.createProduct({
+          ...productData,
+          userId: users[0].id,
+          storeId: store1.id,
+          location: "الجزائر",
+          imageUrl: null,
+          isActive: true,
+          commissionRate: "0.05"
+        });
+        products.push(product);
+        console.log(`✓ تم إنشاء منتج: ${product.name}`);
+      }
+      
+      // Products for Tech Store (Fatima)
+      const techProducts = [
+        {
+          name: "هاتف ذكي متطور",
+          description: "هاتف ذكي بكاميرا 108 ميجابكسل، ذاكرة 256GB، شاشة AMOLED 6.7 بوصة. يدعم الشحن السريع وتقنية 5G.",
+          price: "75000.00",
+          category: "هواتف ذكية"
+        },
+        {
+          name: "حاسوب محمول للألعاب",
+          description: "حاسوب محمول قوي للألعاب بكرت رسومات RTX 4070، معالج Intel i7، ذاكرة 32GB RAM، تخزين SSD 1TB.",
+          price: "180000.00",
+          category: "حاسوب وملحقات"
+        },
+        {
+          name: "ساعة ذكية رياضية",
+          description: "ساعة ذكية مقاومة للماء مع GPS، مراقبة معدل ضربات القلب، وأكثر من 50 نشاط رياضي.",
+          price: "15000.00",
+          category: "ساعات ذكية"
+        }
+      ];
+      
+      for (const productData of techProducts) {
+        const product = await storage.createProduct({
+          ...productData,
+          userId: users[1].id,
+          storeId: store2.id,
+          location: "الجزائر",
+          imageUrl: null,
+          isActive: true,
+          commissionRate: "0.05"
+        });
+        products.push(product);
+        console.log(`✓ تم إنشاء منتج: ${product.name}`);
+      }
+      
+      // Products for Food Store (Mohamed)
+      const foodProducts = [
+        {
+          name: "تشكيلة حلويات عربية",
+          description: "مجموعة متنوعة من الحلويات العربية الأصيلة: بقلاوة، معمول، غريبة، وحلويات أخرى بطعم البيت.",
+          price: "3500.00",
+          category: "حلويات"
+        },
+        {
+          name: "كسكس جاهز للتحضير",
+          description: "كسكس أصيل مع جميع التوابل والخضار المجففة، سهل التحضير في المنزل بطعم تقليدي رائع.",
+          price: "2200.00",
+          category: "وجبات جاهزة"
+        },
+        {
+          name: "مربى التين الشوكي",
+          description: "مربى طبيعي من التين الشوكي الطازج، بدون مواد حافظة، طعم أصيل ومميز.",
+          price: "1800.00",
+          category: "مربيات ومعلبات"
+        }
+      ];
+      
+      for (const productData of foodProducts) {
+        const product = await storage.createProduct({
+          ...productData,
+          userId: users[2].id,
+          storeId: store3.id,
+          location: "الجزائر",
+          imageUrl: null,
+          isActive: true,
+          commissionRate: "0.05"
+        });
+        products.push(product);
+        console.log(`✓ تم إنشاء منتج: ${product.name}`);
+      }
+      
+      // Create promotional stories
+      console.log('📖 إنشاء قصص ترويجية...');
+      const stories = [];
+      
+      const storyData = [
+        {
+          userId: users[0].id,
+          storeId: store1.id,
+          content: "🎉 عروض خاصة على جميع الملابس التقليدية! خصم يصل إلى 30% - لفترة محدودة فقط"
+        },
+        {
+          userId: users[1].id,
+          storeId: store2.id,
+          content: "📱 أحدث التقنيات وصلت! هواتف ذكية وحاسوب محمول بأسعار منافسة - تسوق الآن"
+        },
+        {
+          userId: users[2].id,
+          storeId: store3.id,
+          content: "🍯 طعم البيت الأصيل... حلويات عربية طازجة يومياً. اطلب الآن واستمتع بأجمل الذكريات"
+        }
+      ];
+      
+      for (const storyInfo of storyData) {
+        const story = await storage.createStory({
+          ...storyInfo,
+          location: "الجزائر",
+          mediaUrl: null,
+          mediaType: "text",
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          isBusinessPromo: true,
+          backgroundColor: "#075e54",
+          textColor: "#ffffff"
+        });
+        stories.push(story);
+        console.log(`✓ تم إنشاء قصة ترويجية للمتجر`);
+      }
+      
+      console.log('✅ تم إنشاء البيانات التجريبية بنجاح!');
+      console.log('📊 تم إنشاء:');
+      console.log(`  - ${users.length} مستخدمين (بائعين)`);
+      console.log(`  - ${stores.length} متاجر`);
+      console.log(`  - ${products.length} منتجات متنوعة`);
+      console.log(`  - ${stories.length} قصص ترويجية`);
+      
+      res.json({ 
+        success: true,
+        message: "تم إنشاء البيانات التجريبية بنجاح!",
+        data: {
+          users: users.length,
+          stores: stores.length,
+          products: products.length,
+          stories: stories.length,
+          details: {
+            stores: stores.map(s => ({ id: s.id, name: s.name, owner: s.userId })),
+            products: products.map(p => ({ id: p.id, name: p.name, store: p.storeId }))
+          }
+        }
+      });
+    } catch (error) {
+      console.error('❌ فشل في إنشاء البيانات التجريبية:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "فشل في إنشاء البيانات التجريبية",
+        error: process.env.NODE_ENV === 'development' ? error.message : "Internal server error"
+      });
+    }
+  });
+
   // Development endpoint to promote any user by phone number to admin  
   app.post("/api/dev/make-admin-by-phone", async (req: any, res) => {
     if (process.env.NODE_ENV !== 'development') {
