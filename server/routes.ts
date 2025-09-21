@@ -2737,6 +2737,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug admin status endpoint
+  app.get("/api/admin/debug-status", async (req, res) => {
+    try {
+      const token = req.headers.authorization?.split(' ')[1];
+      console.log('Debug - Token:', token);
+      
+      if (!token) {
+        return res.json({ message: "No token provided", hasToken: false });
+      }
+      
+      const session = await storage.getSessionByToken(token);
+      console.log('Debug - Session:', session);
+      
+      if (!session) {
+        return res.json({ message: "Session not found", hasToken: true, hasSession: false });
+      }
+      
+      const user = await storage.getUserById(session.userId);
+      console.log('Debug - User:', user);
+      
+      if (!user) {
+        return res.json({ message: "User not found", hasToken: true, hasSession: true, hasUser: false });
+      }
+      
+      res.json({
+        message: "Debug info",
+        hasToken: true,
+        hasSession: true,
+        hasUser: true,
+        isAdmin: user.isAdmin,
+        user: { id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }
+      });
+    } catch (error) {
+      console.error("Debug admin status error:", error);
+      res.status(500).json({ message: "Debug error", error: error.message });
+    }
+  });
+
+  // Force fix admin privileges
+  app.post("/api/admin/force-fix-privileges", async (req, res) => {
+    try {
+      const token = req.headers.authorization?.split(' ')[1];
+      
+      if (!token || !token.startsWith('admin-')) {
+        return res.status(401).json({ message: "Admin token required" });
+      }
+      
+      const session = await storage.getSessionByToken(token);
+      if (!session) {
+        return res.status(401).json({ message: "Invalid session" });
+      }
+      
+      // Force update admin status
+      const updatedUser = await storage.updateUserAdminStatus(session.userId, true);
+      console.log('Force fixed admin privileges for user:', updatedUser);
+      
+      res.json({ 
+        message: "Admin privileges fixed", 
+        user: updatedUser,
+        success: true 
+      });
+    } catch (error) {
+      console.error("Force fix admin error:", error);
+      res.status(500).json({ message: "Fix error", error: error.message });
+    }
+  });
+
   // Admin Dashboard Statistics
   app.get("/api/admin/dashboard-stats", requireAdmin, async (req: any, res) => {
     try {
