@@ -401,12 +401,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 User search result for ${email}:`, user ? `Found: ${user.name} (${user.id})` : 'Not found');
       
       if (!user) {
-        // OTP is valid but user doesn't exist - need profile setup
-        console.log(`📝 User ${email} needs profile setup`);
+        // OTP is valid but user doesn't exist - issue signupToken for secure user creation
+        console.log(`📝 User ${email} needs profile setup - issuing signupToken`);
+        const signupToken = await storage.createSignupToken(normalizedEmail);
         return res.json({ 
           success: true, 
           needsProfile: true,
-          email: normalizedEmail, // Pass email for profile setup
+          email: normalizedEmail,
+          signupToken, // Secure token required for user creation
           message: "تم التحقق بنجاح. يرجى إكمال بياناتك الشخصية." 
         });
       } else {
@@ -515,9 +517,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new user after email OTP verification
   app.post("/api/auth/create-user", async (req, res) => {
     try {
-      const { email, name, location } = req.body;
+      const { email, name, location, signupToken } = req.body;
       
       console.log("📧 Creating user with:", { email, name, location });
+      
+      // 🔒 CRITICAL SECURITY: Validate signupToken to prevent unauthorized user creation
+      if (!signupToken || typeof signupToken !== 'string') {
+        console.error("🚫 SECURITY: Missing signupToken in create-user request");
+        return res.status(403).json({ 
+          success: false,
+          message: "رمز التسجيل غير صحيح أو مفقود" 
+        });
+      }
       
       // Check if storage is available
       if (!storage) {
@@ -566,31 +577,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if user already exists
-      let user = await storage.getUserByEmail(cleanEmail);
-      
-      if (user) {
-        console.log("👤 User already exists, logging them in:", user.id);
-        
-        // User exists, so log them in instead
-        await storage.updateUserOnlineStatus(user.id, true);
-        
-        // Create session
-        const token = randomUUID();
-        const sessionData = insertSessionSchema.parse({
-          userId: user.id,
-          token,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      // 🔒 CRITICAL SECURITY: Validate and consume signupToken
+      const isValidToken = await storage.validateAndConsumeSignupToken(signupToken, cleanEmail);
+      if (!isValidToken) {
+        console.error(`🚫 SECURITY: Invalid or expired signupToken for ${cleanEmail}`);
+        return res.status(403).json({ 
+          success: false,
+          message: "رمز التسجيل غير صحيح أو منتهي الصلاحية. يرجى إعادة التحقق من البريد الإلكتروني" 
         });
-        
-        await storage.createSession(sessionData);
-        
-        console.log("✅ Existing user logged in successfully:", user.id);
-        return res.json({ 
-          success: true, 
-          user, 
-          token,
-          message: "مرحباً بعودتك! تم تسجيل الدخول بنجاح" 
+      }
+      
+      // Check if user already exists - should not happen with valid signupToken, but check for safety
+      let user = await storage.getUserByEmail(cleanEmail);
+      if (user) {
+        console.error(`🚫 SECURITY: Attempt to create user that already exists: ${cleanEmail}`);
+        return res.status(409).json({ 
+          success: false,
+          message: "هذا الحساب موجود بالفعل. يرجى تسجيل الدخول بدلاً من ذلك" 
         });
       }
       
@@ -753,8 +756,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Diagnostic endpoint to check system health
+  // Diagnostic endpoint to check system health - SECURE
   app.get("/api/health", async (req, res) => {
+    // 🔒 SECURITY: Restrict health endpoint in production
+    if (process.env.NODE_ENV !== 'development') {
+      return res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    }
+    
+    // Development-only detailed diagnostics
     const diagnostics = {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,

@@ -5,7 +5,8 @@ import * as schema from "@shared/schema";
 import { sql } from 'drizzle-orm';
 
 neonConfig.webSocketConstructor = ws;
-// Fix certificate issues in Replit environment
+// Database TLS configuration - Required for Neon database connectivity
+// Note: Neon uses self-signed certificates that require this setting
 if (process.env.NODE_ENV === 'development') {
   process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 }

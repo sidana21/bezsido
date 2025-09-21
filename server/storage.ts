@@ -90,6 +90,11 @@ export interface IStorage {
   getSessionByToken(token: string): Promise<Session | undefined>;
   deleteSession(token: string): Promise<void>;
   
+  // Signup tokens for secure user creation
+  createSignupToken(email: string): Promise<string>;
+  validateAndConsumeSignupToken(token: string, email: string): Promise<boolean>;
+  cleanupExpiredSignupTokens(): Promise<void>;
+  
   // Chats
   getChat(id: string): Promise<Chat | undefined>;
   getUserChats(userId: string): Promise<Chat[]>;
@@ -265,6 +270,8 @@ export interface IStorage {
 
 // Database Storage Implementation - uses PostgreSQL database
 export class DatabaseStorage implements IStorage {
+  // In-memory storage for short-lived signupTokens (5 min expiry)
+  private signupTokens = new Map<string, { email: string; token: string; expiresAt: Date }>();
   async getUser(id: string): Promise<User | undefined> {
     try {
       if (!db) {
@@ -489,6 +496,53 @@ export class DatabaseStorage implements IStorage {
       await db.delete(sessions).where(eq(sessions.token, token));
     } catch (error) {
       console.error('Error deleting session:', error);
+    }
+  }
+
+  // Signup token methods for secure user creation
+  async createSignupToken(email: string): Promise<string> {
+    const token = randomUUID();
+    const tokenData = {
+      email: email.toLowerCase().trim(),
+      token,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+    };
+    
+    this.signupTokens.set(token, tokenData);
+    
+    // Auto cleanup expired tokens
+    setTimeout(() => this.cleanupExpiredSignupTokens(), 5 * 60 * 1000);
+    
+    return token;
+  }
+
+  async validateAndConsumeSignupToken(token: string, email: string): Promise<boolean> {
+    const tokenData = this.signupTokens.get(token);
+    
+    if (!tokenData) {
+      return false;
+    }
+    
+    if (tokenData.expiresAt < new Date()) {
+      this.signupTokens.delete(token);
+      return false;
+    }
+    
+    if (tokenData.email !== email.toLowerCase().trim()) {
+      return false;
+    }
+    
+    // Consume the token (one-time use)
+    this.signupTokens.delete(token);
+    return true;
+  }
+
+  async cleanupExpiredSignupTokens(): Promise<void> {
+    const now = new Date();
+    for (const [token, tokenData] of this.signupTokens.entries()) {
+      if (tokenData.expiresAt < now) {
+        this.signupTokens.delete(token);
+      }
     }
   }
 
@@ -3402,6 +3456,7 @@ export class MemStorage implements IStorage {
   private verificationRequests = new Map<string, VerificationRequest>();
   private storyLikes = new Map<string, StoryLike>();
   private storyComments = new Map<string, StoryComment>();
+  private signupTokens = new Map<string, { email: string; token: string; expiresAt: Date }>();
 
   constructor() {
     // Initialize only default features - NO MOCK DATA
@@ -3474,9 +3529,9 @@ export class MemStorage implements IStorage {
     return newOtp;
   }
 
-  async verifyOtpCode(phoneNumber: string, code: string): Promise<boolean> {
+  async verifyOtpCode(email: string, code: string): Promise<boolean> {
     const otpRecord = Array.from(this.otpCodes.values()).find(
-      otp => otp.phoneNumber === phoneNumber && otp.code === code && !otp.isUsed
+      otp => otp.email === email && otp.code === code && !otp.isUsed
     );
 
     if (!otpRecord || otpRecord.expiresAt < new Date()) {
@@ -3504,6 +3559,53 @@ export class MemStorage implements IStorage {
 
   async deleteSession(token: string): Promise<void> {
     this.sessions.delete(token);
+  }
+
+  // Signup token methods for secure user creation
+  async createSignupToken(email: string): Promise<string> {
+    const token = randomUUID();
+    const tokenData = {
+      email: email.toLowerCase().trim(),
+      token,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+    };
+    
+    this.signupTokens.set(token, tokenData);
+    
+    // Auto cleanup expired tokens
+    setTimeout(() => this.cleanupExpiredSignupTokens(), 5 * 60 * 1000);
+    
+    return token;
+  }
+
+  async validateAndConsumeSignupToken(token: string, email: string): Promise<boolean> {
+    const tokenData = this.signupTokens.get(token);
+    
+    if (!tokenData) {
+      return false;
+    }
+    
+    if (tokenData.expiresAt < new Date()) {
+      this.signupTokens.delete(token);
+      return false;
+    }
+    
+    if (tokenData.email !== email.toLowerCase().trim()) {
+      return false;
+    }
+    
+    // Consume the token (one-time use)
+    this.signupTokens.delete(token);
+    return true;
+  }
+
+  async cleanupExpiredSignupTokens(): Promise<void> {
+    const now = new Date();
+    for (const [token, tokenData] of this.signupTokens.entries()) {
+      if (tokenData.expiresAt < now) {
+        this.signupTokens.delete(token);
+      }
+    }
   }
 
   // Chat methods
