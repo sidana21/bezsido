@@ -21,6 +21,7 @@ import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import Cart from "@/pages/cart";
 import Orders from "@/pages/orders";
+import Neighborhoods from "@/pages/neighborhoods";
 // Admin Pages
 import { AdminLogin } from "@/pages/admin/admin-login";
 import { AdminDashboard } from "@/pages/admin/admin-dashboard";
@@ -102,6 +103,7 @@ function Router() {
             <Route path="/store/:storeId" component={StoreProfile} />
             <Route path="/cart" component={Cart} />
             <Route path="/orders" component={Orders} />
+            <Route path="/neighborhoods" component={Neighborhoods} />
             <Route path="/affiliate" component={Affiliate} />
             <Route path="/affiliate/:uniqueCode" component={AffiliateRedirect} />
             <Route path="/profile" component={Profile} />

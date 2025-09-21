@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { Link } from "wouter";
-import { MessageSquare, Users, Phone, TrendingUp, Store, ShoppingCart, Sparkles } from "lucide-react";
+import { MessageSquare, Users, Phone, TrendingUp, Store, ShoppingCart, Sparkles, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,15 @@ export function BottomNavigation() {
       featureId: "cart",
       color: "from-orange-500 to-red-600",
       activeColor: "from-orange-600 to-red-700"
+    },
+    {
+      label: "الحي",
+      icon: MapPin,
+      href: "/neighborhoods",
+      isActive: location === "/neighborhoods",
+      featureId: "neighborhoods",
+      color: "from-teal-500 to-green-600",
+      activeColor: "from-teal-600 to-green-700"
     },
     {
       label: "التسويق",
