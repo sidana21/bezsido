@@ -12,6 +12,13 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 5000
-    # Force database migration and initialization
-    preDeployCommand: npx drizzle-kit push --force
+        value: 10000
+      - key: SESSION_SECRET
+        generateValue: true
+    # Enable database migration if DATABASE_URL is provided
+    preDeployCommand: |
+      if [ -n "$DATABASE_URL" ]; then
+        npx drizzle-kit push --force
+      else
+        echo "No DATABASE_URL provided, skipping database migration"
+      fi

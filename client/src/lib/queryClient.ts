@@ -24,15 +24,35 @@ export async function apiRequest(
   if (!response.ok) {
     const errorText = await response.text();
     let errorMessage = `${response.status}: ${response.statusText}`;
+    let errorCode = 'UNKNOWN_ERROR';
     
     try {
       const errorData = JSON.parse(errorText);
-      errorMessage = errorData.message || errorMessage;
-    } catch {
-      // If not JSON, use default message
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+      if (errorData.errorCode) {
+        errorCode = errorData.errorCode;
+      }
+      
+      // Enhanced error for debugging
+      console.error('API Error Details:', {
+        url,
+        status: response.status,
+        errorData,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (parseError) {
+      console.error('Failed to parse error response:', errorText);
+      // If not JSON, use default message with better context
+      errorMessage = `خطأ في الشبكة (${response.status}): ${response.statusText}`;
     }
     
-    throw new Error(errorMessage);
+    const error = new Error(errorMessage);
+    (error as any).code = errorCode;
+    (error as any).status = response.status;
+    throw error;
   }
 
   return response.json();

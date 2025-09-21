@@ -358,6 +358,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("📱 Creating user with:", { phoneNumber, name, location });
       
+      // Check if storage is available
+      if (!storage) {
+        console.error("❌ Storage system not available");
+        return res.status(500).json({ 
+          success: false,
+          message: "نظام التخزين غير متاح حالياً، يرجى المحاولة مرة أخرى" 
+        });
+      }
+      
       // Validate input data
       if (!phoneNumber || typeof phoneNumber !== 'string' || !phoneNumber.trim()) {
         console.log("❌ Missing or invalid phone number:", phoneNumber);
@@ -451,13 +460,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "تم إنشاء حسابك بنجاح! مرحباً بك في BizChat" 
       });
     } catch (error: any) {
-      console.error('❌ User creation error details:', {
-        error: error.message,
-        stack: error.stack,
-        code: error.code,
-        constraint: error.constraint,
-        phoneNumber: req.body?.phoneNumber
-      });
+      // Enhanced error logging for production debugging
+      const errorDetails = {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack,
+        code: error?.code,
+        constraint: error?.constraint,
+        name: error?.name,
+        phoneNumber: req.body?.phoneNumber,
+        hasStorage: !!storage,
+        environment: process.env.NODE_ENV,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('❌ User creation error details:', errorDetails);
       
       // Handle specific database errors
       if (error.code === '23505') {
@@ -474,15 +490,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ 
           success: false,
           message: "البيانات المدخلة غير صحيحة",
-          error: process.env.NODE_ENV === 'development' ? error.message : undefined
+          details: process.env.NODE_ENV === 'development' ? error.message : "تحقق من صحة البيانات المدخلة"
         });
       }
       
-      // Generic error response
+      // Handle database connection errors
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.message?.includes('connection')) {
+        return res.status(503).json({ 
+          success: false,
+          message: "مشكلة في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى" 
+        });
+      }
+      
+      // Generic error response with better error details
       res.status(500).json({ 
         success: false,
         message: "حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة مرة أخرى",
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        errorCode: error.code || 'UNKNOWN_ERROR'
       });
     }
   });

@@ -4,6 +4,19 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage, type IStorage } from "./storage";
 import { AdminManager } from "./admin-manager";
 
+// Enhanced error handling for production environments
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('🚨 Uncaught Exception:', error);
+  // Don't exit in production - let the server continue running
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
+});
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
