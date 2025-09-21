@@ -53,7 +53,7 @@ async function ensureTablesExist() {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-        phone_number VARCHAR NOT NULL UNIQUE,
+        email VARCHAR NOT NULL UNIQUE,
         name TEXT NOT NULL,
         avatar TEXT,
         location TEXT NOT NULL,
@@ -85,7 +85,7 @@ async function ensureTablesExist() {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS otp_codes (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-        phone_number VARCHAR NOT NULL,
+        email VARCHAR NOT NULL,
         code VARCHAR NOT NULL,
         expires_at TIMESTAMP NOT NULL,
         is_used BOOLEAN DEFAULT false,

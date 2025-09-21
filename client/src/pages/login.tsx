@@ -52,8 +52,8 @@ export default function LoginPage() {
     "تندوف", "الجزائر", "وهران", "قسنطينة", "عنابة", "سطيف", "باتنة", "تيزي وزو", "بجاية", "مستغانم"
   ];
 
-  // دخول مباشر بدون التحقق من OTP (مؤقت للتطوير)
-  const handleDirectLogin = async () => {
+  // إرسال رمز التحقق إلى البريد الإلكتروني
+  const handleSendOTP = async () => {
     if (!email.trim()) {
       toast({
         title: "خطأ",
@@ -79,33 +79,23 @@ export default function LoginPage() {
     try {
       console.log("🚀 Attempting direct login for:", cleanEmail);
       
-      // محاولة الدخول المباشر بدون OTP
-      const response = await apiRequest("/api/auth/direct-login", {
+      // طلب إرسال رمز التحقق
+      const response = await apiRequest("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: cleanEmail }),
       });
 
       if (response.success) {
-        if (response.needsProfile) {
-          // مستخدم جديد - عرض نموذج الملف الشخصي
-          console.log("New user detected, showing profile setup");
-          setShowProfile(true);
-          toast({
-            title: "مرحباً بك!",
-            description: "يرجى إكمال بياناتك الشخصية",
-          });
-        } else if (response.user && response.token) {
-          // مستخدم موجود - تسجيل دخول مباشر
-          console.log("✅ Existing user login successful:", response.user.name);
-          login(response.user, response.token);
-          toast({
-            title: "مرحباً " + response.user.name + "! 🎉",
-            description: "تم تسجيل الدخول بنجاح",
-          });
-        }
+        // تم إرسال رمز التحقق
+        setShowOtpInput(true);
+        setGeneratedOtp(response.otpCode || "");
+        toast({
+          title: "تم إرسال رمز التحقق",
+          description: "تحقق من بريدك الإلكتروني وأدخل رمز التحقق",
+        });
       } else {
-        throw new Error(response.message || "فشل في تسجيل الدخول");
+        throw new Error(response.message || "فشل في إرسال رمز التحقق");
       }
     } catch (error: any) {
       console.error("Direct login error:", error);
@@ -411,12 +401,12 @@ export default function LoginPage() {
           description: `أهلاً وسهلاً ${response.user.name}`,
         });
       } else {
-        // Fall back to direct login flow
-        handleDirectLogin();
+        // Fall back to OTP flow
+        handleSendOTP();
       }
     } catch (error) {
-      console.warn("Quick login failed, using direct login:", error);
-      handleDirectLogin();
+      console.warn("Quick login failed, using OTP flow:", error);
+      handleSendOTP();
     } finally {
       setIsLoading(false);
     }
@@ -454,22 +444,35 @@ export default function LoginPage() {
         <Card className="border-0 shadow-lg" data-testid="card-email-login">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl font-semibold">تسجيل الدخول</CardTitle>
-            <CardDescription>أدخل بريدك الإلكتروني للدخول مباشرة (بدون رمز تحقق)</CardDescription>
+            <CardDescription>أدخل بريدك الإلكتروني لإرسال رمز التحقق</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="أدخل بريدك الإلكتروني"
+                className="text-left"
+                dir="ltr"
+                data-testid="input-email"
+              />
+            </div>
 
             <Button 
-              onClick={handleDirectLogin} 
+              onClick={handleSendOTP} 
               className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white text-lg py-3"
               disabled={isLoading || !email.trim()}
               data-testid="button-login"
             >
-              {isLoading ? "جارِ الدخول..." : "دخول مباشر"}
+              {isLoading ? "جارِ الإرسال..." : "إرسال رمز التحقق"}
             </Button>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-6">
               <Shield className="w-4 h-4" />
-              <span>دخول مباشر مؤقت للتطوير - بدون رمز تحقق</span>
+              <span>سيتم إرسال رمز التحقق إلى بريدك الإلكتروني</span>
             </div>
           </CardContent>
         </Card>

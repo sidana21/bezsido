@@ -57,7 +57,7 @@ export class AdminManager {
     try {
       // البحث عن مستخدم إدارة موجود
       const existingUsers = await this.storage.getAllUsers();
-      let adminUser = existingUsers.find(user => user.phoneNumber === "+213555123456" || user.phoneNumber === "+213123456789");
+      let adminUser = existingUsers.find(user => user.email === adminConfig.email || user.email === "admin@bizchat.dz");
       
       if (adminUser) {
         console.log('تم العثور على مستخدم إدارة موجود:', adminUser.name);
@@ -79,7 +79,7 @@ export class AdminManager {
       console.log('إنشاء مستخدم إدارة جديد...');
       adminUser = await this.storage.createUser({
         name: adminConfig.name || "المدير العام",
-        phoneNumber: "+213555123456",
+        email: adminConfig.email || "admin@bizchat.dz",
         location: "الجزائر",
         avatar: null,
         isOnline: true,
