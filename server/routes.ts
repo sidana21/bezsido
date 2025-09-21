@@ -659,15 +659,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await pool.query('SELECT 1');
           diagnostics.database.connected = true;
 
-          // Check if required tables exist
-          const tables = ['users', 'sessions', 'otp_codes', 'chats', 'messages'];
-          for (const table of tables) {
+          // Check if required tables exist with proper structure
+          const requiredTables = {
+            'users': ['id', 'phone_number', 'name', 'location', 'avatar', 'is_online', 'is_admin', 'created_at'],
+            'sessions': ['id', 'user_id', 'token', 'expires_at', 'created_at'],
+            'otp_codes': ['id', 'phone_number', 'code', 'expires_at', 'is_used', 'created_at'],
+            'chats': ['id', 'participants', 'last_message_at', 'created_at'],
+            'messages': ['id', 'chat_id', 'sender_id', 'content', 'type', 'created_at']
+          };
+
+          for (const [tableName, expectedColumns] of Object.entries(requiredTables)) {
             try {
-              const result = await pool.query(`SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '${table}'`);
-              diagnostics.database.tablesExist[table] = result.rows[0].count > 0;
+              const tableResult = await pool.query(`
+                SELECT COUNT(*) FROM information_schema.tables 
+                WHERE table_name = $1 AND table_schema = 'public'
+              `, [tableName]);
+              
+              const tableExists = tableResult.rows[0].count > 0;
+              diagnostics.database.tablesExist[tableName] = {
+                exists: tableExists,
+                columns: {}
+              };
+
+              if (tableExists) {
+                // Check column structure
+                const columnsResult = await pool.query(`
+                  SELECT column_name, data_type, is_nullable, column_default
+                  FROM information_schema.columns
+                  WHERE table_name = $1 AND table_schema = 'public'
+                  ORDER BY ordinal_position
+                `, [tableName]);
+
+                const actualColumns = columnsResult.rows.map(row => row.column_name);
+                
+                for (const expectedColumn of expectedColumns) {
+                  diagnostics.database.tablesExist[tableName].columns[expectedColumn] = 
+                    actualColumns.includes(expectedColumn);
+                }
+                
+                // Test basic operations
+                try {
+                  await pool.query(`SELECT 1 FROM ${tableName} LIMIT 1`);
+                  diagnostics.database.tablesExist[tableName].readable = true;
+                } catch (error: any) {
+                  diagnostics.database.tablesExist[tableName].readable = false;
+                  diagnostics.errors.push(`Table ${tableName} not readable: ${error.message}`);
+                }
+              }
             } catch (error: any) {
-              diagnostics.database.tablesExist[table] = false;
-              diagnostics.errors.push(`Table ${table}: ${error.message}`);
+              diagnostics.database.tablesExist[tableName] = {
+                exists: false,
+                error: error.message
+              };
+              diagnostics.errors.push(`Table ${tableName} check failed: ${error.message}`);
             }
           }
         }
@@ -687,6 +731,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.json(diagnostics);
+  });
+
+  // Database initialization endpoint for troubleshooting
+  app.post("/api/admin/init-database", async (req, res) => {
+    try {
+      // Only allow in development or with specific admin token
+      const isDev = process.env.NODE_ENV === 'development';
+      const hasValidToken = req.headers['x-admin-token'] === process.env.ADMIN_INIT_TOKEN;
+      
+      if (!isDev && !hasValidToken) {
+        return res.status(403).json({ 
+          message: "Unauthorized: Database initialization only allowed in development or with valid admin token" 
+        });
+      }
+
+      if (!process.env.DATABASE_URL) {
+        return res.status(400).json({ 
+          message: "Database URL not configured" 
+        });
+      }
+
+      const { pool } = await import("./db");
+      if (!pool) {
+        return res.status(500).json({ 
+          message: "Database connection not available" 
+        });
+      }
+
+      // Test connection first
+      await pool.query('SELECT 1');
+      
+      // Try to run a basic schema check
+      const results = {
+        connection: 'OK',
+        tables_checked: [],
+        errors: []
+      };
+
+      const basicTables = ['users', 'sessions', 'otp_codes'];
+      for (const table of basicTables) {
+        try {
+          await pool.query(`SELECT COUNT(*) FROM ${table} LIMIT 1`);
+          results.tables_checked.push(`${table}: EXISTS`);
+        } catch (error: any) {
+          if (error.code === '42P01') {
+            results.tables_checked.push(`${table}: MISSING`);
+            results.errors.push(`Table ${table} does not exist - run database migrations`);
+          } else {
+            results.tables_checked.push(`${table}: ERROR`);
+            results.errors.push(`Table ${table}: ${error.message}`);
+          }
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Database check completed", 
+        results 
+      });
+
+    } catch (error: any) {
+      res.status(500).json({ 
+        success: false, 
+        message: "Database check failed", 
+        error: error.message 
+      });
+    }
   });
 
   // Development endpoint to promote current user to admin
