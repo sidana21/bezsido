@@ -422,13 +422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: cleanLocation,
         avatar: null,
         isOnline: true,
-        isAdmin: false, // Regular users should not be admins by default
-        // Add automatic verification for data protection
-        isVerified: false,
-        verifiedAt: null,
-        lastSeen: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
+        isAdmin: false // Regular users should not be admins by default
       };
       
       console.log("📋 Creating new user with parsed data:", userData);
