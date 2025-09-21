@@ -525,6 +525,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diagnostic endpoint to check system health
+  app.get("/api/health", async (req, res) => {
+    const diagnostics = {
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      hasStorage: !!storage,
+      storageType: storage ? (storage.constructor.name || 'Unknown') : null,
+      database: {
+        configured: !!process.env.DATABASE_URL,
+        url: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
+        connected: false,
+        tablesExist: {}
+      },
+      server: {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        version: process.version
+      },
+      errors: []
+    };
+
+    // Test database connection
+    if (process.env.DATABASE_URL) {
+      try {
+        const { pool } = await import("./db");
+        if (pool) {
+          await pool.query('SELECT 1');
+          diagnostics.database.connected = true;
+
+          // Check if required tables exist
+          const tables = ['users', 'sessions', 'otp_codes', 'chats', 'messages'];
+          for (const table of tables) {
+            try {
+              const result = await pool.query(`SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '${table}'`);
+              diagnostics.database.tablesExist[table] = result.rows[0].count > 0;
+            } catch (error: any) {
+              diagnostics.database.tablesExist[table] = false;
+              diagnostics.errors.push(`Table ${table}: ${error.message}`);
+            }
+          }
+        }
+      } catch (error: any) {
+        diagnostics.database.connected = false;
+        diagnostics.errors.push(`Database connection: ${error.message}`);
+      }
+    }
+
+    // Test storage methods
+    try {
+      if (storage) {
+        await storage.getUserByPhoneNumber("test-health-check");
+      }
+    } catch (error: any) {
+      diagnostics.errors.push(`Storage test: ${error.message}`);
+    }
+
+    res.json(diagnostics);
+  });
+
   // Development endpoint to promote current user to admin
   app.post("/api/dev/make-admin", requireAuth, async (req: any, res) => {
     if (process.env.NODE_ENV !== 'development') {
