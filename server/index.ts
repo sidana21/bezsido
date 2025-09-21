@@ -61,6 +61,19 @@ app.use((req, res, next) => {
     console.error('Warning: Failed to initialize default stickers:', error);
   }
 
+  // Initialize daily missions on startup
+  try {
+    console.log('Initializing daily missions...');
+    if (typeof (storage as any).initializeDailyMissions === 'function') {
+      await (storage as any).initializeDailyMissions();
+      console.log('Daily missions initialized successfully');
+    } else {
+      console.log('Daily missions initialization not available in current storage type');
+    }
+  } catch (error) {
+    console.error('Warning: Failed to initialize daily missions:', error);
+  }
+
   // Initialize admin user (with data protection)
   try {
     console.log('Initializing admin user...');

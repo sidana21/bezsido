@@ -2586,28 +2586,504 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Placeholder implementations for remaining methods
-  async getDailyMissions(category?: string): Promise<DailyMission[]> { return []; }
-  async getUserDailyMissions(userId: string, date: string): Promise<UserMission[]> { return []; }
-  async updateMissionProgress(userId: string, missionId: string, increment = 1): Promise<UserMission | undefined> { return undefined; }
-  async completeMission(userId: string, missionId: string): Promise<UserMission | undefined> { return undefined; }
-  async initializeDailyMissions(): Promise<void> { }
-  async resetDailyMissions(userId: string, date: string): Promise<void> { }
-  async getReminders(userId: string): Promise<Reminder[]> { return []; }
-  async createReminder(reminder: InsertReminder): Promise<Reminder> { throw new Error('Not implemented'); }
-  async markReminderComplete(reminderId: string): Promise<void> { }
-  async getDueReminders(): Promise<Reminder[]> { return []; }
-  async deleteReminder(reminderId: string): Promise<void> { }
-  async getCustomerTags(userId: string): Promise<CustomerTag[]> { return []; }
-  async getContactTag(userId: string, contactId: string): Promise<CustomerTag | undefined> { return undefined; }
-  async setCustomerTag(tag: InsertCustomerTag): Promise<CustomerTag> { throw new Error('Not implemented'); }
-  async updateCustomerTag(tagId: string, updates: Partial<InsertCustomerTag>): Promise<CustomerTag | undefined> { return undefined; }
-  async deleteCustomerTag(tagId: string): Promise<void> { }
-  async getQuickReplies(userId: string, category?: string): Promise<QuickReply[]> { return []; }
-  async createQuickReply(reply: InsertQuickReply): Promise<QuickReply> { throw new Error('Not implemented'); }
-  async updateQuickReply(replyId: string, updates: Partial<InsertQuickReply>): Promise<QuickReply | undefined> { return undefined; }
-  async incrementQuickReplyUsage(replyId: string): Promise<void> { }
-  async deleteQuickReply(replyId: string): Promise<void> { }
+  // Daily Missions Implementation
+  async getDailyMissions(category?: string): Promise<DailyMission[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(dailyMissions).where(eq(dailyMissions.isActive, true));
+      
+      if (category) {
+        query = query.where(eq(dailyMissions.category, category));
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error('Error getting daily missions:', error);
+      return [];
+    }
+  }
+
+  async getUserDailyMissions(userId: string, date: string): Promise<UserMission[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      return await db.select()
+        .from(userMissions)
+        .innerJoin(dailyMissions, eq(userMissions.missionId, dailyMissions.id))
+        .where(and(
+          eq(userMissions.userId, userId),
+          eq(userMissions.date, date)
+        ));
+    } catch (error) {
+      console.error('Error getting user daily missions:', error);
+      return [];
+    }
+  }
+
+  async updateMissionProgress(userId: string, missionId: string, increment = 1): Promise<UserMission | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get or create user mission
+      let userMission = await db.select()
+        .from(userMissions)
+        .where(and(
+          eq(userMissions.userId, userId),
+          eq(userMissions.missionId, missionId),
+          eq(userMissions.date, today)
+        ))
+        .limit(1);
+      
+      if (userMission.length === 0) {
+        // Create new user mission
+        const newMission = {
+          id: randomUUID(),
+          userId,
+          missionId,
+          progress: increment,
+          isCompleted: false,
+          date: today,
+          createdAt: new Date()
+        };
+        
+        await db.insert(userMissions).values(newMission);
+        return newMission as UserMission;
+      } else {
+        // Update existing mission
+        const mission = userMission[0];
+        const newProgress = mission.progress + increment;
+        
+        // Check if mission is completed
+        const dailyMission = await db.select()
+          .from(dailyMissions)
+          .where(eq(dailyMissions.id, missionId))
+          .limit(1);
+        
+        const isCompleted = dailyMission.length > 0 && newProgress >= dailyMission[0].targetCount;
+        
+        const updatedMission = {
+          ...mission,
+          progress: newProgress,
+          isCompleted,
+          completedAt: isCompleted ? new Date() : mission.completedAt
+        };
+        
+        await db.update(userMissions)
+          .set(updatedMission)
+          .where(eq(userMissions.id, mission.id));
+        
+        // Award points if completed
+        if (isCompleted && !mission.isCompleted && dailyMission.length > 0) {
+          await this.addPoints(userId, dailyMission[0].points, `مهمة: ${dailyMission[0].title}`, mission.id, 'mission');
+        }
+        
+        return updatedMission as UserMission;
+      }
+    } catch (error) {
+      console.error('Error updating mission progress:', error);
+      return undefined;
+    }
+  }
+
+  async completeMission(userId: string, missionId: string): Promise<UserMission | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      const updated = await db.update(userMissions)
+        .set({
+          isCompleted: true,
+          completedAt: new Date()
+        })
+        .where(and(
+          eq(userMissions.userId, userId),
+          eq(userMissions.missionId, missionId),
+          eq(userMissions.date, today)
+        ))
+        .returning();
+      
+      return updated[0] as UserMission;
+    } catch (error) {
+      console.error('Error completing mission:', error);
+      return undefined;
+    }
+  }
+
+  async initializeDailyMissions(): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const existingMissions = await db.select().from(dailyMissions).limit(1);
+      if (existingMissions.length > 0) {
+        return; // Already initialized
+      }
+      
+      const defaultMissions = [
+        {
+          id: randomUUID(),
+          title: "إرسال رسالة ترحيب",
+          description: "أرسل رسالة لشخص جديد في المجتمع",
+          category: "social",
+          points: 10,
+          targetCount: 1,
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: randomUUID(),
+          title: "تقديم المساعدة",
+          description: "ساعد شخصاً في طلب مساعدة",
+          category: "help",
+          points: 20,
+          targetCount: 1,
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: randomUUID(),
+          title: "نشر منتج",
+          description: "انشر منتجاً جديداً في متجرك",
+          category: "business",
+          points: 15,
+          targetCount: 1,
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: randomUUID(),
+          title: "تفاعل اجتماعي",
+          description: "تفاعل مع 3 قصص من الأشخاص",
+          category: "social",
+          points: 5,
+          targetCount: 3,
+          isActive: true,
+          createdAt: new Date()
+        }
+      ];
+      
+      await db.insert(dailyMissions).values(defaultMissions);
+      console.log('✅ Default daily missions initialized');
+    } catch (error) {
+      console.error('Error initializing daily missions:', error);
+    }
+  }
+
+  async resetDailyMissions(userId: string, date: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(userMissions)
+        .where(and(
+          eq(userMissions.userId, userId),
+          eq(userMissions.date, date)
+        ));
+    } catch (error) {
+      console.error('Error resetting daily missions:', error);
+    }
+  }
+
+  // Customer Tags Implementation
+  async getCustomerTags(userId: string): Promise<CustomerTag[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      return await db.select()
+        .from(customerTags)
+        .where(eq(customerTags.userId, userId));
+    } catch (error) {
+      console.error('Error getting customer tags:', error);
+      return [];
+    }
+  }
+
+  async getContactTag(userId: string, contactId: string): Promise<CustomerTag | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select()
+        .from(customerTags)
+        .where(and(
+          eq(customerTags.userId, userId),
+          eq(customerTags.contactId, contactId)
+        ))
+        .limit(1);
+      
+      return result[0];
+    } catch (error) {
+      console.error('Error getting contact tag:', error);
+      return undefined;
+    }
+  }
+
+  async setCustomerTag(tag: InsertCustomerTag): Promise<CustomerTag> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newTag = {
+        id: randomUUID(),
+        ...tag,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const inserted = await db.insert(customerTags).values(newTag).returning();
+      return inserted[0] as CustomerTag;
+    } catch (error) {
+      console.error('Error setting customer tag:', error);
+      throw error;
+    }
+  }
+
+  async updateCustomerTag(tagId: string, updates: Partial<InsertCustomerTag>): Promise<CustomerTag | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const updated = await db.update(customerTags)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(customerTags.id, tagId))
+        .returning();
+      
+      return updated[0] as CustomerTag;
+    } catch (error) {
+      console.error('Error updating customer tag:', error);
+      return undefined;
+    }
+  }
+
+  async deleteCustomerTag(tagId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(customerTags).where(eq(customerTags.id, tagId));
+    } catch (error) {
+      console.error('Error deleting customer tag:', error);
+    }
+  }
+
+  // Quick Replies Implementation
+  async getQuickReplies(userId: string, category?: string): Promise<QuickReply[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(quickReplies).where(eq(quickReplies.userId, userId));
+      
+      if (category) {
+        query = query.where(eq(quickReplies.category, category));
+      }
+      
+      return await query.orderBy(quickReplies.usageCount);
+    } catch (error) {
+      console.error('Error getting quick replies:', error);
+      return [];
+    }
+  }
+
+  async createQuickReply(reply: InsertQuickReply): Promise<QuickReply> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newReply = {
+        id: randomUUID(),
+        ...reply,
+        usageCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const inserted = await db.insert(quickReplies).values(newReply).returning();
+      return inserted[0] as QuickReply;
+    } catch (error) {
+      console.error('Error creating quick reply:', error);
+      throw error;
+    }
+  }
+
+  async updateQuickReply(replyId: string, updates: Partial<InsertQuickReply>): Promise<QuickReply | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const updated = await db.update(quickReplies)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(quickReplies.id, replyId))
+        .returning();
+      
+      return updated[0] as QuickReply;
+    } catch (error) {
+      console.error('Error updating quick reply:', error);
+      return undefined;
+    }
+  }
+
+  async incrementQuickReplyUsage(replyId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.update(quickReplies)
+        .set({ 
+          usageCount: sql`${quickReplies.usageCount} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(quickReplies.id, replyId));
+    } catch (error) {
+      console.error('Error incrementing quick reply usage:', error);
+    }
+  }
+
+  async deleteQuickReply(replyId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(quickReplies).where(eq(quickReplies.id, replyId));
+    } catch (error) {
+      console.error('Error deleting quick reply:', error);
+    }
+  }
+
+  // Reminders Implementation
+  async getReminders(userId: string): Promise<Reminder[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      return await db.select()
+        .from(reminders)
+        .where(and(
+          eq(reminders.userId, userId),
+          eq(reminders.isCompleted, false)
+        ))
+        .orderBy(reminders.reminderTime);
+    } catch (error) {
+      console.error('Error getting reminders:', error);
+      return [];
+    }
+  }
+
+  async createReminder(reminder: InsertReminder): Promise<Reminder> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newReminder = {
+        id: randomUUID(),
+        ...reminder,
+        isCompleted: false,
+        createdAt: new Date()
+      };
+      
+      const inserted = await db.insert(reminders).values(newReminder).returning();
+      return inserted[0] as Reminder;
+    } catch (error) {
+      console.error('Error creating reminder:', error);
+      throw error;
+    }
+  }
+
+  async markReminderComplete(reminderId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.update(reminders)
+        .set({ 
+          isCompleted: true,
+          completedAt: new Date()
+        })
+        .where(eq(reminders.id, reminderId));
+    } catch (error) {
+      console.error('Error marking reminder complete:', error);
+    }
+  }
+
+  async getDueReminders(): Promise<Reminder[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      return await db.select()
+        .from(reminders)
+        .where(and(
+          eq(reminders.isCompleted, false),
+          sql`${reminders.reminderTime} <= NOW()`
+        ))
+        .orderBy(reminders.reminderTime);
+    } catch (error) {
+      console.error('Error getting due reminders:', error);
+      return [];
+    }
+  }
+
+  async deleteReminder(reminderId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(reminders).where(eq(reminders.id, reminderId));
+    } catch (error) {
+      console.error('Error deleting reminder:', error);
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database

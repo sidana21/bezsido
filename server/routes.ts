@@ -2915,6 +2915,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add missing help route that frontend is calling
+  app.post("/api/help-requests/:requestId/help", requireAuth, async (req: any, res: any) => {
+    try {
+      const { requestId } = req.params;
+      const request = await storage.acceptHelpRequest(requestId, req.userId);
+      
+      if (request) {
+        // Award points for offering help
+        await storage.addPoints(req.userId, 10, "تقديم المساعدة", requestId, "help_offer");
+      }
+      
+      res.json(request);
+    } catch (error) {
+      console.error("Error offering help:", error);
+      res.status(500).json({ message: "Failed to offer help" });
+    }
+  });
+
+  // Add missing routes for specific help request queries
+  app.get("/api/help-requests/all", requireAuth, async (req: any, res: any) => {
+    try {
+      const requests = await storage.getHelpRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error getting all help requests:", error);
+      res.status(500).json({ message: "Failed to get help requests" });
+    }
+  });
+
+  app.get("/api/help-requests/groups", requireAuth, async (req: any, res: any) => {
+    try {
+      const userGroups = await storage.getUserNeighborhoodGroups(req.userId);
+      const groupIds = userGroups.map(g => g.id);
+      
+      let allRequests: any[] = [];
+      for (const groupId of groupIds) {
+        const requests = await storage.getHelpRequests(groupId);
+        allRequests = allRequests.concat(requests);
+      }
+      
+      res.json(allRequests);
+    } catch (error) {
+      console.error("Error getting group help requests:", error);
+      res.status(500).json({ message: "Failed to get group help requests" });
+    }
+  });
+
   app.get("/api/my-helper-requests", requireAuth, async (req: any, res: any) => {
     try {
       const requests = await storage.getUserHelperRequests(req.userId);
