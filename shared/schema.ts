@@ -5,7 +5,7 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  phoneNumber: varchar("phone_number").notNull().unique(),
+  email: varchar("email").notNull().unique(),
   name: text("name").notNull(),
   avatar: text("avatar"),
   location: text("location").notNull(), // المنطقة الجغرافية
@@ -33,7 +33,7 @@ export const sessions = pgTable("sessions", {
 // OTP verification table
 export const otpCodes = pgTable("otp_codes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  phoneNumber: varchar("phone_number").notNull(),
+  email: varchar("email").notNull(),
   code: varchar("code").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   isUsed: boolean("is_used").default(false),

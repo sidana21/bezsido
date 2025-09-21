@@ -48,6 +48,7 @@ import {
   type QuickReply
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { emailService } from "./services/emailService";
 import { AdminManager } from "./admin-manager";
 
 // Configure multer for file uploads (images and videos)
@@ -199,82 +200,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authentication routes
+  // Authentication routes - Email-based OTP
   app.post("/api/auth/send-otp", async (req, res) => {
     try {
-      const { phoneNumber } = req.body;
+      const { email } = req.body;
       
-      if (!phoneNumber) {
-        return res.status(400).json({ message: "رقم الهاتف مطلوب" });
+      if (!email) {
+        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
       }
       
-      // Normalize phone number to avoid format inconsistencies
-      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber.trim());
-      
-      // Validate phone number format after normalization
-      if (!normalizedPhoneNumber.startsWith('+') || normalizedPhoneNumber.length < 10) {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
         return res.status(400).json({ 
-          message: "تأكد من صحة تنسيق رقم الهاتف (مثال: +213xxxxxxxxx)" 
+          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
         });
       }
       
+      // Clean and normalize email
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      console.log(`📧 Sending OTP to email: ${normalizedEmail}`);
+      
       // Generate 6-digit OTP
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = emailService.generateOTP();
       
       const otpData = insertOtpSchema.parse({
-        phoneNumber: normalizedPhoneNumber,
+        email: normalizedEmail,
         code,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes for email
         isUsed: false,
       });
       
       await storage.createOtpCode(otpData);
       
       // Store last OTP for development
-      (global as any).lastOtp = { phoneNumber: normalizedPhoneNumber, code, timestamp: Date.now() };
+      (global as any).lastOtp = { email: normalizedEmail, code, timestamp: Date.now() };
       
-      let smsDelivered = false;
-      let smsError = null;
+      // Send OTP via email
+      let emailSent = false;
+      let emailError = null;
       
-      // Try to send SMS via Twilio if credentials are available
-      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
-        try {
-          const { default: twilio } = await import('twilio');
-          const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-          
-          await client.messages.create({
-            body: `رمز التحقق الخاص بك في BizChat هو: ${code}`,
-            from: process.env.TWILIO_PHONE_NUMBER,
-            to: normalizedPhoneNumber
-          });
-          
-          smsDelivered = true;
-          console.log(`✅ SMS sent successfully to ${normalizedPhoneNumber}: ${code}`);
-        } catch (twilioError: any) {
-          smsError = twilioError.message;
-          console.error('❌ Twilio SMS error:', twilioError);
+      try {
+        emailSent = await emailService.sendOTP(normalizedEmail, code);
+        if (emailSent) {
+          console.log(`✅ Email OTP sent successfully to ${normalizedEmail}: ${code}`);
         }
-      } else {
-        console.log('ℹ️ Twilio credentials not configured, showing OTP directly');
+      } catch (error: any) {
+        emailError = error.message;
+        console.error('❌ Email sending error:', error);
       }
       
       // Only show OTP directly in development mode for security
       const shouldShowOTP = process.env.NODE_ENV === 'development';
       
-      let message = "تم إرسال رمز التحقق عبر الرسائل النصية";
+      let message = "تم إرسال رمز التحقق عبر البريد الإلكتروني";
       if (shouldShowOTP) {
-        message = smsDelivered ? 
-          `تم إرسال الرمز عبر SMS وهو: ${code}` : 
+        message = emailSent ? 
+          `تم إرسال الرمز عبر البريد الإلكتروني وهو: ${code}` : 
           `رمز التحقق: ${code}`;
-      } else if (!smsDelivered && smsError) {
-        message = "حدث خطأ في إرسال الرسالة النصية، يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني";
+      } else if (!emailSent && emailError) {
+        message = "حدث خطأ في إرسال البريد الإلكتروني، يرجى التأكد من صحة عنوان البريد والمحاولة مرة أخرى";
       }
       
       // Log for debugging (be careful with OTP in production logs)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`OTP for ${normalizedPhoneNumber}: ${code} (SMS delivered: ${smsDelivered})`);
+        console.log(`OTP for ${normalizedEmail}: ${code} (Email delivered: ${emailSent})`);
       } else {
-        console.log(`OTP sent to ${normalizedPhoneNumber} (SMS delivered: ${smsDelivered})`);
+        console.log(`OTP sent to ${normalizedEmail} (Email delivered: ${emailSent})`);
       }
       
       res.json({ 
@@ -295,37 +288,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/auth/verify-otp", async (req, res) => {
     try {
-      const { phoneNumber, code } = req.body;
+      const { email, code } = req.body;
       
-      if (!phoneNumber || !code) {
-        return res.status(400).json({ message: "رقم الهاتف ورمز التحقق مطلوبان" });
+      if (!email || !code) {
+        return res.status(400).json({ message: "البريد الإلكتروني ورمز التحقق مطلوبان" });
       }
       
-      // Normalize phone number to match the format used when storing OTP
-      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber.trim());
+      // Clean and normalize email
+      const normalizedEmail = email.trim().toLowerCase();
       
-      console.log(`🔍 Verifying OTP for normalized phone: ${normalizedPhoneNumber}, code: ${code}`);
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(normalizedEmail)) {
+        return res.status(400).json({ 
+          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
+        });
+      }
       
-      const isValidOtp = await storage.verifyOtpCode(normalizedPhoneNumber, code);
+      console.log(`🔍 Verifying OTP for email: ${normalizedEmail}, code: ${code}`);
+      
+      const isValidOtp = await storage.verifyOtpCode(normalizedEmail, code);
       
       if (!isValidOtp) {
-        console.log(`❌ Invalid OTP for ${normalizedPhoneNumber}`);
+        console.log(`❌ Invalid OTP for ${normalizedEmail}`);
         return res.status(400).json({ message: "رمز التحقق غير صحيح أو منتهي الصلاحية" });
       }
       
-      console.log(`✅ OTP verified for ${normalizedPhoneNumber}`);
+      console.log(`✅ OTP verified for ${normalizedEmail}`);
       
       // Check if user exists
-      let user = await storage.getUserByPhoneNumber(normalizedPhoneNumber);
-      console.log(`🔍 User search result for ${phoneNumber}:`, user ? `Found: ${user.name} (${user.id})` : 'Not found');
+      let user = await storage.getUserByEmail(normalizedEmail);
+      console.log(`🔍 User search result for ${email}:`, user ? `Found: ${user.name} (${user.id})` : 'Not found');
       
       if (!user) {
         // OTP is valid but user doesn't exist - need profile setup
-        console.log(`📝 User ${phoneNumber} needs profile setup`);
+        console.log(`📝 User ${email} needs profile setup`);
         return res.json({ 
           success: true, 
           needsProfile: true,
-          message: "OTP verified successfully. Please complete your profile." 
+          email: normalizedEmail, // Pass email for profile setup
+          message: "تم التحقق بنجاح. يرجى إكمال بياناتك الشخصية." 
         });
       } else {
         // Existing user - update online status and create session
@@ -347,7 +349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: true, 
           user, 
           token,
-          message: "Authentication successful" 
+          message: "تم تسجيل الدخول بنجاح" 
         });
       }
     } catch (error) {
@@ -412,12 +414,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new user after OTP verification
+  // Create new user after email OTP verification
   app.post("/api/auth/create-user", async (req, res) => {
     try {
-      const { phoneNumber, name, location } = req.body;
+      const { email, name, location } = req.body;
       
-      console.log("📱 Creating user with:", { phoneNumber, name, location });
+      console.log("📧 Creating user with:", { email, name, location });
       
       // Check if storage is available
       if (!storage) {
@@ -429,11 +431,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Validate input data
-      if (!phoneNumber || typeof phoneNumber !== 'string' || !phoneNumber.trim()) {
-        console.log("❌ Missing or invalid phone number:", phoneNumber);
+      if (!email || typeof email !== 'string' || !email.trim()) {
+        console.log("❌ Missing or invalid email:", email);
         return res.status(400).json({ 
           success: false,
-          message: "رقم الهاتف مطلوب وصالح" 
+          message: "البريد الإلكتروني مطلوب وصالح" 
         });
       }
       
@@ -453,20 +455,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const cleanPhoneNumber = normalizePhoneNumber(phoneNumber.trim());
+      const cleanEmail = email.trim().toLowerCase();
       const cleanName = name.trim();
       const cleanLocation = location.trim();
       
-      // Additional phone number validation after normalization
-      if (!cleanPhoneNumber.startsWith('+') || cleanPhoneNumber.length < 10) {
+      // Additional email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
         return res.status(400).json({ 
           success: false,
-          message: "تأكد من صحة تنسيق رقم الهاتف (مثال: +213xxxxxxxxx)" 
+          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
         });
       }
       
       // Check if user already exists
-      let user = await storage.getUserByPhoneNumber(cleanPhoneNumber);
+      let user = await storage.getUserByEmail(cleanEmail);
       
       if (user) {
         console.log("👤 User already exists, logging them in:", user.id);
@@ -495,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create new user with enhanced data protection
       const userData = {
-        phoneNumber: cleanPhoneNumber,
+        email: cleanEmail,
         name: cleanName,
         location: cleanLocation,
         avatar: null,
