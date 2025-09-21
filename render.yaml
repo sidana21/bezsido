@@ -15,6 +15,18 @@ services:
         value: 10000
       - key: SESSION_SECRET
         generateValue: true
+      # Email service configuration (choose one method)
+      # Method 1: Gmail SMTP (Recommended for small scale)
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      # Method 2: SendGrid (Recommended for production)
+      - key: SENDGRID_API_KEY
+        sync: false
+      # Email sender address
+      - key: FROM_EMAIL
+        sync: false
     # Enable database migration if DATABASE_URL is provided
     preDeployCommand: |
       if [ -n "$DATABASE_URL" ]; then
