@@ -23,13 +23,29 @@ import {
   insertStoryLikeSchema,
   insertStoryCommentSchema,
   insertCallSchema,
+  insertNeighborhoodGroupSchema,
+  insertHelpRequestSchema,
+  insertPointTransactionSchema,
+  insertDailyMissionSchema,
+  insertUserMissionSchema,
+  insertReminderSchema,
+  insertCustomerTagSchema,
+  insertQuickReplySchema,
   type Store,
   type Product,
   type AffiliateLink,
   type Commission,
   type CartItem,
   type Order,
-  type Call
+  type Call,
+  type NeighborhoodGroup,
+  type HelpRequest,
+  type PointTransaction,
+  type DailyMission,
+  type UserMission,
+  type Reminder,
+  type CustomerTag,
+  type QuickReply
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { AdminManager } from "./admin-manager";
@@ -2714,6 +2730,397 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting call history:", error);
       res.status(500).json({ message: "Failed to get call history" });
+    }
+  });
+
+  // Neighborhood Groups Routes - مجموعات الحي
+  app.get("/api/neighborhood-groups", requireAuth, async (req: any, res: any) => {
+    try {
+      const { location } = req.query;
+      const groups = await storage.getNeighborhoodGroups(location);
+      res.json(groups);
+    } catch (error) {
+      console.error("Error getting neighborhood groups:", error);
+      res.status(500).json({ message: "Failed to get neighborhood groups" });
+    }
+  });
+
+  app.get("/api/neighborhood-groups/:groupId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { groupId } = req.params;
+      const group = await storage.getNeighborhoodGroup(groupId);
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      res.json(group);
+    } catch (error) {
+      console.error("Error getting neighborhood group:", error);
+      res.status(500).json({ message: "Failed to get neighborhood group" });
+    }
+  });
+
+  app.post("/api/neighborhood-groups", requireAuth, async (req: any, res: any) => {
+    try {
+      const groupData = insertNeighborhoodGroupSchema.parse({
+        ...req.body,
+        createdBy: req.userId
+      });
+      
+      const group = await storage.createNeighborhoodGroup(groupData);
+      res.json(group);
+    } catch (error) {
+      console.error("Error creating neighborhood group:", error);
+      res.status(500).json({ message: "Failed to create neighborhood group" });
+    }
+  });
+
+  app.post("/api/neighborhood-groups/:groupId/join", requireAuth, async (req: any, res: any) => {
+    try {
+      const { groupId } = req.params;
+      await storage.joinNeighborhoodGroup(groupId, req.userId);
+      res.json({ message: "Successfully joined group" });
+    } catch (error) {
+      console.error("Error joining neighborhood group:", error);
+      res.status(500).json({ message: "Failed to join neighborhood group" });
+    }
+  });
+
+  app.post("/api/neighborhood-groups/:groupId/leave", requireAuth, async (req: any, res: any) => {
+    try {
+      const { groupId } = req.params;
+      await storage.leaveNeighborhoodGroup(groupId, req.userId);
+      res.json({ message: "Successfully left group" });
+    } catch (error) {
+      console.error("Error leaving neighborhood group:", error);
+      res.status(500).json({ message: "Failed to leave neighborhood group" });
+    }
+  });
+
+  app.get("/api/my-neighborhood-groups", requireAuth, async (req: any, res: any) => {
+    try {
+      const groups = await storage.getUserNeighborhoodGroups(req.userId);
+      res.json(groups);
+    } catch (error) {
+      console.error("Error getting user neighborhood groups:", error);
+      res.status(500).json({ message: "Failed to get user neighborhood groups" });
+    }
+  });
+
+  // Help Requests Routes - طلبات المساعدة
+  app.get("/api/help-requests", requireAuth, async (req: any, res: any) => {
+    try {
+      const { groupId, status } = req.query;
+      const requests = await storage.getHelpRequests(groupId, status);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error getting help requests:", error);
+      res.status(500).json({ message: "Failed to get help requests" });
+    }
+  });
+
+  app.get("/api/help-requests/:requestId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { requestId } = req.params;
+      const request = await storage.getHelpRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Error getting help request:", error);
+      res.status(500).json({ message: "Failed to get help request" });
+    }
+  });
+
+  app.post("/api/help-requests", requireAuth, async (req: any, res: any) => {
+    try {
+      const requestData = insertHelpRequestSchema.parse({
+        ...req.body,
+        userId: req.userId
+      });
+      
+      const request = await storage.createHelpRequest(requestData);
+      
+      // Award points for creating help request
+      await storage.addPoints(req.userId, 5, "طلب مساعدة جديد", request.id, "help_request");
+      
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating help request:", error);
+      res.status(500).json({ message: "Failed to create help request" });
+    }
+  });
+
+  app.post("/api/help-requests/:requestId/accept", requireAuth, async (req: any, res: any) => {
+    try {
+      const { requestId } = req.params;
+      const request = await storage.acceptHelpRequest(requestId, req.userId);
+      
+      if (request) {
+        // Award points for accepting help
+        await storage.addPoints(req.userId, 10, "قبول طلب مساعدة", requestId, "help_accept");
+      }
+      
+      res.json(request);
+    } catch (error) {
+      console.error("Error accepting help request:", error);
+      res.status(500).json({ message: "Failed to accept help request" });
+    }
+  });
+
+  app.post("/api/help-requests/:requestId/complete", requireAuth, async (req: any, res: any) => {
+    try {
+      const { requestId } = req.params;
+      const { rating, feedback } = req.body;
+      
+      const request = await storage.completeHelpRequest(requestId, rating, feedback);
+      
+      if (request && request.helperId) {
+        // Award points for completing help
+        const points = rating >= 4 ? 20 : 15;
+        await storage.addPoints(request.helperId, points, "إكمال طلب مساعدة", requestId, "help_complete");
+        
+        // Award points to requester for rating
+        await storage.addPoints(request.userId, 5, "تقييم مساعدة", requestId, "help_rating");
+      }
+      
+      res.json(request);
+    } catch (error) {
+      console.error("Error completing help request:", error);
+      res.status(500).json({ message: "Failed to complete help request" });
+    }
+  });
+
+  app.post("/api/help-requests/:requestId/cancel", requireAuth, async (req: any, res: any) => {
+    try {
+      const { requestId } = req.params;
+      const request = await storage.cancelHelpRequest(requestId);
+      res.json(request);
+    } catch (error) {
+      console.error("Error cancelling help request:", error);
+      res.status(500).json({ message: "Failed to cancel help request" });
+    }
+  });
+
+  app.get("/api/my-help-requests", requireAuth, async (req: any, res: any) => {
+    try {
+      const requests = await storage.getUserHelpRequests(req.userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error getting user help requests:", error);
+      res.status(500).json({ message: "Failed to get user help requests" });
+    }
+  });
+
+  app.get("/api/my-helper-requests", requireAuth, async (req: any, res: any) => {
+    try {
+      const requests = await storage.getUserHelperRequests(req.userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error getting user helper requests:", error);
+      res.status(500).json({ message: "Failed to get user helper requests" });
+    }
+  });
+
+  // Points System Routes - نظام النقاط
+  app.get("/api/points", requireAuth, async (req: any, res: any) => {
+    try {
+      const points = await storage.getUserPoints(req.userId);
+      res.json({ points });
+    } catch (error) {
+      console.error("Error getting user points:", error);
+      res.status(500).json({ message: "Failed to get user points" });
+    }
+  });
+
+  app.get("/api/points/transactions", requireAuth, async (req: any, res: any) => {
+    try {
+      const transactions = await storage.getPointTransactions(req.userId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error getting point transactions:", error);
+      res.status(500).json({ message: "Failed to get point transactions" });
+    }
+  });
+
+  app.post("/api/points/update-streak", requireAuth, async (req: any, res: any) => {
+    try {
+      await storage.updateUserStreak(req.userId);
+      res.json({ message: "Streak updated successfully" });
+    } catch (error) {
+      console.error("Error updating user streak:", error);
+      res.status(500).json({ message: "Failed to update user streak" });
+    }
+  });
+
+  app.get("/api/leaderboard", requireAuth, async (req: any, res: any) => {
+    try {
+      const { limit = 10 } = req.query;
+      const topUsers = await storage.getTopUsers(parseInt(limit as string));
+      res.json(topUsers);
+    } catch (error) {
+      console.error("Error getting leaderboard:", error);
+      res.status(500).json({ message: "Failed to get leaderboard" });
+    }
+  });
+
+  // Customer Tags Routes - تصنيفات العملاء
+  app.get("/api/customer-tags", requireAuth, async (req: any, res: any) => {
+    try {
+      const tags = await storage.getCustomerTags(req.userId);
+      res.json(tags);
+    } catch (error) {
+      console.error("Error getting customer tags:", error);
+      res.status(500).json({ message: "Failed to get customer tags" });
+    }
+  });
+
+  app.post("/api/customer-tags", requireAuth, async (req: any, res: any) => {
+    try {
+      const tagData = insertCustomerTagSchema.parse({
+        ...req.body,
+        userId: req.userId
+      });
+      
+      const tag = await storage.setCustomerTag(tagData);
+      res.json(tag);
+    } catch (error) {
+      console.error("Error creating customer tag:", error);
+      res.status(500).json({ message: "Failed to create customer tag" });
+    }
+  });
+
+  app.put("/api/customer-tags/:tagId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { tagId } = req.params;
+      const tag = await storage.updateCustomerTag(tagId, req.body);
+      res.json(tag);
+    } catch (error) {
+      console.error("Error updating customer tag:", error);
+      res.status(500).json({ message: "Failed to update customer tag" });
+    }
+  });
+
+  app.delete("/api/customer-tags/:tagId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { tagId } = req.params;
+      await storage.deleteCustomerTag(tagId);
+      res.json({ message: "Customer tag deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting customer tag:", error);
+      res.status(500).json({ message: "Failed to delete customer tag" });
+    }
+  });
+
+  // Quick Replies Routes - الردود السريعة
+  app.get("/api/quick-replies", requireAuth, async (req: any, res: any) => {
+    try {
+      const { category } = req.query;
+      const replies = await storage.getQuickReplies(req.userId, category);
+      res.json(replies);
+    } catch (error) {
+      console.error("Error getting quick replies:", error);
+      res.status(500).json({ message: "Failed to get quick replies" });
+    }
+  });
+
+  app.post("/api/quick-replies", requireAuth, async (req: any, res: any) => {
+    try {
+      const replyData = insertQuickReplySchema.parse({
+        ...req.body,
+        userId: req.userId
+      });
+      
+      const reply = await storage.createQuickReply(replyData);
+      res.json(reply);
+    } catch (error) {
+      console.error("Error creating quick reply:", error);
+      res.status(500).json({ message: "Failed to create quick reply" });
+    }
+  });
+
+  app.put("/api/quick-replies/:replyId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { replyId } = req.params;
+      const reply = await storage.updateQuickReply(replyId, req.body);
+      res.json(reply);
+    } catch (error) {
+      console.error("Error updating quick reply:", error);
+      res.status(500).json({ message: "Failed to update quick reply" });
+    }
+  });
+
+  app.post("/api/quick-replies/:replyId/use", requireAuth, async (req: any, res: any) => {
+    try {
+      const { replyId } = req.params;
+      await storage.incrementQuickReplyUsage(replyId);
+      res.json({ message: "Quick reply usage incremented" });
+    } catch (error) {
+      console.error("Error incrementing quick reply usage:", error);
+      res.status(500).json({ message: "Failed to increment quick reply usage" });
+    }
+  });
+
+  app.delete("/api/quick-replies/:replyId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { replyId } = req.params;
+      await storage.deleteQuickReply(replyId);
+      res.json({ message: "Quick reply deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting quick reply:", error);
+      res.status(500).json({ message: "Failed to delete quick reply" });
+    }
+  });
+
+  // Reminders Routes - التذكيرات
+  app.get("/api/reminders", requireAuth, async (req: any, res: any) => {
+    try {
+      const reminders = await storage.getReminders(req.userId);
+      res.json(reminders);
+    } catch (error) {
+      console.error("Error getting reminders:", error);
+      res.status(500).json({ message: "Failed to get reminders" });
+    }
+  });
+
+  app.post("/api/reminders", requireAuth, async (req: any, res: any) => {
+    try {
+      const reminderData = insertReminderSchema.parse({
+        ...req.body,
+        userId: req.userId
+      });
+      
+      const reminder = await storage.createReminder(reminderData);
+      res.json(reminder);
+    } catch (error) {
+      console.error("Error creating reminder:", error);
+      res.status(500).json({ message: "Failed to create reminder" });
+    }
+  });
+
+  app.post("/api/reminders/:reminderId/complete", requireAuth, async (req: any, res: any) => {
+    try {
+      const { reminderId } = req.params;
+      await storage.markReminderComplete(reminderId);
+      
+      // Award points for completing reminder
+      await storage.addPoints(req.userId, 3, "إتمام تذكير", reminderId, "reminder_complete");
+      
+      res.json({ message: "Reminder marked as complete" });
+    } catch (error) {
+      console.error("Error completing reminder:", error);
+      res.status(500).json({ message: "Failed to complete reminder" });
+    }
+  });
+
+  app.delete("/api/reminders/:reminderId", requireAuth, async (req: any, res: any) => {
+    try {
+      const { reminderId } = req.params;
+      await storage.deleteReminder(reminderId);
+      res.json({ message: "Reminder deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting reminder:", error);
+      res.status(500).json({ message: "Failed to delete reminder" });
     }
   });
 
