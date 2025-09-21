@@ -10,19 +10,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { MessageCircle, Shield, KeyRound } from "lucide-react";
 import appIconUrl from '@/assets/app-icon.png';
 
-const countries = [
-  { code: "+213", name: "Algeria", flag: "🇩🇿" },
-  { code: "+966", name: "Saudi Arabia", flag: "🇸🇦" },
-  { code: "+971", name: "UAE", flag: "🇦🇪" },
-  { code: "+20", name: "Egypt", flag: "🇪🇬" },
-  { code: "+212", name: "Morocco", flag: "🇲🇦" },
-  { code: "+1", name: "USA", flag: "🇺🇸" },
-  { code: "+44", name: "UK", flag: "🇬🇧" },
-];
+// Email validation regex
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage() {
-  const [countryCode, setCountryCode] = useState("+213");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [location, setLocation] = useState("الجزائر");
   const [otpCode, setOtpCode] = useState("");
@@ -42,12 +34,9 @@ export default function LoginPage() {
     if (userBackup) {
       try {
         const backup = JSON.parse(userBackup);
-        if (backup.phoneNumber) {
-          // Auto-fill phone number for quick access
-          const phone = backup.phoneNumber.replace(/^\+\d+/, "");
-          const country = backup.phoneNumber.match(/^\+\d+/)?.[0] || "+213";
-          setPhoneNumber(phone);
-          setCountryCode(country);
+        if (backup.email) {
+          // Auto-fill email for quick access
+          setEmail(backup.email);
           setName(backup.name || "");
           setLocation(backup.location || "الجزائر");
           setShowQuickLogin(true);
@@ -65,26 +54,36 @@ export default function LoginPage() {
 
   // دخول مباشر بدون التحقق من OTP (مؤقت للتطوير)
   const handleDirectLogin = async () => {
-    if (!phoneNumber.trim()) {
+    if (!email.trim()) {
       toast({
         title: "خطأ",
-        description: "يرجى إدخال رقم الهاتف",
+        description: "يرجى إدخال البريد الإلكتروني",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate email format
+    if (!emailRegex.test(email.trim())) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال بريد إلكتروني صحيح",
         variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    const fullPhone = countryCode + phoneNumber.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
     try {
-      console.log("🚀 Attempting direct login for:", fullPhone);
+      console.log("🚀 Attempting direct login for:", cleanEmail);
       
       // محاولة الدخول المباشر بدون OTP
       const response = await apiRequest("/api/auth/direct-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: fullPhone }),
+        body: JSON.stringify({ email: cleanEmail }),
       });
 
       if (response.success) {
@@ -131,13 +130,13 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    const fullPhone = countryCode + phoneNumber.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
     try {
       const response = await apiRequest("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: fullPhone, code: otpCode }),
+        body: JSON.stringify({ email: cleanEmail, code: otpCode }),
       });
 
       if (response.success) {
@@ -192,16 +191,16 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    const fullPhone = countryCode + phoneNumber.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
     try {
-      console.log("Creating account with data:", { phoneNumber: fullPhone, name: name.trim(), location });
+      console.log("Creating account with data:", { email: cleanEmail, name: name.trim(), location });
       
       const response = await apiRequest("/api/auth/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          phoneNumber: fullPhone,
+          email: cleanEmail,
           name: name.trim(),
           location
         })
@@ -386,18 +385,18 @@ export default function LoginPage() {
 
   // Quick login for returning users
   const handleQuickLogin = async () => {
-    if (!phoneNumber.trim()) return;
+    if (!email.trim()) return;
     
     setIsLoading(true);
-    const fullPhone = countryCode + phoneNumber.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
     try {
-      console.log("🚀 Attempting quick login for returning user:", fullPhone);
+      console.log("🚀 Attempting quick login for returning user:", cleanEmail);
       const response = await apiRequest("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          phoneNumber: fullPhone,
+          email: cleanEmail,
           code: "QUICK_LOGIN", // Special code for quick login
           name: name.trim(),
           location: location.trim()
@@ -452,62 +451,17 @@ export default function LoginPage() {
           )}
         </div>
 
-        <Card className="border-0 shadow-lg" data-testid="card-phone-login">
+        <Card className="border-0 shadow-lg" data-testid="card-email-login">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl font-semibold">تسجيل الدخول</CardTitle>
-            <CardDescription>أدخل رقم هاتفك للدخول مباشرة (بدون رمز تحقق)</CardDescription>
+            <CardDescription>أدخل بريدك الإلكتروني للدخول مباشرة (بدون رمز تحقق)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="country">البلد</Label>
-              <Select value={countryCode} onValueChange={setCountryCode}>
-                <SelectTrigger data-testid="select-country">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {countries.map((country) => (
-                    <SelectItem key={country.code} value={country.code}>
-                      <div className="flex items-center gap-2">
-                        <span>{country.flag}</span>
-                        <span>{country.name}</span>
-                        <span className="text-muted-foreground">{country.code}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">رقم الهاتف</Label>
-              <div className="flex gap-2">
-                <div className="flex items-center px-3 py-2 border border-input rounded-md bg-background text-sm font-medium">
-                  {countryCode}
-                </div>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                  placeholder="555123456"
-                  className="flex-1"
-                  data-testid="input-phone-number"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && phoneNumber.trim()) {
-                      handleDirectLogin();
-                    }
-                  }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                سيتم تسجيل الدخول مباشرة بدون الحاجة لرمز التحقق
-              </p>
-            </div>
 
             <Button 
               onClick={handleDirectLogin} 
               className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white text-lg py-3"
-              disabled={isLoading || !phoneNumber.trim()}
+              disabled={isLoading || !email.trim()}
               data-testid="button-login"
             >
               {isLoading ? "جارِ الدخول..." : "دخول مباشر"}
