@@ -378,13 +378,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user) {
         // User doesn't exist - need profile setup
-        return res.status(404).json({ 
-          success: false,
+        console.log(`📝 New user detected for direct login: ${normalizedPhoneNumber}`);
+        return res.json({ 
+          success: true,
           needsProfile: true,
-          message: "مستخدم جديد - يحتاج إعداد الملف الشخصي" 
+          message: "مرحباً! يرجى إكمال بياناتك الشخصية" 
         });
       } else {
         // Existing user - update online status and create session
+        console.log(`👤 Direct login for existing user: ${user.name} (${normalizedPhoneNumber})`);
         await storage.updateUserOnlineStatus(user.id, true);
         
         // Create session
@@ -396,6 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         await storage.createSession(sessionData);
+        console.log(`🔑 Direct login session created for user ${user.id}`);
         
         res.json({ 
           success: true, 

@@ -63,7 +63,8 @@ export default function LoginPage() {
     "تندوف", "الجزائر", "وهران", "قسنطينة", "عنابة", "سطيف", "باتنة", "تيزي وزو", "بجاية", "مستغانم"
   ];
 
-  const handleSendOTP = async () => {
+  // دخول مباشر بدون التحقق من OTP (مؤقت للتطوير)
+  const handleDirectLogin = async () => {
     if (!phoneNumber.trim()) {
       toast({
         title: "خطأ",
@@ -77,29 +78,41 @@ export default function LoginPage() {
     const fullPhone = countryCode + phoneNumber.trim();
 
     try {
-      const response = await apiRequest("/api/auth/send-otp", {
+      console.log("🚀 Attempting direct login for:", fullPhone);
+      
+      // محاولة الدخول المباشر بدون OTP
+      const response = await apiRequest("/api/auth/direct-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phoneNumber: fullPhone }),
       });
 
       if (response.success) {
-        setShowOtpInput(true);
-        if (response.code) {
-          setGeneratedOtp(response.code);
+        if (response.needsProfile) {
+          // مستخدم جديد - عرض نموذج الملف الشخصي
+          console.log("New user detected, showing profile setup");
+          setShowProfile(true);
+          toast({
+            title: "مرحباً بك!",
+            description: "يرجى إكمال بياناتك الشخصية",
+          });
+        } else if (response.user && response.token) {
+          // مستخدم موجود - تسجيل دخول مباشر
+          console.log("✅ Existing user login successful:", response.user.name);
+          login(response.user, response.token);
+          toast({
+            title: "مرحباً " + response.user.name + "! 🎉",
+            description: "تم تسجيل الدخول بنجاح",
+          });
         }
-        toast({
-          title: "تم إرسال رمز التحقق",
-          description: response.message || "يرجى إدخال رمز التحقق المرسل",
-        });
       } else {
-        throw new Error(response.message || "فشل في إرسال رمز التحقق");
+        throw new Error(response.message || "فشل في تسجيل الدخول");
       }
     } catch (error: any) {
-      console.error("OTP sending error:", error);
+      console.error("Direct login error:", error);
       toast({
-        title: "خطأ",
-        description: error.message || "فشل في إرسال رمز التحقق",
+        title: "خطأ في تسجيل الدخول",
+        description: error.message || "تعذر تسجيل الدخول، تأكد من رقم الهاتف",
         variant: "destructive",
       });
     } finally {
@@ -399,12 +412,12 @@ export default function LoginPage() {
           description: `أهلاً وسهلاً ${response.user.name}`,
         });
       } else {
-        // Fall back to normal OTP flow
-        handleSendOTP();
+        // Fall back to direct login flow
+        handleDirectLogin();
       }
     } catch (error) {
-      console.warn("Quick login failed, using OTP:", error);
-      handleSendOTP();
+      console.warn("Quick login failed, using direct login:", error);
+      handleDirectLogin();
     } finally {
       setIsLoading(false);
     }
@@ -442,7 +455,7 @@ export default function LoginPage() {
         <Card className="border-0 shadow-lg" data-testid="card-phone-login">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl font-semibold">تسجيل الدخول</CardTitle>
-            <CardDescription>أدخل رقم هاتفك وسنرسل لك رمز التحقق</CardDescription>
+            <CardDescription>أدخل رقم هاتفك للدخول مباشرة (بدون رمز تحقق)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -481,28 +494,28 @@ export default function LoginPage() {
                   data-testid="input-phone-number"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && phoneNumber.trim()) {
-                      handleSendOTP();
+                      handleDirectLogin();
                     }
                   }}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                سيتم إرسال رمز التحقق وعرضه على الشاشة للأمان
+                سيتم تسجيل الدخول مباشرة بدون الحاجة لرمز التحقق
               </p>
             </div>
 
             <Button 
-              onClick={handleSendOTP} 
+              onClick={handleDirectLogin} 
               className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white text-lg py-3"
               disabled={isLoading || !phoneNumber.trim()}
               data-testid="button-login"
             >
-              {isLoading ? "جارِ الإرسال..." : "إرسال رمز التحقق"}
+              {isLoading ? "جارِ الدخول..." : "دخول مباشر"}
             </Button>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-6">
               <Shield className="w-4 h-4" />
-              <span>محمي بتشفير تام - التحقق برمز آمن</span>
+              <span>دخول مباشر مؤقت للتطوير - بدون رمز تحقق</span>
             </div>
           </CardContent>
         </Card>
