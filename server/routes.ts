@@ -356,12 +356,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Direct login without OTP (DEVELOPMENT ONLY - SECURITY RISK IN PRODUCTION)
+  // Direct login without OTP (⚠️ TEMPORARY - SECURITY RISK - FOR DEVELOPMENT/TESTING ONLY)
   app.post("/api/auth/direct-login", async (req, res) => {
-    // Only allow in development environment for security
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(404).json({ message: "Not found" });
-    }
+    // ⚠️ WARNING: This endpoint bypasses OTP verification
+    // TODO: Re-enable OTP verification before production deployment
+    console.warn("⚠️ WARNING: Direct login endpoint accessed without OTP verification");
     
     try {
       const { phoneNumber } = req.body;
