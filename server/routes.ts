@@ -51,6 +51,54 @@ import { randomUUID } from "crypto";
 import { emailService } from "./services/emailService";
 import { AdminManager } from "./admin-manager";
 
+// Rate limiting for OTP endpoints to prevent abuse
+class SimpleRateLimiter {
+  private requests: Map<string, number[]> = new Map();
+  private readonly windowMs: number;
+  private readonly maxRequests: number;
+
+  constructor(windowMs: number, maxRequests: number) {
+    this.windowMs = windowMs;
+    this.maxRequests = maxRequests;
+    
+    // Clean up old entries every 5 minutes
+    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+  }
+
+  isRateLimited(identifier: string): boolean {
+    const now = Date.now();
+    const requests = this.requests.get(identifier) || [];
+    
+    // Filter out old requests
+    const recentRequests = requests.filter(time => now - time < this.windowMs);
+    
+    if (recentRequests.length >= this.maxRequests) {
+      return true; // Rate limited
+    }
+    
+    // Add current request
+    recentRequests.push(now);
+    this.requests.set(identifier, recentRequests);
+    return false;
+  }
+
+  private cleanup() {
+    const now = Date.now();
+    for (const [identifier, requests] of this.requests.entries()) {
+      const recentRequests = requests.filter(time => now - time < this.windowMs);
+      if (recentRequests.length === 0) {
+        this.requests.delete(identifier);
+      } else {
+        this.requests.set(identifier, recentRequests);
+      }
+    }
+  }
+}
+
+// Rate limiters for different endpoints
+const sendOtpLimiter = new SimpleRateLimiter(10 * 60 * 1000, 3); // 3 requests per 10 minutes
+const verifyOtpLimiter = new SimpleRateLimiter(10 * 60 * 1000, 5); // 5 attempts per 10 minutes
+
 // Configure multer for file uploads (images and videos)
 const upload = multer({
   storage: multer.diskStorage({
@@ -172,6 +220,9 @@ const requireAdmin = async (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Trust proxy for accurate IP addresses behind load balancers
+  app.set('trust proxy', 1);
+  
   // Serve uploaded files statically
   app.use('/uploads', express.static('uploads'));
   
@@ -204,6 +255,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/send-otp", async (req, res) => {
     try {
       const { email } = req.body;
+      
+      // Rate limiting check
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      const emailKey = email ? email.trim().toLowerCase() : clientIP;
+      
+      if (sendOtpLimiter.isRateLimited(clientIP) || sendOtpLimiter.isRateLimited(emailKey)) {
+        console.warn(`🚫 Rate limit exceeded for send-otp: IP=${clientIP}, email=${emailKey}`);
+        return res.status(429).json({ 
+          success: false,
+          message: "لقد تجاوزت الحد المسموح به من الطلبات. يرجى المحاولة مرة أخرى بعد 10 دقائق" 
+        });
+      }
       
       if (!email) {
         return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
@@ -276,9 +339,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Only include OTP in development mode
         code: shouldShowOTP ? code : undefined,
         showDirectly: shouldShowOTP,
-        smsDelivered,
-        // Don't expose SMS errors in production
-        smsError: process.env.NODE_ENV === 'development' ? smsError : undefined
+        emailDelivered: emailSent,
+        // Don't expose email errors in production
+        emailError: process.env.NODE_ENV === 'development' ? emailError : undefined
       });
     } catch (error) {
       console.error('OTP sending error:', error);
@@ -289,6 +352,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/verify-otp", async (req, res) => {
     try {
       const { email, code } = req.body;
+      
+      // Rate limiting check
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      const emailKey = email ? email.trim().toLowerCase() : clientIP;
+      
+      if (verifyOtpLimiter.isRateLimited(clientIP) || verifyOtpLimiter.isRateLimited(emailKey)) {
+        console.warn(`🚫 Rate limit exceeded for verify-otp: IP=${clientIP}, email=${emailKey}`);
+        return res.status(429).json({ 
+          success: false,
+          message: "لقد تجاوزت الحد المسموح به من محاولات التحقق. يرجى المحاولة مرة أخرى بعد 10 دقائق" 
+        });
+      }
       
       if (!email || !code) {
         return res.status(400).json({ message: "البريد الإلكتروني ورمز التحقق مطلوبان" });
@@ -305,7 +380,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      console.log(`🔍 Verifying OTP for email: ${normalizedEmail}, code: ${code}`);
+      // Log verification attempt (without exposing OTP code in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔍 Verifying OTP for email: ${normalizedEmail}, code: ${code}`);
+      } else {
+        console.log(`🔍 Verifying OTP for email: ${normalizedEmail}`);
+      }
       
       const isValidOtp = await storage.verifyOtpCode(normalizedEmail, code);
       
@@ -358,36 +438,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Direct login without OTP (⚠️ TEMPORARY - SECURITY RISK - FOR DEVELOPMENT/TESTING ONLY)
+  // 🚫 DISABLED: Direct login endpoint - SECURITY VULNERABILITY
+  // This endpoint bypasses OTP verification and is a critical security risk
   app.post("/api/auth/direct-login", async (req, res) => {
-    // ⚠️ WARNING: This endpoint bypasses OTP verification
-    // TODO: Re-enable OTP verification before production deployment
-    console.warn("⚠️ WARNING: Direct login endpoint accessed without OTP verification");
+    // 🛑 CRITICAL SECURITY CHECK: Only allow in development with explicit flag
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const allowUnsafeLogin = process.env.ALLOW_UNSAFE_DIRECT_LOGIN === 'true';
+    
+    if (!isDevelopment || !allowUnsafeLogin) {
+      console.error("🚫 SECURITY: Direct login attempt blocked in production or without explicit flag");
+      return res.status(403).json({ 
+        success: false,
+        message: "هذه الخدمة غير متاحة لأسباب أمنية" 
+      });
+    }
+    
+    console.warn("⚠️ DEVELOPMENT ONLY: Unsafe direct login endpoint accessed");
     
     try {
-      const { phoneNumber } = req.body;
+      const { email } = req.body;
       
-      if (!phoneNumber) {
-        return res.status(400).json({ message: "رقم الهاتف مطلوب" });
+      if (!email) {
+        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
       }
       
-      // Normalize phone number to match storage format
-      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber.trim());
+      // Clean and validate email
+      const cleanEmail = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return res.status(400).json({ 
+          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
+        });
+      }
       
       // Check if user exists
-      let user = await storage.getUserByPhoneNumber(normalizedPhoneNumber);
+      let user = await storage.getUserByEmail(cleanEmail);
       
       if (!user) {
         // User doesn't exist - need profile setup
-        console.log(`📝 New user detected for direct login: ${normalizedPhoneNumber}`);
+        console.log(`📝 New user detected for unsafe direct login: ${cleanEmail}`);
         return res.json({ 
           success: true,
           needsProfile: true,
+          email: cleanEmail,
           message: "مرحباً! يرجى إكمال بياناتك الشخصية" 
         });
       } else {
         // Existing user - update online status and create session
-        console.log(`👤 Direct login for existing user: ${user.name} (${normalizedPhoneNumber})`);
+        console.log(`👤 UNSAFE direct login for existing user: ${user.name} (${cleanEmail})`);
         await storage.updateUserOnlineStatus(user.id, true);
         
         // Create session
@@ -399,13 +497,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         await storage.createSession(sessionData);
-        console.log(`🔑 Direct login session created for user ${user.id}`);
+        console.log(`🔑 UNSAFE direct login session created for user ${user.id}`);
         
         res.json({ 
           success: true, 
           user, 
           token,
-          message: "تم تسجيل الدخول بنجاح" 
+          message: "تم تسجيل الدخول بنجاح (وضع التطوير)" 
         });
       }
     } catch (error) {
@@ -643,12 +741,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Development endpoint to get last OTP
   app.get("/api/dev/last-otp", (req, res) => {
-    if (process.env.NODE_ENV && process.env.NODE_ENV !== 'development') {
+    // 🔒 SECURITY: Strict development-only access (fail-closed)
+    if (process.env.NODE_ENV !== 'development') {
       return res.status(404).json({ message: "Not found" });
     }
     const lastOtp = (global as any).lastOtp;
     if (lastOtp && Date.now() - lastOtp.timestamp < 300000) { // 5 minutes
-      res.json({ code: lastOtp.code, phoneNumber: lastOtp.phoneNumber });
+      res.json({ code: lastOtp.code, email: lastOtp.email });
     } else {
       res.json({ code: null });
     }
