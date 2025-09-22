@@ -11,10 +11,20 @@ import {
   type InsertSession, 
   type OtpCode, 
   type InsertOtp,
-  type Store,
-  type InsertStore,
+  type Vendor,
+  type InsertVendor,
+  type VendorCategory,
+  type InsertVendorCategory,
+  type VendorRating,
+  type InsertVendorRating,
+  type VendorSubscription,
+  type InsertVendorSubscription,
+  type ProductCategory,
+  type InsertProductCategory,
   type Product,
   type InsertProduct,
+  type ProductReview,
+  type InsertProductReview,
   type AffiliateLink,
   type InsertAffiliateLink,
   type Commission,
@@ -59,7 +69,7 @@ import {
   type InsertQuickReply
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, stores, verificationRequests, cartItems, stickers, products, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -160,17 +170,45 @@ export interface IStorage {
   getAllVerificationRequests(status?: string): Promise<VerificationRequest[]>;
   updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy'>>): Promise<VerificationRequest | undefined>;
   
-  // Stores and products
-  getStores(location?: string, category?: string): Promise<Store[]>;
-  getAllStores(): Promise<Store[]>;
-  getStore(storeId: string): Promise<Store | undefined>;
-  getUserStore(userId: string): Promise<Store | undefined>;
-  createStore(store: InsertStore): Promise<Store>;
-  updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined>;
-  updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Store | undefined>;
-  deleteStore(storeId: string): Promise<boolean>;
-  getStoreProducts(storeId: string): Promise<Product[]>;
+  // فئات البائعين - Vendor Categories
+  getVendorCategories(): Promise<VendorCategory[]>;
+  getVendorCategory(categoryId: string): Promise<VendorCategory | undefined>;
+  createVendorCategory(category: InsertVendorCategory): Promise<VendorCategory>;
+  updateVendorCategory(categoryId: string, updates: Partial<InsertVendorCategory>): Promise<VendorCategory | undefined>;
+  deleteVendorCategory(categoryId: string): Promise<boolean>;
+
+  // البائعين - Vendors
+  getVendors(location?: string, categoryId?: string, status?: string): Promise<Vendor[]>;
+  getAllVendors(): Promise<Vendor[]>;
+  getFeaturedVendors(): Promise<Vendor[]>;
+  getVendor(vendorId: string): Promise<Vendor | undefined>;
+  getUserVendor(userId: string): Promise<Vendor | undefined>;
+  createVendor(vendor: InsertVendor): Promise<Vendor>;
+  updateVendor(vendorId: string, updates: Partial<InsertVendor>): Promise<Vendor | undefined>;
+  updateVendorStatus(vendorId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Vendor | undefined>;
+  deleteVendor(vendorId: string): Promise<boolean>;
+  getVendorProducts(vendorId: string): Promise<Product[]>;
   getUserProducts(userId: string): Promise<Product[]>;
+
+  // تقييمات البائعين - Vendor Ratings
+  getVendorRatings(vendorId: string): Promise<VendorRating[]>;
+  createVendorRating(rating: InsertVendorRating): Promise<VendorRating>;
+  updateVendorRating(ratingId: string, updates: Partial<InsertVendorRating>): Promise<VendorRating | undefined>;
+  deleteVendorRating(ratingId: string): Promise<boolean>;
+  getVendorAverageRating(vendorId: string): Promise<number>;
+
+  // اشتراكات البائعين - Vendor Subscriptions
+  getVendorSubscription(vendorId: string): Promise<VendorSubscription | undefined>;
+  createVendorSubscription(subscription: InsertVendorSubscription): Promise<VendorSubscription>;
+  updateVendorSubscription(subscriptionId: string, updates: Partial<InsertVendorSubscription>): Promise<VendorSubscription | undefined>;
+  renewVendorSubscription(vendorId: string): Promise<VendorSubscription | undefined>;
+
+  // فئات المنتجات - Product Categories
+  getProductCategories(): Promise<ProductCategory[]>;
+  getProductCategory(categoryId: string): Promise<ProductCategory | undefined>;
+  createProductCategory(category: InsertProductCategory): Promise<ProductCategory>;
+  updateProductCategory(categoryId: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory | undefined>;
+  deleteProductCategory(categoryId: string): Promise<boolean>;
   
   // Products
   getProducts(location?: string, category?: string): Promise<Product[]>;
@@ -3448,7 +3486,10 @@ export class MemStorage implements IStorage {
   private adminCredentials: AdminCredentials | undefined;
   private calls = new Map<string, Call>();
   private stickers: any[] = [];
-  private stores = new Map<string, Store>();
+  private vendors = new Map<string, Vendor>();
+  private vendorCategories = new Map<string, VendorCategory>();
+  private vendorRatings = new Map<string, VendorRating>();
+  private vendorSubscriptions = new Map<string, VendorSubscription>();
   private products = new Map<string, Product>();
   private affiliateLinks = new Map<string, AffiliateLink>();
   private commissions = new Map<string, Commission>();
@@ -3466,6 +3507,8 @@ export class MemStorage implements IStorage {
     this.initializeDefaultFeatures();
     // Initialize free stickers collection
     this.initializeDefaultStickers();
+    // Initialize vendor categories and sample vendors
+    this.initializeDefaultVendorData();
   }
 
   // User methods
@@ -4440,6 +4483,299 @@ export class MemStorage implements IStorage {
     this.stickers.push(newSticker);
     return newSticker;
   }
+
+  // Initialize default vendor categories and sample vendors
+  private initializeDefaultVendorData() {
+    // Initialize vendor categories
+    const defaultCategories = [
+      {
+        id: 'electronics',
+        name: 'Electronics',
+        nameAr: 'الإلكترونيات',
+        description: 'Electronic devices and gadgets',
+        icon: '📱',
+        color: '#3B82F6',
+        sortOrder: 1,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'fashion',
+        name: 'Fashion',
+        nameAr: 'الأزياء',
+        description: 'Clothing and accessories',
+        icon: '👕',
+        color: '#EC4899',
+        sortOrder: 2,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'food',
+        name: 'Food & Beverage',
+        nameAr: 'الأطعمة والمشروبات',
+        description: 'Food, beverages and restaurants',
+        icon: '🍕',
+        color: '#F59E0B',
+        sortOrder: 3,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'home',
+        name: 'Home & Garden',
+        nameAr: 'المنزل والحديقة',
+        description: 'Home appliances and garden items',
+        icon: '🏠',
+        color: '#10B981',
+        sortOrder: 4,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'beauty',
+        name: 'Beauty & Health',
+        nameAr: 'الجمال والصحة',
+        description: 'Beauty products and health items',
+        icon: '💄',
+        color: '#8B5CF6',
+        sortOrder: 5,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'sports',
+        name: 'Sports & Fitness',
+        nameAr: 'الرياضة واللياقة',
+        description: 'Sports equipment and fitness gear',
+        icon: '⚽',
+        color: '#EF4444',
+        sortOrder: 6,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'books',
+        name: 'Books & Education',
+        nameAr: 'الكتب والتعليم',
+        description: 'Books, educational materials',
+        icon: '📚',
+        color: '#6366F1',
+        sortOrder: 7,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'services',
+        name: 'Services',
+        nameAr: 'الخدمات',
+        description: 'Professional and personal services',
+        icon: '🔧',
+        color: '#06B6D4',
+        sortOrder: 8,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+
+    defaultCategories.forEach(category => {
+      this.vendorCategories.set(category.id, category);
+    });
+
+    // Initialize sample vendors
+    const sampleVendors = [
+      {
+        id: 'vendor-electronics-1',
+        userId: 'user-vendor-1',
+        businessName: 'متجر التقنية الحديثة',
+        displayName: 'تك ستور',
+        description: 'متجر متخصص في بيع أحدث الأجهزة الإلكترونية والتقنية بأفضل الأسعار وأعلى جودة',
+        categoryId: 'electronics',
+        logoUrl: '',
+        bannerUrl: '',
+        location: 'الجزائر العاصمة',
+        address: 'شارع ديدوش مراد، الجزائر العاصمة',
+        phoneNumber: '+213 555 123 456',
+        whatsappNumber: '+213 555 123 456',
+        email: 'info@techstore.dz',
+        website: 'https://techstore.dz',
+        socialLinks: {
+          facebook: 'https://facebook.com/techstore.dz',
+          instagram: 'https://instagram.com/techstore.dz'
+        },
+        status: 'approved',
+        isActive: true,
+        isVerified: true,
+        isFeatured: true,
+        isPremium: true,
+        averageRating: '4.8',
+        totalReviews: 324,
+        totalProducts: 89,
+        totalSales: '2580000',
+        totalOrders: 1247,
+        workingHours: {
+          sunday: { open: '09:00', close: '18:00', isOpen: true },
+          monday: { open: '09:00', close: '18:00', isOpen: true },
+          tuesday: { open: '09:00', close: '18:00', isOpen: true },
+          wednesday: { open: '09:00', close: '18:00', isOpen: true },
+          thursday: { open: '09:00', close: '18:00', isOpen: true },
+          friday: { open: '14:00', close: '18:00', isOpen: true },
+          saturday: { open: '09:00', close: '18:00', isOpen: true }
+        },
+        deliveryAreas: ['الجزائر العاصمة', 'بومرداس', 'تيزي وزو', 'البليدة'],
+        deliveryFee: '500',
+        minOrderAmount: '2000',
+        createdAt: new Date('2024-01-15'),
+        updatedAt: new Date()
+      },
+      {
+        id: 'vendor-fashion-1',
+        userId: 'user-vendor-2',
+        businessName: 'بوتيك الأناقة النسائية',
+        displayName: 'أناقة مودرن',
+        description: 'بوتيك متخصص في الأزياء النسائية العصرية والكلاسيكية، نقدم أجمل التصاميم وأحدث الموضة',
+        categoryId: 'fashion',
+        logoUrl: '',
+        bannerUrl: '',
+        location: 'وهران',
+        address: 'شارع الأمير عبد القادر، وهران',
+        phoneNumber: '+213 556 234 567',
+        whatsappNumber: '+213 556 234 567',
+        email: 'contact@anaqamodern.dz',
+        website: '',
+        socialLinks: {
+          facebook: 'https://facebook.com/anaqamodern',
+          instagram: 'https://instagram.com/anaqamodern'
+        },
+        status: 'approved',
+        isActive: true,
+        isVerified: true,
+        isFeatured: false,
+        isPremium: false,
+        averageRating: '4.6',
+        totalReviews: 156,
+        totalProducts: 45,
+        totalSales: '890000',
+        totalOrders: 423,
+        workingHours: {
+          sunday: { open: '10:00', close: '19:00', isOpen: true },
+          monday: { open: '10:00', close: '19:00', isOpen: true },
+          tuesday: { open: '10:00', close: '19:00', isOpen: true },
+          wednesday: { open: '10:00', close: '19:00', isOpen: true },
+          thursday: { open: '10:00', close: '19:00', isOpen: true },
+          friday: { open: '10:00', close: '19:00', isOpen: false },
+          saturday: { open: '10:00', close: '19:00', isOpen: true }
+        },
+        deliveryAreas: ['وهران', 'مستغانم', 'معسكر'],
+        deliveryFee: '400',
+        minOrderAmount: '3000',
+        createdAt: new Date('2024-02-20'),
+        updatedAt: new Date()
+      },
+      {
+        id: 'vendor-food-1',
+        userId: 'user-vendor-3',
+        businessName: 'مطعم الذواقة',
+        displayName: 'ذواقة الشرق',
+        description: 'مطعم متخصص في المأكولات الشرقية والتقليدية، نقدم أشهى الأطباق المحضرة بأجود المكونات',
+        categoryId: 'food',
+        logoUrl: '',
+        bannerUrl: '',
+        location: 'قسنطينة',
+        address: 'شارع العربي بن مهيدي، قسنطينة',
+        phoneNumber: '+213 557 345 678',
+        whatsappNumber: '+213 557 345 678',
+        email: 'orders@zawaqasharq.dz',
+        website: 'https://zawaqasharq.dz',
+        socialLinks: {
+          facebook: 'https://facebook.com/zawaqasharq',
+          instagram: 'https://instagram.com/zawaqasharq'
+        },
+        status: 'approved',
+        isActive: true,
+        isVerified: true,
+        isFeatured: true,
+        isPremium: false,
+        averageRating: '4.9',
+        totalReviews: 567,
+        totalProducts: 23,
+        totalSales: '1250000',
+        totalOrders: 2340,
+        workingHours: {
+          sunday: { open: '11:00', close: '23:00', isOpen: true },
+          monday: { open: '11:00', close: '23:00', isOpen: true },
+          tuesday: { open: '11:00', close: '23:00', isOpen: true },
+          wednesday: { open: '11:00', close: '23:00', isOpen: true },
+          thursday: { open: '11:00', close: '23:00', isOpen: true },
+          friday: { open: '11:00', close: '23:00', isOpen: true },
+          saturday: { open: '11:00', close: '23:00', isOpen: true }
+        },
+        deliveryAreas: ['قسنطينة', 'عنابة', 'باتنة', 'سطيف'],
+        deliveryFee: '300',
+        minOrderAmount: '1500',
+        createdAt: new Date('2024-01-05'),
+        updatedAt: new Date()
+      },
+      {
+        id: 'vendor-beauty-1',
+        userId: 'user-vendor-4',
+        businessName: 'صالون الجمال الملكي',
+        displayName: 'الجمال الملكي',
+        description: 'صالون متخصص في خدمات التجميل والعناية بالبشرة والشعر، مع أحدث التقنيات والمنتجات العالمية',
+        categoryId: 'beauty',
+        logoUrl: '',
+        bannerUrl: '',
+        location: 'سطيف',
+        address: 'شارع 8 مايو 1945، سطيف',
+        phoneNumber: '+213 558 456 789',
+        whatsappNumber: '+213 558 456 789',
+        email: 'booking@royalbeauty.dz',
+        website: '',
+        socialLinks: {
+          facebook: 'https://facebook.com/royalbeauty.dz',
+          instagram: 'https://instagram.com/royalbeauty.dz'
+        },
+        status: 'approved',
+        isActive: true,
+        isVerified: false,
+        isFeatured: false,
+        isPremium: false,
+        averageRating: '4.4',
+        totalReviews: 89,
+        totalProducts: 12,
+        totalSales: '340000',
+        totalOrders: 234,
+        workingHours: {
+          sunday: { open: '09:00', close: '17:00', isOpen: true },
+          monday: { open: '09:00', close: '17:00', isOpen: true },
+          tuesday: { open: '09:00', close: '17:00', isOpen: true },
+          wednesday: { open: '09:00', close: '17:00', isOpen: true },
+          thursday: { open: '09:00', close: '17:00', isOpen: true },
+          friday: { open: '09:00', close: '17:00', isOpen: false },
+          saturday: { open: '09:00', close: '17:00', isOpen: true }
+        },
+        deliveryAreas: ['سطيف', 'برج بوعريريج'],
+        deliveryFee: '600',
+        minOrderAmount: '2500',
+        createdAt: new Date('2024-03-10'),
+        updatedAt: new Date()
+      }
+    ];
+
+    sampleVendors.forEach(vendor => {
+      this.vendors.set(vendor.id, vendor);
+    });
+
+    console.log(`✅ Initialized ${defaultCategories.length} vendor categories and ${sampleVendors.length} sample vendors`);
+  }
   
   // Cart implementation for MemStorage
   async getCartItems(userId: string): Promise<any[]> {
@@ -4958,13 +5294,280 @@ export class MemStorage implements IStorage {
   async incrementQuickReplyUsage(replyId: string): Promise<void> { }
   async deleteQuickReply(replyId: string): Promise<void> { }
   
+  // فئات البائعين - Vendor Categories
+  private vendorCategories = new Map<string, VendorCategory>();
+  
+  async getVendorCategories(): Promise<VendorCategory[]> {
+    return Array.from(this.vendorCategories.values());
+  }
+  
+  async getVendorCategory(categoryId: string): Promise<VendorCategory | undefined> {
+    return this.vendorCategories.get(categoryId);
+  }
+  
+  async createVendorCategory(category: InsertVendorCategory): Promise<VendorCategory> {
+    const newCategory: VendorCategory = {
+      id: randomUUID(),
+      ...category,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.vendorCategories.set(newCategory.id, newCategory);
+    return newCategory;
+  }
+  
+  async updateVendorCategory(categoryId: string, updates: Partial<InsertVendorCategory>): Promise<VendorCategory | undefined> {
+    const category = this.vendorCategories.get(categoryId);
+    if (!category) return undefined;
+    
+    const updatedCategory = { ...category, ...updates, updatedAt: new Date() };
+    this.vendorCategories.set(categoryId, updatedCategory);
+    return updatedCategory;
+  }
+  
+  async deleteVendorCategory(categoryId: string): Promise<boolean> {
+    return this.vendorCategories.delete(categoryId);
+  }
+
+  // البائعين - Vendors
+  private vendors = new Map<string, Vendor>();
+  private vendorRatings = new Map<string, VendorRating>();
+  private vendorSubscriptions = new Map<string, VendorSubscription>();
+  private productCategories = new Map<string, ProductCategory>();
+  private productReviews = new Map<string, ProductReview>();
+  
+  async getVendors(location?: string, categoryId?: string, status?: string): Promise<Vendor[]> {
+    let vendors = Array.from(this.vendors.values());
+    
+    if (location) {
+      vendors = vendors.filter(vendor => vendor.location.includes(location));
+    }
+    if (categoryId) {
+      vendors = vendors.filter(vendor => vendor.categoryId === categoryId);
+    }
+    if (status) {
+      vendors = vendors.filter(vendor => vendor.status === status);
+    }
+    
+    return vendors;
+  }
+  
+  async getAllVendors(): Promise<Vendor[]> {
+    return Array.from(this.vendors.values());
+  }
+  
+  async getFeaturedVendors(): Promise<Vendor[]> {
+    return Array.from(this.vendors.values())
+      .filter(vendor => vendor.isFeatured && vendor.status === 'approved');
+  }
+  
+  async getVendor(vendorId: string): Promise<Vendor | undefined> {
+    return this.vendors.get(vendorId);
+  }
+  
+  async getUserVendor(userId: string): Promise<Vendor | undefined> {
+    return Array.from(this.vendors.values())
+      .find(vendor => vendor.userId === userId);
+  }
+  
+  async createVendor(vendor: InsertVendor): Promise<Vendor> {
+    const newVendor: Vendor = {
+      id: randomUUID(),
+      ...vendor,
+      totalSales: '0',
+      totalOrders: 0,
+      totalProducts: 0,
+      averageRating: '0',
+      totalReviews: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.vendors.set(newVendor.id, newVendor);
+    return newVendor;
+  }
+  
+  async updateVendor(vendorId: string, updates: Partial<InsertVendor>): Promise<Vendor | undefined> {
+    const vendor = this.vendors.get(vendorId);
+    if (!vendor) return undefined;
+    
+    const updatedVendor = { ...vendor, ...updates, updatedAt: new Date() };
+    this.vendors.set(vendorId, updatedVendor);
+    return updatedVendor;
+  }
+  
+  async updateVendorStatus(vendorId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Vendor | undefined> {
+    const vendor = this.vendors.get(vendorId);
+    if (!vendor) return undefined;
+    
+    const updatedVendor = { 
+      ...vendor, 
+      status, 
+      approvedBy: status === 'approved' ? reviewedBy : vendor.approvedBy,
+      approvedAt: status === 'approved' ? new Date() : vendor.approvedAt,
+      rejectionReason: status === 'rejected' ? rejectionReason : vendor.rejectionReason,
+      updatedAt: new Date()
+    };
+    
+    this.vendors.set(vendorId, updatedVendor);
+    return updatedVendor;
+  }
+  
+  async deleteVendor(vendorId: string): Promise<boolean> {
+    return this.vendors.delete(vendorId);
+  }
+  
+  async getVendorProducts(vendorId: string): Promise<Product[]> {
+    return Array.from(this.products.values())
+      .filter(product => product.vendorId === vendorId);
+  }
+  
+  // تقييمات البائعين - Vendor Ratings
+  async getVendorRatings(vendorId: string): Promise<VendorRating[]> {
+    return Array.from(this.vendorRatings.values())
+      .filter(rating => rating.vendorId === vendorId);
+  }
+  
+  async createVendorRating(rating: InsertVendorRating): Promise<VendorRating> {
+    const newRating: VendorRating = {
+      id: randomUUID(),
+      ...rating,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.vendorRatings.set(newRating.id, newRating);
+    
+    // Update vendor average rating
+    await this.updateVendorAverageRating(rating.vendorId);
+    
+    return newRating;
+  }
+  
+  async updateVendorRating(ratingId: string, updates: Partial<InsertVendorRating>): Promise<VendorRating | undefined> {
+    const rating = this.vendorRatings.get(ratingId);
+    if (!rating) return undefined;
+    
+    const updatedRating = { ...rating, ...updates, updatedAt: new Date() };
+    this.vendorRatings.set(ratingId, updatedRating);
+    
+    // Update vendor average rating
+    await this.updateVendorAverageRating(rating.vendorId);
+    
+    return updatedRating;
+  }
+  
+  async deleteVendorRating(ratingId: string): Promise<boolean> {
+    const rating = this.vendorRatings.get(ratingId);
+    if (!rating) return false;
+    
+    const deleted = this.vendorRatings.delete(ratingId);
+    if (deleted) {
+      // Update vendor average rating
+      await this.updateVendorAverageRating(rating.vendorId);
+    }
+    return deleted;
+  }
+  
+  async getVendorAverageRating(vendorId: string): Promise<number> {
+    const ratings = Array.from(this.vendorRatings.values())
+      .filter(rating => rating.vendorId === vendorId);
+    
+    if (ratings.length === 0) return 0;
+    
+    const sum = ratings.reduce((total, rating) => total + rating.rating, 0);
+    return sum / ratings.length;
+  }
+  
+  private async updateVendorAverageRating(vendorId: string): Promise<void> {
+    const averageRating = await this.getVendorAverageRating(vendorId);
+    const totalReviews = Array.from(this.vendorRatings.values())
+      .filter(rating => rating.vendorId === vendorId).length;
+    
+    await this.updateVendor(vendorId, {
+      averageRating: averageRating.toFixed(2),
+      totalReviews
+    });
+  }
+  
+  // اشتراكات البائعين - Vendor Subscriptions
+  async getVendorSubscription(vendorId: string): Promise<VendorSubscription | undefined> {
+    return Array.from(this.vendorSubscriptions.values())
+      .find(subscription => subscription.vendorId === vendorId && subscription.isActive);
+  }
+  
+  async createVendorSubscription(subscription: InsertVendorSubscription): Promise<VendorSubscription> {
+    const newSubscription: VendorSubscription = {
+      id: randomUUID(),
+      ...subscription,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.vendorSubscriptions.set(newSubscription.id, newSubscription);
+    return newSubscription;
+  }
+  
+  async updateVendorSubscription(subscriptionId: string, updates: Partial<InsertVendorSubscription>): Promise<VendorSubscription | undefined> {
+    const subscription = this.vendorSubscriptions.get(subscriptionId);
+    if (!subscription) return undefined;
+    
+    const updatedSubscription = { ...subscription, ...updates, updatedAt: new Date() };
+    this.vendorSubscriptions.set(subscriptionId, updatedSubscription);
+    return updatedSubscription;
+  }
+  
+  async renewVendorSubscription(vendorId: string): Promise<VendorSubscription | undefined> {
+    const subscription = await this.getVendorSubscription(vendorId);
+    if (!subscription) return undefined;
+    
+    const endDate = new Date(subscription.endDate);
+    endDate.setMonth(endDate.getMonth() + 1); // Add one month
+    
+    return await this.updateVendorSubscription(subscription.id, {
+      endDate: endDate,
+      lastPaymentDate: new Date(),
+      nextPaymentDate: new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 7 days before end
+    });
+  }
+  
+  // فئات المنتجات - Product Categories
+  async getProductCategories(): Promise<ProductCategory[]> {
+    return Array.from(this.productCategories.values());
+  }
+  
+  async getProductCategory(categoryId: string): Promise<ProductCategory | undefined> {
+    return this.productCategories.get(categoryId);
+  }
+  
+  async createProductCategory(category: InsertProductCategory): Promise<ProductCategory> {
+    const newCategory: ProductCategory = {
+      id: randomUUID(),
+      ...category,
+      createdAt: new Date(),
+    };
+    this.productCategories.set(newCategory.id, newCategory);
+    return newCategory;
+  }
+  
+  async updateProductCategory(categoryId: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory | undefined> {
+    const category = this.productCategories.get(categoryId);
+    if (!category) return undefined;
+    
+    const updatedCategory = { ...category, ...updates };
+    this.productCategories.set(categoryId, updatedCategory);
+    return updatedCategory;
+  }
+  
+  async deleteProductCategory(categoryId: string): Promise<boolean> {
+    return this.productCategories.delete(categoryId);
+  }
+
   // Admin dashboard stats for MemStorage (placeholder)
   async getAdminDashboardStats(): Promise<any> {
     return {
       pendingVerificationRequests: 0,
       totalVerificationRequests: 0,
       totalUsers: this.users.size,
-      totalStores: 0,
+      totalVendors: this.vendors.size,
+      totalProducts: this.products.size,
       todayRequests: 0,
       totalRevenue: 0
     };

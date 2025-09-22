@@ -13,8 +13,13 @@ import {
   insertUserSchema, 
   insertSessionSchema,
   insertChatSchema,
-  insertStoreSchema,
+  insertVendorCategorySchema,
+  insertVendorSchema,
+  insertVendorRatingSchema,
+  insertVendorSubscriptionSchema,
+  insertProductCategorySchema,
   insertProductSchema,
+  insertProductReviewSchema,
   insertAffiliateLinkSchema,
   insertCommissionSchema,
   insertContactSchema,
@@ -32,8 +37,13 @@ import {
   insertReminderSchema,
   insertCustomerTagSchema,
   insertQuickReplySchema,
-  type Store,
+  type Vendor,
+  type VendorCategory,
+  type VendorRating,
+  type VendorSubscription,
+  type ProductCategory,
   type Product,
+  type ProductReview,
   type AffiliateLink,
   type Commission,
   type CartItem,
@@ -2079,153 +2089,232 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stores endpoints
-  app.get("/api/stores", requireAuth, async (req: any, res) => {
+  // فئات البائعين - Vendor Categories endpoints
+  app.get("/api/vendor-categories", async (req: any, res) => {
     try {
-      const { location, category } = req.query;
-      const stores = await storage.getStores(location, category);
-      res.json(stores);
+      const categories = await storage.getVendorCategories();
+      res.json(categories);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get stores" });
+      res.status(500).json({ message: "Failed to get vendor categories" });
     }
   });
 
-  app.get("/api/stores/:storeId", requireAuth, async (req: any, res) => {
+  app.post("/api/vendor-categories", requireAdmin, async (req: any, res) => {
     try {
-      const { storeId } = req.params;
-      const store = await storage.getStore(storeId);
-      if (!store) {
-        return res.status(404).json({ message: "Store not found" });
+      const categoryData = insertVendorCategorySchema.parse(req.body);
+      const category = await storage.createVendorCategory(categoryData);
+      res.json(category);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      const owner = await storage.getUserById(store.userId);
-      res.json({ ...store, owner });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get store" });
+      res.status(500).json({ message: "Failed to create vendor category" });
     }
   });
 
-  app.get("/api/user/store", requireAuth, async (req: any, res) => {
+  // فئات المنتجات - Product Categories endpoints
+  app.get("/api/product-categories", async (req: any, res) => {
     try {
-      const store = await storage.getUserStore(req.userId);
-      res.json(store || null);
+      const categories = await storage.getProductCategories();
+      res.json(categories);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get user store" });
+      res.status(500).json({ message: "Failed to get product categories" });
     }
   });
 
-  app.get("/api/stores/:storeId/products", requireAuth, async (req: any, res) => {
+  app.post("/api/product-categories", requireAdmin, async (req: any, res) => {
     try {
-      const { storeId } = req.params;
-      const products = await storage.getStoreProducts(storeId);
+      const categoryData = insertProductCategorySchema.parse(req.body);
+      const category = await storage.createProductCategory(categoryData);
+      res.json(category);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create product category" });
+    }
+  });
+
+  // البائعين - Vendors endpoints
+  app.get("/api/vendors", async (req: any, res) => {
+    try {
+      const { location, categoryId, status } = req.query;
+      const vendors = await storage.getVendors(location, categoryId, status);
+      res.json(vendors);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get vendors" });
+    }
+  });
+
+  app.get("/api/vendors/featured", async (req: any, res) => {
+    try {
+      const vendors = await storage.getFeaturedVendors();
+      res.json(vendors);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get featured vendors" });
+    }
+  });
+
+  app.get("/api/vendors/:vendorId", async (req: any, res) => {
+    try {
+      const { vendorId } = req.params;
+      const vendor = await storage.getVendor(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      
+      // Get vendor owner and category info
+      const owner = await storage.getUserById(vendor.userId);
+      const category = await storage.getVendorCategory(vendor.categoryId);
+      const ratings = await storage.getVendorRatings(vendorId);
+      
+      res.json({ 
+        ...vendor, 
+        owner: { id: owner?.id, name: owner?.name, avatar: owner?.avatar }, 
+        category,
+        ratingsCount: ratings.length
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get vendor" });
+    }
+  });
+
+  app.get("/api/user/vendor", requireAuth, async (req: any, res) => {
+    try {
+      const vendor = await storage.getUserVendor(req.userId);
+      res.json(vendor || null);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user vendor" });
+    }
+  });
+
+  app.get("/api/vendors/:vendorId/products", async (req: any, res) => {
+    try {
+      const { vendorId } = req.params;
+      const products = await storage.getVendorProducts(vendorId);
       res.json(products);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get store products" });
+      res.status(500).json({ message: "Failed to get vendor products" });
     }
   });
 
-  app.post("/api/stores", requireAuth, async (req: any, res) => {
+  app.post("/api/vendors", requireAuth, async (req: any, res) => {
     try {
-      console.log("Store creation request:", req.body);
-      console.log("User ID:", req.userId);
+      console.log("طلب إنشاء بائع:", req.body);
+      console.log("معرف المستخدم:", req.userId);
       
-      // Check if user already has a store
-      const existingStore = await storage.getUserStore(req.userId);
-      if (existingStore) {
-        console.log("User already has store:", existingStore.id);
-        return res.status(400).json({ message: "User already has a store" });
+      // Check if user already has a vendor
+      const existingVendor = await storage.getUserVendor(req.userId);
+      if (existingVendor) {
+        console.log("المستخدم لديه بائع بالفعل:", existingVendor.id);
+        return res.status(400).json({ message: "المستخدم لديه بائع بالفعل" });
       }
 
-      const storeData = insertStoreSchema.parse({
+      const vendorData = insertVendorSchema.parse({
         ...req.body,
         userId: req.userId,
       });
       
-      console.log("Parsed store data:", storeData);
+      console.log("بيانات البائع المعالجة:", vendorData);
       
-      const store = await storage.createStore(storeData);
-      console.log("Store created successfully:", store.id);
-      res.json(store);
+      const vendor = await storage.createVendor(vendorData);
+      console.log("تم إنشاء البائع بنجاح:", vendor.id);
+      res.json(vendor);
     } catch (error) {
-      console.error("Store creation error:", error);
+      console.error("خطأ في إنشاء البائع:", error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
       if (error instanceof Error) {
         res.status(400).json({ message: error.message });
       } else {
-        res.status(500).json({ message: "Failed to create store" });
+        res.status(500).json({ message: "فشل في إنشاء البائع" });
       }
     }
   });
 
-  app.patch("/api/stores/:storeId", requireAuth, async (req: any, res) => {
+  app.patch("/api/vendors/:vendorId", requireAuth, async (req: any, res) => {
     try {
-      const { storeId } = req.params;
+      const { vendorId } = req.params;
       
-      // Check if user owns this store
-      const store = await storage.getStore(storeId);
-      if (!store || store.userId !== req.userId) {
-        return res.status(403).json({ message: "Unauthorized" });
+      // Check if user owns this vendor
+      const vendor = await storage.getVendor(vendorId);
+      if (!vendor || vendor.userId !== req.userId) {
+        return res.status(403).json({ message: "غير مصرّح" });
       }
       
-      const updatedStore = await storage.updateStore(storeId, req.body);
-      if (!updatedStore) {
-        return res.status(404).json({ message: "Store not found" });
+      const updatedVendor = await storage.updateVendor(vendorId, req.body);
+      if (!updatedVendor) {
+        return res.status(404).json({ message: "البائع غير موجود" });
       }
       
-      res.json(updatedStore);
+      res.json(updatedVendor);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update store" });
+      res.status(500).json({ message: "فشل في تحديث البائع" });
     }
   });
 
-  app.delete("/api/stores/:storeId", requireAuth, async (req: any, res) => {
+  app.delete("/api/vendors/:vendorId", requireAuth, async (req: any, res) => {
     try {
-      const { storeId } = req.params;
+      const { vendorId } = req.params;
       
-      // Check if user owns this store
-      const store = await storage.getStore(storeId);
-      if (!store || store.userId !== req.userId) {
-        return res.status(403).json({ message: "Unauthorized" });
+      // Check if user owns this vendor
+      const vendor = await storage.getVendor(vendorId);
+      if (!vendor || vendor.userId !== req.userId) {
+        return res.status(403).json({ message: "غير مصرّح" });
       }
       
-      const deleted = await storage.deleteStore(storeId);
+      const deleted = await storage.deleteVendor(vendorId);
       if (!deleted) {
-        return res.status(404).json({ message: "Store not found" });
+        return res.status(404).json({ message: "البائع غير موجود" });
       }
       
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete store" });
+      res.status(500).json({ message: "فشل في حذف البائع" });
     }
   });
 
-  // Auto-verify store for verified users
-  app.post("/api/stores/:storeId/auto-verify", requireAuth, async (req: any, res) => {
+  // تقييمات البائعين - Vendor Ratings endpoints
+  app.get("/api/vendors/:vendorId/ratings", async (req: any, res) => {
     try {
-      const { storeId } = req.params;
+      const { vendorId } = req.params;
+      const ratings = await storage.getVendorRatings(vendorId);
       
-      // Get user to check if they're verified
-      const user = await storage.getUserById(req.userId);
-      if (!user || !user.isVerified) {
-        return res.status(403).json({ message: "User is not verified" });
-      }
+      // Add user info to each rating
+      const ratingsWithUsers = await Promise.all(
+        ratings.map(async rating => {
+          const user = await storage.getUserById(rating.userId);
+          return {
+            ...rating,
+            user: { id: user?.id, name: user?.name, avatar: user?.avatar }
+          };
+        })
+      );
       
-      // Check if user owns this store
-      const store = await storage.getStore(storeId);
-      if (!store || store.userId !== req.userId) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
+      res.json(ratingsWithUsers);
+    } catch (error) {
+      res.status(500).json({ message: "فشل في جلب تقييمات البائع" });
+    }
+  });
+
+  app.post("/api/vendors/:vendorId/ratings", requireAuth, async (req: any, res) => {
+    try {
+      const { vendorId } = req.params;
       
-      // Auto-approve and verify the store
-      const updatedStore = await storage.updateStore(storeId, {
-        isActive: true
+      const ratingData = insertVendorRatingSchema.parse({
+        ...req.body,
+        vendorId,
+        userId: req.userId,
       });
       
-      // Update store status separately if needed
-      await storage.updateStoreStatus(storeId, 'approved', req.userId);
-      
-      res.json(updatedStore);
+      const rating = await storage.createVendorRating(ratingData);
+      res.json(rating);
     } catch (error) {
-      console.error('Auto-verify store error:', error);
-      res.status(500).json({ message: "Failed to auto-verify store" });
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "فشل في إضافة التقييم" });
     }
   });
 
@@ -2262,13 +2351,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/products/store/:storeId", async (req: any, res) => {
+  app.get("/api/products/vendor/:vendorId", async (req: any, res) => {
     try {
-      const { storeId } = req.params;
-      const products = await storage.getStoreProducts(storeId);
+      const { vendorId } = req.params;
+      const products = await storage.getVendorProducts(vendorId);
       res.json(products);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get store products" });
+      res.status(500).json({ message: "Failed to get vendor products" });
     }
   });
 

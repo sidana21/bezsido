@@ -53,10 +53,10 @@ export function BottomNavigation() {
       activeColor: "from-green-600 to-emerald-700"
     },
     {
-      label: "المتاجر",
+      label: "البائعين",
       icon: Store,
-      href: "/stores",
-      isActive: location === "/stores" || location === "/my-store",
+      href: "/vendors",
+      isActive: location === "/vendors" || location === "/my-vendor",
       featureId: "marketplace",
       color: "from-emerald-500 to-green-600",
       activeColor: "from-emerald-600 to-green-700"
