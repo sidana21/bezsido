@@ -2727,7 +2727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // استخدام مدير الإدارة الجديد
-      const adminManager = new AdminManager(storage as any);
+      const adminManager = new AdminManager(storage);
       
       // التحقق من صحة بيانات الدخول
       const isValid = adminManager.validateCredentials(email, password);
@@ -2789,7 +2789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: adminUser,
         message: "تم تسجيل الدخول بنجاح"
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Admin login error:", error);
       
       // رسالة خطأ مفصلة للتشخيص
