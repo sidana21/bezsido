@@ -177,11 +177,12 @@ export class AdminManager {
       console.error('❌ خطأ في إدارة مستخدم الإدارة:', error);
       
       // رمي خطأ أكثر تفصيلاً
-      if (error.message.includes('admin credentials')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('admin credentials')) {
         throw error; // اعادة رمي خطأ بيانات الاعتماد
-      } else if (error.message.includes('fetch failed')) {
+      } else if (errorMessage.includes('fetch failed')) {
         throw error; // اعادة رمي خطأ جلب المستخدمين
-      } else if (error.message.includes('creation failed')) {
+      } else if (errorMessage.includes('creation failed')) {
         throw error; // اعادة رمي خطأ إنشاء المستخدم
       } else {
         throw new Error('admin user management failed - فشل في إدارة مستخدم الإدارة');

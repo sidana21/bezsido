@@ -2727,7 +2727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // استخدام مدير الإدارة الجديد
-      const adminManager = new AdminManager(storage);
+      const adminManager = new AdminManager(storage as any);
       
       // التحقق من صحة بيانات الدخول
       const isValid = adminManager.validateCredentials(email, password);
@@ -2794,19 +2794,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // رسالة خطأ مفصلة للتشخيص
       let errorMessage = "خطأ في الخادم";
-      if (error instanceof Error) {
-        if (error.message.includes('admin credentials')) {
-          errorMessage = "لم يتم العثور على بيانات الإدارة";
-        } else if (error.message.includes('admin user')) {
-          errorMessage = "خطأ في إنشاء مستخدم الإدارة";
-        } else if (error.message.includes('session')) {
-          errorMessage = "خطأ في إنشاء الجلسة";
-        }
+      const errorStr = error instanceof Error ? error.message : String(error);
+      
+      if (errorStr.includes('admin credentials')) {
+        errorMessage = "لم يتم العثور على بيانات الإدارة";
+      } else if (errorStr.includes('admin user')) {
+        errorMessage = "خطأ في إنشاء مستخدم الإدارة";
+      } else if (errorStr.includes('session')) {
+        errorMessage = "خطأ في إنشاء الجلسة";
       }
       
       res.status(500).json({ 
         message: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? errorStr : undefined
       });
     }
   });
@@ -2814,7 +2814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin health check endpoint for troubleshooting
   app.get("/api/admin/health", async (req, res) => {
     try {
-      const adminManager = new AdminManager(storage);
+      const adminManager = new AdminManager(storage as any);
       const config = adminManager.readAdminConfig();
       
       const status = {
@@ -2831,7 +2831,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(status);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ error: errorMessage });
     }
   });
 
