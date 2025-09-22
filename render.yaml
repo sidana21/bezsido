@@ -29,11 +29,11 @@ services:
         sync: false
       # Admin credentials for admin panel access (REQUIRED)
       - key: ADMIN_EMAIL
-        sync: false
+        value: admin@bizchat.com
       - key: ADMIN_PASSWORD
-        sync: false
+        sync: false  # يجب إضافة كلمة مرور قوية من لوحة التحكم
       - key: ADMIN_NAME
-        sync: false
+        value: المدير العام
     # Enable database migration if DATABASE_URL is provided
     preDeployCommand: |
       if [ -n "$DATABASE_URL" ]; then

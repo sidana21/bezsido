@@ -150,16 +150,39 @@ export class AdminManager {
           throw new Error('Storage not initialized');
         }
         
-        adminUser = await this.storage.createUser(userData);
-        console.log('User created successfully:', adminUser?.id);
+        // محاولة إنشاء المستخدم مع retry logic للإنتاج
+        let retries = 3;
+        let lastError;
+        
+        while (retries > 0) {
+          try {
+            adminUser = await this.storage.createUser(userData);
+            console.log('User created successfully:', adminUser?.id);
+            break;
+          } catch (attemptError: any) {
+            lastError = attemptError;
+            retries--;
+            
+            if (retries > 0) {
+              console.log(`⚠️ User creation failed, retrying... (${retries} attempts left)`);
+              await new Promise(resolve => setTimeout(resolve, 2000)); // انتظار ثانيتين
+            }
+          }
+        }
+        
+        if (!adminUser) {
+          throw lastError;
+        }
+        
       } catch (createError: any) {
-        console.error('❌ Error creating admin user:', createError);
+        console.error('❌ Error creating admin user after all retries:', createError);
         console.error('❌ Error details:', createError?.message || 'Unknown error');
         
-        // في حالة فشل إنشاء المستخدم، نحاول التشغيل بدون قاعدة بيانات
-        if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
-          console.log('⚠️ No database available, skipping admin user creation for now');
-          return null;
+        // في حالة فشل إنشاء المستخدم في الإنتاج، نتجاهل الخطأ ونكمل التشغيل
+        if (process.env.NODE_ENV === 'production') {
+          console.log('⚠️ Production mode: Continuing without admin user creation, will retry later');
+          console.log('🔧 Admin user can be created manually via API endpoint /api/admin/health');
+          return null; // إرجاع null بدلاً من رمي خطأ
         }
         
         throw new Error(`admin user creation failed - ${createError?.message || 'فشل في إنشاء مستخدم الإدارة'}`);

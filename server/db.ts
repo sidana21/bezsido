@@ -18,7 +18,18 @@ let db: any = null;
 async function initializeDatabase() {
   if (process.env.DATABASE_URL) {
     try {
-      pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      // إعدادات محسنة لـ Render PostgreSQL
+      const poolConfig = {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.NODE_ENV === 'production' ? { 
+          rejectUnauthorized: false 
+        } : false,
+        max: 20, // الحد الأقصى للاتصالات
+        idleTimeoutMillis: 30000, // 30 ثانية
+        connectionTimeoutMillis: 10000, // 10 ثواني للاتصال
+      };
+      
+      pool = new Pool(poolConfig);
       db = drizzle({ client: pool, schema });
       
       // Test the connection
