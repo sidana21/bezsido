@@ -126,7 +126,16 @@ export default function EmailSettings() {
 
   const handleGmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!gmailData.user || !gmailData.password) {
+    
+    // Get values directly from form inputs to handle autofill/autocomplete scenarios
+    const formData = new FormData(e.target as HTMLFormElement);
+    const userValue = formData.get('gmail-user') as string || gmailData.user;
+    const passwordValue = formData.get('gmail-password') as string || gmailData.password;
+    const fromEmailValue = formData.get('gmail-from') as string || gmailData.fromEmail || userValue;
+    
+    console.log('Form submission attempt:', { userValue, passwordValue: passwordValue ? '[HIDDEN]' : 'EMPTY', fromEmailValue });
+    
+    if (!userValue || !passwordValue) {
       toast({
         title: '❌ بيانات مطلوبة',
         description: 'يرجى إدخال البريد الإلكتروني وكلمة مرور التطبيق',
@@ -134,7 +143,15 @@ export default function EmailSettings() {
       });
       return;
     }
-    gmailMutation.mutate(gmailData);
+    
+    // Update state and submit with actual form values
+    const submitData = {
+      user: userValue,
+      password: passwordValue,
+      fromEmail: fromEmailValue
+    };
+    
+    gmailMutation.mutate(submitData);
   };
 
   const handleSendGridSubmit = (e: React.FormEvent) => {
@@ -246,6 +263,7 @@ export default function EmailSettings() {
                   <Label htmlFor="gmail-user">البريد الإلكتروني</Label>
                   <Input
                     id="gmail-user"
+                    name="gmail-user"
                     type="email"
                     placeholder="your-email@gmail.com"
                     value={gmailData.user}
@@ -258,6 +276,7 @@ export default function EmailSettings() {
                   <Label htmlFor="gmail-password">كلمة مرور التطبيق (16 رقم)</Label>
                   <Input
                     id="gmail-password"
+                    name="gmail-password"
                     type="password"
                     placeholder="أدخل كلمة مرور التطبيق"
                     value={gmailData.password}
@@ -270,6 +289,7 @@ export default function EmailSettings() {
                   <Label htmlFor="gmail-from">البريد المرسل منه (اختياري)</Label>
                   <Input
                     id="gmail-from"
+                    name="gmail-from"
                     type="email"
                     placeholder="سيتم استخدام نفس البريد الإلكتروني إذا ترك فارغاً"
                     value={gmailData.fromEmail}
