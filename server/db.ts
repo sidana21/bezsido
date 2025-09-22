@@ -1,15 +1,7 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 import { sql } from 'drizzle-orm';
-
-neonConfig.webSocketConstructor = ws;
-// Database TLS configuration - Required for Neon database connectivity
-// Note: Neon uses self-signed certificates that require this setting
-if (process.env.NODE_ENV === 'development') {
-  process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
-}
 
 // Allow application to work without database in production
 let pool: Pool | null = null;
@@ -18,12 +10,14 @@ let db: any = null;
 async function initializeDatabase() {
   if (process.env.DATABASE_URL) {
     try {
-      // إعدادات محسنة لـ Render PostgreSQL
+      // إعدادات قاعدة البيانات المحلية
       const poolConfig = {
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === 'production' ? { 
-          rejectUnauthorized: false 
-        } : false,
+        // SSL configuration based on the connection string
+        ssl: process.env.DATABASE_URL?.includes('sslmode=disable') ? false : 
+             process.env.DATABASE_URL?.includes('neon') || process.env.DATABASE_URL?.includes('render') ? { 
+               rejectUnauthorized: false 
+             } : false,
         max: 20, // الحد الأقصى للاتصالات
         idleTimeoutMillis: 30000, // 30 ثانية
         connectionTimeoutMillis: 10000, // 10 ثواني للاتصال
