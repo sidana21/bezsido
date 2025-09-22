@@ -12,6 +12,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// تحقق من متغيرات البيئة المطلوبة للإدارة
+const checkAdminEnvVars = () => {
+  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+    console.warn('⚠️ ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required for admin access');
+  } else {
+    console.log('✅ Admin environment variables configured');
+  }
+};
+
+// التحقق من إعدادات الإدارة عند البداية
+checkAdminEnvVars();
+
 // إعداد الملفات الثابتة
 const distPath = path.join(__dirname, 'dist', 'public');
 

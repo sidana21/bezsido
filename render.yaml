@@ -27,13 +27,13 @@ services:
       # Email sender address
       - key: FROM_EMAIL
         sync: false
-      # Admin credentials for admin panel access
+      # Admin credentials for admin panel access (REQUIRED)
       - key: ADMIN_EMAIL
-        value: admin@bizchat.com
+        sync: false
       - key: ADMIN_PASSWORD
-        value: admin123456
+        sync: false
       - key: ADMIN_NAME
-        value: المدير العام
+        sync: false
     # Enable database migration if DATABASE_URL is provided
     preDeployCommand: |
       if [ -n "$DATABASE_URL" ]; then

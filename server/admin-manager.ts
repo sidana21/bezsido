@@ -21,24 +21,12 @@ export class AdminManager {
   }
 
   /**
-   * قراءة بيانات الإدارة من ملف admin.json أو متغيرات البيئة
+   * قراءة بيانات الإدارة من متغيرات البيئة أولاً ثم ملف admin.json
    */
   public readAdminConfig(): AdminConfig | null {
-    try {
-      // المحاولة الأولى: قراءة من ملف admin.json
-      if (fs.existsSync(this.adminFilePath)) {
-        const adminFileContent = fs.readFileSync(this.adminFilePath, 'utf8');
-        const config = JSON.parse(adminFileContent) as AdminConfig;
-        console.log('✅ Admin credentials loaded from admin.json');
-        return config;
-      }
-    } catch (error) {
-      console.error('⚠️ Error reading admin.json:', error);
-    }
-
-    // المحاولة الثانية: استخدام متغيرات البيئة كبديل
-    const envEmail = process.env.ADMIN_EMAIL || process.env.DEFAULT_ADMIN_EMAIL;
-    const envPassword = process.env.ADMIN_PASSWORD || process.env.DEFAULT_ADMIN_PASSWORD;
+    // المحاولة الأولى: استخدام متغيرات البيئة (الأولوية للإنتاج)
+    const envEmail = process.env.ADMIN_EMAIL;
+    const envPassword = process.env.ADMIN_PASSWORD;
     
     if (envEmail && envPassword) {
       console.log('✅ Admin credentials loaded from environment variables');
@@ -52,9 +40,21 @@ export class AdminManager {
       };
     }
 
-    // المحاولة الثالثة: استخدام بيانات افتراضية للتطوير
+    // المحاولة الثانية: قراءة من ملف admin.json (للتطوير المحلي)
+    try {
+      if (fs.existsSync(this.adminFilePath)) {
+        const adminFileContent = fs.readFileSync(this.adminFilePath, 'utf8');
+        const config = JSON.parse(adminFileContent) as AdminConfig;
+        console.log('✅ Admin credentials loaded from admin.json (development)');
+        return config;
+      }
+    } catch (error) {
+      console.error('⚠️ Error reading admin.json:', error);
+    }
+
+    // المحاولة الثالثة: استخدام بيانات افتراضية للتطوير فقط
     if (process.env.NODE_ENV === 'development') {
-      console.log('⚠️ Using default admin credentials for development');
+      console.log('⚠️ Using default admin credentials for development only');
       return {
         email: "admin@bizchat.com",
         password: "admin123456",
@@ -65,7 +65,7 @@ export class AdminManager {
       };
     }
 
-    console.error('❌ No admin credentials found in admin.json or environment variables');
+    console.error('❌ No admin credentials found. Set ADMIN_EMAIL and ADMIN_PASSWORD environment variables.');
     return null;
   }
 
@@ -145,17 +145,26 @@ export class AdminManager {
   }
 
   /**
-   * تحديث وقت آخر تسجيل دخول
+   * تحديث وقت آخر تسجيل دخول (فقط إذا كان باستخدام ملف وليس متغيرات البيئة)
    */
   public updateLastLogin(): void {
-    try {
-      const adminConfig = this.readAdminConfig();
-      if (adminConfig) {
-        adminConfig.lastLogin = new Date().toISOString();
-        fs.writeFileSync(this.adminFilePath, JSON.stringify(adminConfig, null, 2));
+    // لا نحدث ملف admin.json إذا كنا نستخدم متغيرات البيئة
+    if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+      console.log('Using environment variables - skipping admin.json update');
+      return;
+    }
+
+    // تحديث فقط إذا كان الملف موجود ونحن في بيئة التطوير
+    if (process.env.NODE_ENV === 'development' && fs.existsSync(this.adminFilePath)) {
+      try {
+        const adminConfig = this.readAdminConfig();
+        if (adminConfig) {
+          adminConfig.lastLogin = new Date().toISOString();
+          fs.writeFileSync(this.adminFilePath, JSON.stringify(adminConfig, null, 2));
+        }
+      } catch (error) {
+        console.error('خطأ في تحديث وقت آخر تسجيل دخول:', error);
       }
-    } catch (error) {
-      console.error('خطأ في تحديث وقت آخر تسجيل دخول:', error);
     }
   }
 
