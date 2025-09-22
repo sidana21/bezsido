@@ -1,36 +1,23 @@
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from "@shared/schema";
 import { sql } from 'drizzle-orm';
 
 // Allow application to work without database in production
-let pool: Pool | null = null;
 let db: any = null;
 
 async function initializeDatabase() {
   if (process.env.DATABASE_URL) {
     try {
-      // إعدادات قاعدة البيانات المحلية
-      const poolConfig = {
-        connectionString: process.env.DATABASE_URL,
-        // SSL configuration based on the connection string
-        ssl: process.env.DATABASE_URL?.includes('sslmode=disable') ? false : 
-             process.env.DATABASE_URL?.includes('neon') || process.env.DATABASE_URL?.includes('render') ? { 
-               rejectUnauthorized: false 
-             } : false,
-        max: 20, // الحد الأقصى للاتصالات
-        idleTimeoutMillis: 30000, // 30 ثانية
-        connectionTimeoutMillis: 10000, // 10 ثواني للاتصال
-      };
-      
-      pool = new Pool(poolConfig);
-      db = drizzle({ client: pool, schema });
+      // إعداد قاعدة البيانات الخارجية Neon Serverless
+      const connection = neon(process.env.DATABASE_URL);
+      db = drizzle({ client: connection, schema });
       
       // Test the connection
-      await pool.query('SELECT 1');
-      console.log('✅ Database connection established');
+      await db.execute(sql`SELECT 1`);
+      console.log('✅ Neon serverless database connection established');
       
-      // Create tables if they don't exist (for Render deployment)
+      // Create tables if they don't exist
       await ensureTablesExist();
       console.log('✅ Database tables verified/created');
       
@@ -38,7 +25,6 @@ async function initializeDatabase() {
     } catch (error) {
       console.warn('⚠️ Failed to connect to database, falling back to in-memory storage:', error);
       db = null;
-      pool = null;
       return false;
     }
   } else {
@@ -142,4 +128,4 @@ async function ensureTablesExist() {
 // Initialize database connection (but don't await it here)
 initializeDatabase();
 
-export { pool, db, ensureTablesExist };
+export { db, ensureTablesExist };
