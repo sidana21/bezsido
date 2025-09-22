@@ -145,11 +145,24 @@ export class AdminManager {
       console.log('Creating user with data:', userData);
       
       try {
+        // تحقق من الاتصال بقاعدة البيانات أولاً
+        if (!this.storage) {
+          throw new Error('Storage not initialized');
+        }
+        
         adminUser = await this.storage.createUser(userData);
         console.log('User created successfully:', adminUser?.id);
-      } catch (createError) {
+      } catch (createError: any) {
         console.error('❌ Error creating admin user:', createError);
-        throw new Error('admin user creation failed - فشل في إنشاء مستخدم الإدارة');
+        console.error('❌ Error details:', createError?.message || 'Unknown error');
+        
+        // في حالة فشل إنشاء المستخدم، نحاول التشغيل بدون قاعدة بيانات
+        if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+          console.log('⚠️ No database available, skipping admin user creation for now');
+          return null;
+        }
+        
+        throw new Error(`admin user creation failed - ${createError?.message || 'فشل في إنشاء مستخدم الإدارة'}`);
       }
 
       if (!adminUser) {
