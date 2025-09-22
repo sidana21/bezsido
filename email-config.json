@@ -1,6 +1,10 @@
 {
   "service": "gmail",
-  "fromEmail": "",
-  "isConfigured": false,
-  "lastUpdated": "2025-09-22T12:59:00.000Z"
+  "gmail": {
+    "user": "test@gmail.com",
+    "password": "testpassword123"
+  },
+  "fromEmail": "test@gmail.com",
+  "isConfigured": true,
+  "lastUpdated": "2025-09-22T13:37:33.499Z"
 }
