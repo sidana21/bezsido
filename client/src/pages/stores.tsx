@@ -8,16 +8,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plus, Package, MessageCircle, ShieldCheck, Crown, Zap, Heart, TrendingUp, Award, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { User, Store as StoreType, Product } from "@shared/schema";
+import type { User, Vendor, Product } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-interface StoreWithOwner extends StoreType {
+interface VendorWithOwner extends Vendor {
   owner: User;
 }
 
 export default function Stores() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStore, setSelectedStore] = useState<StoreWithOwner | null>(null);
+  const [selectedStore, setSelectedStore] = useState<VendorWithOwner | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -32,7 +32,7 @@ export default function Stores() {
     enabled: !!currentUser,
   });
 
-  const { data: stores = [], isLoading: isLoadingStores } = useQuery<StoreWithOwner[]>({
+  const { data: stores = [], isLoading: isLoadingStores } = useQuery<VendorWithOwner[]>({
     queryKey: ["/api/stores", currentUser?.location],
     queryFn: () => apiRequest(`/api/stores?location=${encodeURIComponent(currentUser?.location || '')}`),
     enabled: !!currentUser,
@@ -89,7 +89,7 @@ export default function Stores() {
       });
 
       // Send product message
-      const productMessage = `مرحباً، أريد شراء هذا المنتج:\n\n📦 ${product?.name || 'منتج'}\n💰 السعر: ${parseInt(product?.price || '0').toLocaleString()} دج\n📝 ${product?.description || 'بدون وصف'}\n\nهل هذا المنتج متوفر؟`;
+      const productMessage = `مرحباً، أريد شراء هذا المنتج:\n\n📦 ${product?.name || 'منتج'}\n💰 السعر: ${parseInt(product?.salePrice || product?.originalPrice || '0').toLocaleString()} دج\n📝 ${product?.description || 'بدون وصف'}\n\nهل هذا المنتج متوفر؟`;
       
       await apiRequest(`/api/chats/${chatResponse.chatId}/messages`, {
         method: "POST",
