@@ -247,19 +247,32 @@ export default function MyStore() {
 
   const addProductMutation = useMutation({
     mutationFn: async (data: any) => {
-      if (!userStore) throw new Error("No store found");
-      return apiRequest("/api/products", {
+      console.log("🚀 addProductMutation called with data:", data);
+      if (!userStore) {
+        console.log("❌ No store found");
+        throw new Error("No store found");
+      }
+      
+      const payload = {
+        ...data,
+        imageUrl: productImageUrl, // Use uploaded image URL
+        userId: currentUser?.id,
+        storeId: userStore.id,
+      };
+      
+      console.log("📤 Sending API request with payload:", payload);
+      
+      const response = await apiRequest("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          imageUrl: productImageUrl, // Use uploaded image URL
-          userId: currentUser?.id,
-          storeId: userStore.id,
-        }),
+        body: JSON.stringify(payload),
       });
+      
+      console.log("✅ API response:", response);
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log("🎉 Product created successfully:", response);
       queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
       toast({
         title: "تم إضافة المنتج",
@@ -270,6 +283,7 @@ export default function MyStore() {
       productForm.reset();
     },
     onError: (error: any) => {
+      console.error("❌ Product creation failed:", error);
       toast({
         title: "خطأ",
         description: error.message || "فشل في إضافة المنتج",
@@ -369,8 +383,21 @@ export default function MyStore() {
   };
 
   const handleAddProduct = (data: any) => {
+    console.log("🔍 handleAddProduct called with data:", data);
+    console.log("🔍 Form errors:", productForm.formState.errors);
+    console.log("🔍 Form values:", productForm.getValues());
+    console.log("🔍 productImageUrl:", productImageUrl);
+    console.log("🔍 userStore:", userStore);
+    console.log("🔍 currentUser:", currentUser);
+    
     // Validate all required fields
     if (!data.name || !data.description || !data.price || !data.category) {
+      console.log("❌ Validation failed - missing fields:", {
+        name: !data.name,
+        description: !data.description, 
+        price: !data.price,
+        category: !data.category
+      });
       toast({
         title: "بيانات ناقصة",
         description: "يرجى ملء جميع الحقول المطلوبة",
@@ -379,6 +406,7 @@ export default function MyStore() {
       return;
     }
     
+    console.log("✅ Validation passed, calling mutation...");
     addProductMutation.mutate(data);
   };
 
@@ -808,7 +836,14 @@ export default function MyStore() {
                       <DialogHeader>
                         <DialogTitle className="text-xl font-bold text-center">✨ إضافة منتج جديد ✨</DialogTitle>
                       </DialogHeader>
-                      <form onSubmit={productForm.handleSubmit(handleAddProduct)} className="space-y-6">
+                      <form onSubmit={productForm.handleSubmit(handleAddProduct, (errors) => {
+                        console.log("❌ Form validation errors:", errors);
+                        toast({
+                          title: "خطأ في النموذج",
+                          description: "يرجى التحقق من البيانات المدخلة وإصلاح الأخطاء",
+                          variant: "destructive",
+                        });
+                      })} className="space-y-6">
                         {/* اسم المنتج */}
                         <div className="space-y-2">
                           <Label htmlFor="productName" className="text-base font-semibold">اسم المنتج *</Label>
