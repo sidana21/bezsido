@@ -3477,6 +3477,11 @@ export class MemStorage implements IStorage {
     return this.getUser(id);
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const e = email?.toLowerCase().trim();
+    return Array.from(this.users.values()).find(u => (u.email || '').toLowerCase().trim() === e);
+  }
+
   async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(user => user.phoneNumber === phoneNumber);
   }
