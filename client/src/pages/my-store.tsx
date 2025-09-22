@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Store, User } from "@shared/schema";
+import { Vendor, User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,15 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertStoreSchema, insertProductSchema } from "@shared/schema";
+import { insertVendorSchema, insertProductSchema } from "@shared/schema";
 import { z } from "zod";
 import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings, Upload, ImageIcon, X } from "lucide-react";
 
-interface StoreWithOwner extends Store {
+interface VendorWithOwner extends Vendor {
   owner: User;
 }
 
-const storeFormSchema = insertStoreSchema.extend({
+const storeFormSchema = insertVendorSchema.extend({
   name: z.string().min(1, "اسم المتجر مطلوب"),
   description: z.string().min(1, "وصف المتجر مطلوب"),
   category: z.string().min(1, "فئة المتجر مطلوبة"),
@@ -44,7 +44,7 @@ export default function MyStore() {
     queryKey: ["/api/user/current"],
   });
 
-  const { data: userStore, isLoading: isLoadingStore } = useQuery<Store | null>({
+  const { data: userStore, isLoading: isLoadingStore } = useQuery<Vendor | null>({
     queryKey: ["/api/user/store"],
     refetchInterval: 30000, // Check every 30 seconds for updates
   });
