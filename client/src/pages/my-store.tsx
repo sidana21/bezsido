@@ -119,7 +119,10 @@ export default function MyStore() {
     resolver: zodResolver(insertProductSchema.extend({
       name: z.string().min(1, "اسم المنتج مطلوب"),
       description: z.string().min(1, "وصف المنتج مطلوب"),
-      price: z.string().min(1, "السعر مطلوب"),
+      price: z.string()
+        .min(1, "السعر مطلوب")
+        .regex(/^\d+(\.\d{1,2})?$/, "يجب أن يكون السعر رقماً صحيحاً (مثال: 100 أو 99.50)")
+        .refine((val) => parseFloat(val) > 0, "يجب أن يكون السعر أكبر من صفر"),
       category: z.string().min(1, "فئة المنتج مطلوبة"),
       location: z.string().min(1, "موقع المنتج مطلوب"),
     })),
@@ -256,6 +259,7 @@ export default function MyStore() {
       
       const payload = {
         ...data,
+        price: parseFloat(data.price).toFixed(2), // Convert price to proper decimal format
         imageUrl: productImageUrl, // Use uploaded image URL
         userId: currentUser?.id,
         storeId: userStore.id,
@@ -472,6 +476,7 @@ export default function MyStore() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
+          price: data.price ? parseFloat(data.price).toFixed(2) : editingProduct.price, // Convert price to proper decimal format
           imageUrl: productImageUrl || editingProduct.imageUrl,
         }),
       });
