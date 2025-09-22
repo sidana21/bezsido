@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { ZodError } from "zod";
 import { 
   insertMessageSchema, 
   insertStorySchema, 
@@ -2281,7 +2282,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const product = await storage.createProduct(productData);
       res.json(product);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create product" });
+      console.error("Product creation error:", error);
+      
+      // Handle Zod validation errors
+      if (error instanceof ZodError) {
+        const fieldErrors: { [key: string]: string[] } = {};
+        
+        error.errors.forEach((err) => {
+          const field = err.path.join('.') || 'unknown';
+          if (!fieldErrors[field]) {
+            fieldErrors[field] = [];
+          }
+          fieldErrors[field].push(err.message);
+        });
+        
+        // Convert arrays to single strings for simpler frontend handling
+        const simplifiedErrors: { [key: string]: string } = {};
+        Object.entries(fieldErrors).forEach(([field, messages]) => {
+          simplifiedErrors[field] = messages.join(', ');
+        });
+        
+        return res.status(400).json({ 
+          message: "بيانات غير صحيحة", 
+          errors: simplifiedErrors,
+          details: "يرجى التحقق من البيانات المدخلة وإصلاح الأخطاء"
+        });
+      }
+      
+      res.status(500).json({ message: "فشل في إنشاء المنتج" });
     }
   });
 

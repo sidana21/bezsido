@@ -289,11 +289,45 @@ export default function MyStore() {
     },
     onError: (error: any) => {
       console.error("❌ Product creation failed:", error);
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل في إضافة المنتج",
-        variant: "destructive",
-      });
+      
+      // Handle detailed validation errors from the backend
+      if (error.errors && typeof error.errors === 'object') {
+        // Set inline field-level errors using react-hook-form
+        Object.entries(error.errors).forEach(([field, message]) => {
+          if (field === 'name' || field === 'description' || field === 'price' || field === 'category' || field === 'location') {
+            productForm.setError(field as any, {
+              type: 'manual',
+              message: message as string,
+            });
+          }
+        });
+        
+        // Build a detailed error message from field errors for toast summary
+        const fieldErrors = Object.entries(error.errors)
+          .map(([field, message]) => {
+            const fieldName = field === 'name' ? 'اسم المنتج' :
+                            field === 'description' ? 'وصف المنتج' :
+                            field === 'price' ? 'السعر' :
+                            field === 'category' ? 'فئة المنتج' :
+                            field === 'location' ? 'موقع المنتج' :
+                            field;
+            return `• ${fieldName}: ${message}`;
+          })
+          .join('\n');
+        
+        toast({
+          title: error.message || "بيانات غير صحيحة",
+          description: fieldErrors,
+          variant: "destructive",
+        });
+      } else {
+        // Fallback to generic error message
+        toast({
+          title: "خطأ",
+          description: error.message || error.details || "فشل في إضافة المنتج",
+          variant: "destructive",
+        });
+      }
     },
   });
 
