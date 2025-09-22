@@ -300,7 +300,7 @@ export const productCategories = pgTable("product_categories", {
   nameAr: text("name_ar").notNull(),
   description: text("description"),
   icon: text("icon"),
-  parentId: varchar("parent_id").references(() => productCategories.id), // للفئات الفرعية
+  parentId: varchar("parent_id"), // للفئات الفرعية
   isActive: boolean("is_active").default(true),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),

@@ -1542,7 +1542,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Stores and products methods
-  async getStores(location?: string, category?: string): Promise<Store[]> {
+  async getStores(location?: string, category?: string): Promise<Vendor[]> {
     try {
       if (!db) {
         const dbModule = await import('./db');
@@ -4826,7 +4826,7 @@ export class MemStorage implements IStorage {
   }
 
   // Stores and products methods for MemStorage
-  async getStores(location?: string, category?: string): Promise<Store[]> {
+  async getStores(location?: string, category?: string): Promise<Vendor[]> {
     return [];
   }
 
@@ -4948,7 +4948,7 @@ export class MemStorage implements IStorage {
   }
 
   // Store methods
-  async getStores(location?: string, category?: string): Promise<Store[]> {
+  async getStores(location?: string, category?: string): Promise<Vendor[]> {
     let storesList = Array.from(this.stores.values());
     
     if (location) {
