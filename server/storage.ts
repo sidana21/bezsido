@@ -319,9 +319,12 @@ export class DatabaseStorage implements IStorage {
         id: randomUUID(),
         ...user,
         isOnline: user.isOnline ?? false,
-        isVerified: user.isVerified ?? false,
-        verifiedAt: user.verifiedAt || null,
+        isVerified: false,
+        verifiedAt: null,
         isAdmin: user.isAdmin ?? false,
+        points: 0,
+        streak: 0,
+        lastStreakDate: null,
         lastSeen: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -330,15 +333,15 @@ export class DatabaseStorage implements IStorage {
       const result = await db.insert(users).values(newUser).returning();
       console.log('User created successfully:', result[0].id);
       return result[0];
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
       console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        detail: error.detail,
-        constraint: error.constraint
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail,
+        constraint: error?.constraint
       });
-      throw new Error(`فشل في إنشاء المستخدم: ${error.message}`);
+      throw new Error(`فشل في إنشاء المستخدم: ${error?.message || 'خطأ غير معروف'}`);
     }
   }
 
@@ -539,7 +542,7 @@ export class DatabaseStorage implements IStorage {
 
   async cleanupExpiredSignupTokens(): Promise<void> {
     const now = new Date();
-    for (const [token, tokenData] of this.signupTokens.entries()) {
+    for (const [token, tokenData] of Array.from(this.signupTokens.entries())) {
       if (tokenData.expiresAt < now) {
         this.signupTokens.delete(token);
       }
@@ -1375,7 +1378,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, userId))
         .returning();
       return result[0] || undefined;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user verification status:', error);
       return undefined;
     }
@@ -3601,7 +3604,7 @@ export class MemStorage implements IStorage {
 
   async cleanupExpiredSignupTokens(): Promise<void> {
     const now = new Date();
-    for (const [token, tokenData] of this.signupTokens.entries()) {
+    for (const [token, tokenData] of Array.from(this.signupTokens.entries())) {
       if (tokenData.expiresAt < now) {
         this.signupTokens.delete(token);
       }

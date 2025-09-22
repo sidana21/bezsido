@@ -204,6 +204,11 @@ const requireAdmin = async (req: any, res: any, next: any) => {
     return res.status(401).json({ message: "Token required" });
   }
   
+  // تحقق خاص للمشرفين - التوكن يجب أن يبدأ بـ admin-
+  if (!token.startsWith('admin-')) {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  
   const session = await storage.getSessionByToken(token);
   if (!session) {
     return res.status(401).json({ message: "Invalid token" });
@@ -211,12 +216,31 @@ const requireAdmin = async (req: any, res: any, next: any) => {
 
   const user = await storage.getUserById(session.userId);
   
-  if (!user || !user.isAdmin) {
+  if (!user) {
+    return res.status(401).json({ message: "User not found" });
+  }
+
+  // تحقق إضافي للتأكد من صلاحيات المشرف
+  const adminManager = new AdminManager(storage);
+  const adminConfig = adminManager.readAdminConfig();
+  
+  // التحقق من أن المستخدم مشرف (إما isAdmin في قاعدة البيانات أو البريد الإلكتروني متطابق مع admin.json)
+  const isAdmin = user.isAdmin || (adminConfig && user.email === adminConfig.email);
+  
+  if (!isAdmin) {
+    console.log(`User ${user.email} attempted admin access but lacks privileges`);
     return res.status(403).json({ message: "Admin access required" });
+  }
+
+  // تحديث حالة المشرف في قاعدة البيانات إذا لم تكن محدثة
+  if (!user.isAdmin && adminConfig && user.email === adminConfig.email) {
+    console.log('Updating admin status for user:', user.email);
+    await storage.updateUserAdminStatus(user.id, true);
   }
 
   req.userId = session.userId;
   req.isAdmin = true;
+  req.user = user;
   next();
 };
 
@@ -2707,24 +2731,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Admin login successful for: ${email}`);
       
       // العثور على مستخدم الإدارة أو إنشاؤه
-      const adminUser = await adminManager.ensureAdminUser();
+      let adminUser = await adminManager.ensureAdminUser();
       
       if (!adminUser) {
         return res.status(500).json({ message: "فشل في إنشاء أو العثور على مستخدم الإدارة" });
       }
-      
-      // تم تعطيل إنشاء البيانات التجريبية للحفاظ على البيانات الحقيقية
+
+      // التأكد من أن المستخدم لديه صلاحيات المشرف
+      if (!adminUser.isAdmin) {
+        console.log('Updating admin status for user during login:', adminUser.email);
+        adminUser = await storage.updateUserAdminStatus(adminUser.id, true);
+        if (!adminUser) {
+          return res.status(500).json({ message: "فشل في تحديث صلاحيات المشرف" });
+        }
+      }
       
       // تحديث وقت آخر تسجيل دخول
       adminManager.updateLastLogin();
       
-      // Create session
+      // Create admin session with proper token
       const sessionData = {
         userId: adminUser!.id,
         token: `admin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       };
+      
+      console.log('Creating admin session with token:', sessionData.token);
       const session = await storage.createSession(sessionData);
+      
+      console.log('Admin session created successfully:', session);
       
       res.json({
         token: session.token,
@@ -2775,27 +2810,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Force fix admin privileges
+  // Force fix admin privileges and session
   app.post("/api/admin/force-fix-privileges", async (req, res) => {
     try {
       const token = req.headers.authorization?.split(' ')[1];
       
-      if (!token || !token.startsWith('admin-')) {
-        return res.status(401).json({ message: "Admin token required" });
+      if (!token) {
+        return res.status(401).json({ message: "Token required" });
       }
       
-      const session = await storage.getSessionByToken(token);
+      // Try to get session even if token doesn't start with admin-
+      let session = await storage.getSessionByToken(token);
+      
       if (!session) {
         return res.status(401).json({ message: "Invalid session" });
+      }
+      
+      let user = await storage.getUserById(session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Check if this is an admin user based on email
+      const adminManager = new AdminManager(storage);
+      const adminConfig = adminManager.readAdminConfig();
+      
+      if (!adminConfig || user.email !== adminConfig.email) {
+        return res.status(403).json({ message: "Not an admin user" });
       }
       
       // Force update admin status
       const updatedUser = await storage.updateUserAdminStatus(session.userId, true);
       console.log('Force fixed admin privileges for user:', updatedUser);
       
+      // Create new admin session with proper token if current token doesn't start with admin-
+      let newToken = token;
+      if (!token.startsWith('admin-')) {
+        const newSessionData = {
+          userId: session.userId,
+          token: `admin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        };
+        
+        console.log('Creating new admin session with token:', newSessionData.token);
+        
+        // Delete old session and create new one
+        await storage.deleteSession(token);
+        const newSession = await storage.createSession(newSessionData);
+        newToken = newSession.token;
+        
+        console.log('New admin session created successfully');
+      }
+      
       res.json({ 
-        message: "Admin privileges fixed", 
+        message: "Admin privileges and session fixed", 
         user: updatedUser,
+        newToken: newToken !== token ? newToken : undefined,
         success: true 
       });
     } catch (error) {
