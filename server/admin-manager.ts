@@ -88,19 +88,38 @@ export class AdminManager {
   public async ensureAdminUser(): Promise<any> {
     const adminConfig = this.readAdminConfig();
     if (!adminConfig) {
-      throw new Error('تعذر قراءة إعدادات الإدارة');
+      throw new Error('admin credentials not found - تعذر قراءة إعدادات الإدارة');
     }
+
+    console.log(`🔍 Looking for admin user with email: ${adminConfig.email}`);
 
     try {
       // البحث عن مستخدم إدارة موجود
-      const existingUsers = await this.storage.getAllUsers();
-      let adminUser = existingUsers.find(user => user.email === adminConfig.email || user.email === "admin@bizchat.dz");
+      let existingUsers;
+      try {
+        existingUsers = await this.storage.getAllUsers();
+        console.log(`📊 Found ${existingUsers.length} total users in database`);
+      } catch (userFetchError) {
+        console.error('❌ Error fetching users:', userFetchError);
+        throw new Error('admin user fetch failed - فشل في جلب المستخدمين');
+      }
+
+      let adminUser = existingUsers.find(user => 
+        user.email === adminConfig.email || 
+        user.email === "admin@bizchat.dz" ||
+        user.email === "admin@bizchat.com"
+      );
       
       if (adminUser) {
-        console.log('تم العثور على مستخدم إدارة موجود:', adminUser.name);
+        console.log('✅ تم العثور على مستخدم إدارة موجود:', adminUser.name);
         // التأكد من أن المستخدم لديه صلاحيات إدارة
         if (!adminUser.isAdmin) {
-          adminUser = await this.storage.updateUserAdminStatus(adminUser.id, true);
+          try {
+            adminUser = await this.storage.updateUserAdminStatus(adminUser.id, true);
+            console.log('✅ Admin privileges updated');
+          } catch (updateError) {
+            console.error('❌ Error updating admin status:', updateError);
+          }
         }
         return adminUser;
       }
@@ -108,40 +127,65 @@ export class AdminManager {
       // البحث عن أي مستخدم إدارة آخر
       const firstAdminUser = existingUsers.find(user => user.isAdmin);
       if (firstAdminUser) {
-        console.log('تم العثور على مستخدم إدارة بديل:', firstAdminUser.name);
+        console.log('✅ تم العثور على مستخدم إدارة بديل:', firstAdminUser.name);
         return firstAdminUser;
       }
 
       // إنشاء مستخدم إدارة جديد
-      console.log('إنشاء مستخدم إدارة جديد...');
-      adminUser = await this.storage.createUser({
+      console.log('🔧 إنشاء مستخدم إدارة جديد...');
+      
+      const userData = {
         name: adminConfig.name || "المدير العام",
-        email: adminConfig.email || "admin@bizchat.dz",
+        email: adminConfig.email || "admin@bizchat.com",
         location: "الجزائر",
         avatar: null,
         isOnline: true,
-      });
+      };
+      
+      console.log('Creating user with data:', userData);
+      
+      try {
+        adminUser = await this.storage.createUser(userData);
+        console.log('User created successfully:', adminUser?.id);
+      } catch (createError) {
+        console.error('❌ Error creating admin user:', createError);
+        throw new Error('admin user creation failed - فشل في إنشاء مستخدم الإدارة');
+      }
 
       if (!adminUser) {
-        throw new Error('فشل في إنشاء مستخدم الإدارة');
+        throw new Error('admin user creation returned null - إنشاء المستخدم أرجع null');
       }
 
       // منح صلاحيات الإدارة
-      if (adminUser) {
+      try {
         adminUser = await this.storage.updateUserAdminStatus(adminUser.id, true);
+        console.log('✅ Admin status granted');
         
         // التحقق من المستخدم
         if (adminUser) {
           await this.storage.updateUserVerificationStatus(adminUser.id, true);
+          console.log('✅ User verified');
         }
+      } catch (privilegeError) {
+        console.error('❌ Error granting admin privileges:', privilegeError);
       }
       
-      console.log('تم إنشاء مستخدم الإدارة بنجاح:', adminUser?.name);
+      console.log('✅ تم إنشاء مستخدم الإدارة بنجاح:', adminUser?.name);
       return adminUser;
 
     } catch (error) {
-      console.error('خطأ في إدارة مستخدم الإدارة:', error);
-      throw new Error('فشل في إنشاء أو العثور على مستخدم الإدارة');
+      console.error('❌ خطأ في إدارة مستخدم الإدارة:', error);
+      
+      // رمي خطأ أكثر تفصيلاً
+      if (error.message.includes('admin credentials')) {
+        throw error; // اعادة رمي خطأ بيانات الاعتماد
+      } else if (error.message.includes('fetch failed')) {
+        throw error; // اعادة رمي خطأ جلب المستخدمين
+      } else if (error.message.includes('creation failed')) {
+        throw error; // اعادة رمي خطأ إنشاء المستخدم
+      } else {
+        throw new Error('admin user management failed - فشل في إدارة مستخدم الإدارة');
+      }
     }
   }
 

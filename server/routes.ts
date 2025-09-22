@@ -2774,9 +2774,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       console.log('Creating admin session with token:', sessionData.token);
-      const session = await storage.createSession(sessionData);
       
-      console.log('Admin session created successfully:', session);
+      let session;
+      try {
+        session = await storage.createSession(sessionData);
+        console.log('✅ Admin session created successfully');
+      } catch (sessionError) {
+        console.error('❌ Error creating admin session:', sessionError);
+        return res.status(500).json({ message: "خطأ في إنشاء الجلسة" });
+      }
       
       res.json({
         token: session.token,
@@ -2784,8 +2790,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "تم تسجيل الدخول بنجاح"
       });
     } catch (error) {
-      console.error("Admin login error:", error);
-      res.status(500).json({ message: "خطأ في الخادم. حاول مرة أخرى." });
+      console.error("❌ Admin login error:", error);
+      
+      // رسالة خطأ مفصلة للتشخيص
+      let errorMessage = "خطأ في الخادم";
+      if (error instanceof Error) {
+        if (error.message.includes('admin credentials')) {
+          errorMessage = "لم يتم العثور على بيانات الإدارة";
+        } else if (error.message.includes('admin user')) {
+          errorMessage = "خطأ في إنشاء مستخدم الإدارة";
+        } else if (error.message.includes('session')) {
+          errorMessage = "خطأ في إنشاء الجلسة";
+        }
+      }
+      
+      res.status(500).json({ 
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Admin health check endpoint for troubleshooting
+  app.get("/api/admin/health", async (req, res) => {
+    try {
+      const adminManager = new AdminManager(storage);
+      const config = adminManager.readAdminConfig();
+      
+      const status = {
+        configLoaded: !!config,
+        configSource: config ? (process.env.ADMIN_EMAIL ? 'environment' : 'file/default') : 'none',
+        adminEmail: config?.email || 'not found',
+        fileExists: require('fs').existsSync(require('path').join(process.cwd(), 'admin.json')),
+        environment: process.env.NODE_ENV,
+        envVarsSet: {
+          ADMIN_EMAIL: !!process.env.ADMIN_EMAIL,
+          ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD
+        }
+      };
+      
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   });
 
