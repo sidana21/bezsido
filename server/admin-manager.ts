@@ -24,6 +24,8 @@ export class AdminManager {
    * قراءة بيانات الإدارة من متغيرات البيئة أولاً ثم ملف admin.json
    */
   public readAdminConfig(): AdminConfig | null {
+    console.log('🔍 Reading admin config...');
+    
     // المحاولة الأولى: استخدام متغيرات البيئة (الأولوية للإنتاج)
     const envEmail = process.env.ADMIN_EMAIL;
     const envPassword = process.env.ADMIN_PASSWORD;
@@ -40,33 +42,32 @@ export class AdminManager {
       };
     }
 
-    // المحاولة الثانية: قراءة من ملف admin.json (للتطوير المحلي)
+    console.log('⚠️ Environment variables not found, checking admin.json...');
+
+    // المحاولة الثانية: قراءة من ملف admin.json
     try {
       if (fs.existsSync(this.adminFilePath)) {
         const adminFileContent = fs.readFileSync(this.adminFilePath, 'utf8');
         const config = JSON.parse(adminFileContent) as AdminConfig;
-        console.log('✅ Admin credentials loaded from admin.json (development)');
+        console.log('✅ Admin credentials loaded from admin.json');
         return config;
+      } else {
+        console.log('⚠️ admin.json file not found at:', this.adminFilePath);
       }
     } catch (error) {
       console.error('⚠️ Error reading admin.json:', error);
     }
 
-    // المحاولة الثالثة: استخدام بيانات افتراضية للتطوير فقط
-    if (process.env.NODE_ENV === 'development') {
-      console.log('⚠️ Using default admin credentials for development only');
-      return {
-        email: "admin@bizchat.com",
-        password: "admin123456",
-        name: "المدير العام",
-        createdAt: new Date().toISOString(),
-        lastLogin: null,
-        isActive: true
-      };
-    }
-
-    console.error('❌ No admin credentials found. Set ADMIN_EMAIL and ADMIN_PASSWORD environment variables.');
-    return null;
+    // المحاولة الثالثة: استخدام بيانات افتراضية (للتطوير والطوارئ)
+    console.log('⚠️ Using default admin credentials for emergency access');
+    return {
+      email: "admin@bizchat.com",
+      password: "admin123456",
+      name: "المدير العام",
+      createdAt: new Date().toISOString(),
+      lastLogin: null,
+      isActive: true
+    };
   }
 
   /**

@@ -2719,7 +2719,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, password } = req.body;
       
+      console.log(`🔐 Admin login attempt for: ${email}`);
+      
       if (!email || !password) {
+        console.log('❌ Missing email or password');
         return res.status(400).json({ message: "البريد الإلكتروني وكلمة المرور مطلوبان" });
       }
       
@@ -2727,16 +2730,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminManager = new AdminManager(storage);
       
       // التحقق من صحة بيانات الدخول
-      if (!adminManager.validateCredentials(email, password)) {
+      const isValid = adminManager.validateCredentials(email, password);
+      console.log(`🔍 Credentials validation result: ${isValid}`);
+      
+      if (!isValid) {
+        console.log('❌ Invalid credentials provided');
         return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
-      console.log(`Admin login successful for: ${email}`);
+      console.log(`✅ Admin login successful for: ${email}`);
       
       // العثور على مستخدم الإدارة أو إنشاؤه
-      let adminUser = await adminManager.ensureAdminUser();
+      let adminUser;
+      try {
+        adminUser = await adminManager.ensureAdminUser();
+      } catch (error) {
+        console.error('❌ Error in ensureAdminUser:', error);
+        return res.status(500).json({ message: "خطأ في إنشاء مستخدم الإدارة" });
+      }
       
       if (!adminUser) {
+        console.log('❌ Failed to create or find admin user');
         return res.status(500).json({ message: "فشل في إنشاء أو العثور على مستخدم الإدارة" });
       }
 
