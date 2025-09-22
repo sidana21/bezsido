@@ -163,41 +163,245 @@ export const insertStickerSchema = createInsertSchema(stickers).omit({
   createdAt: true,
 });
 
-// Stores for users
-export const stores = pgTable("stores", {
+// فئات البائعين - Vendor Categories
+export const vendorCategories = pgTable("vendor_categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id), // Store owner
   name: text("name").notNull(),
-  description: text("description").notNull(),
-  imageUrl: text("image_url"),
-  category: text("category").notNull(),
-  location: text("location").notNull(), // Store location
-  phoneNumber: text("phone_number"),
-  isOpen: boolean("is_open").default(true),
-  isActive: boolean("is_active").default(false), // Default to false until approved
-  status: text("status").notNull().default("pending"), // pending, approved, rejected, suspended
-  isVerified: boolean("is_verified").default(false), // Store verification status
-  verifiedAt: timestamp("verified_at"), // When store was verified
-  approvedAt: timestamp("approved_at"), // When store was approved
-  approvedBy: varchar("approved_by").references(() => users.id), // Admin who approved
-  rejectionReason: text("rejection_reason"), // Reason for rejection
+  nameAr: text("name_ar").notNull(), // الاسم بالعربية
+  description: text("description"),
+  icon: text("icon"), // أيقونة الفئة
+  color: text("color").default("#3B82F6"), // لون الفئة
+  commissionRate: decimal("commission_rate").notNull().default("0.05"), // معدل العمولة لهذه الفئة
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Products for affiliate marketing
+// البائعين - Vendors (يحل محل المتاجر)
+export const vendors = pgTable("vendors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // البائع
+  businessName: text("business_name").notNull(), // اسم النشاط التجاري
+  displayName: text("display_name").notNull(), // الاسم التجاري
+  description: text("description").notNull(),
+  categoryId: varchar("category_id").notNull().references(() => vendorCategories.id),
+  logoUrl: text("logo_url"),
+  bannerUrl: text("banner_url"), // صورة غلاف
+  location: text("location").notNull(),
+  address: text("address"), // العنوان التفصيلي
+  phoneNumber: text("phone_number"),
+  whatsappNumber: text("whatsapp_number"),
+  email: text("email"),
+  website: text("website"),
+  socialLinks: jsonb("social_links").$type<{facebook?: string, instagram?: string, twitter?: string}>().default({}),
+  
+  // حالة البائع
+  status: text("status").notNull().default("pending"), // pending, approved, rejected, suspended, featured
+  isActive: boolean("is_active").default(false),
+  isVerified: boolean("is_verified").default(false),
+  isFeatured: boolean("is_featured").default(false), // بائع مميز
+  isPremium: boolean("is_premium").default(false), // اشتراك مدفوع
+  
+  // تواريخ مهمة
+  verifiedAt: timestamp("verified_at"),
+  approvedAt: timestamp("approved_at"),
+  suspendedAt: timestamp("suspended_at"),
+  featuredUntil: timestamp("featured_until"), // تاريخ انتهاء الترويج
+  premiumUntil: timestamp("premium_until"), // تاريخ انتهاء الاشتراك المدفوع
+  
+  // إحصائيات
+  totalSales: decimal("total_sales").default("0"),
+  totalOrders: integer("total_orders").default(0),
+  totalProducts: integer("total_products").default(0),
+  averageRating: decimal("average_rating", { precision: 3, scale: 2 }).default("0"),
+  totalReviews: integer("total_reviews").default(0),
+  
+  // إعدادات التشغيل
+  workingHours: jsonb("working_hours").$type<{[key: string]: {open: string, close: string, isOpen: boolean}}>().default({}),
+  deliveryAreas: jsonb("delivery_areas").$type<string[]>().default([]), // مناطق التوصيل
+  deliveryFee: decimal("delivery_fee").default("0"), // رسوم التوصيل
+  minOrderAmount: decimal("min_order_amount").default("0"), // أقل مبلغ طلب
+  
+  // إدارة
+  approvedBy: varchar("approved_by").references(() => users.id),
+  rejectionReason: text("rejection_reason"),
+  adminNotes: text("admin_notes"), // ملاحظات الإدارة
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// تقييمات البائعين - Vendor Ratings
+export const vendorRatings = pgTable("vendor_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id),
+  userId: varchar("user_id").notNull().references(() => users.id), // من قام بالتقييم
+  rating: integer("rating").notNull(), // من 1 إلى 5
+  review: text("review"), // المراجعة النصية
+  orderId: varchar("order_id").references(() => orders.id), // مرتبط بطلب
+  
+  // جوانب التقييم
+  productQuality: integer("product_quality"), // جودة المنتج
+  customerService: integer("customer_service"), // خدمة العملاء
+  deliverySpeed: integer("delivery_speed"), // سرعة التوصيل
+  priceValue: integer("price_value"), // مقابل السعر
+  
+  isVerified: boolean("is_verified").default(false), // تقييم موثق
+  isPublic: boolean("is_public").default(true),
+  
+  // رد البائع
+  vendorReply: text("vendor_reply"),
+  repliedAt: timestamp("replied_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// اشتراكات البائعين - Vendor Subscriptions
+export const vendorSubscriptions = pgTable("vendor_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id),
+  planType: text("plan_type").notNull(), // basic, premium, enterprise
+  planName: text("plan_name").notNull(),
+  
+  // تفاصيل الاشتراك
+  monthlyFee: decimal("monthly_fee").notNull(),
+  commissionRate: decimal("commission_rate").notNull(), // معدل العمولة المخفض
+  maxProducts: integer("max_products"), // عدد المنتجات المسموح
+  maxOrders: integer("max_orders"), // عدد الطلبات الشهرية
+  
+  // مميزات الاشتراك
+  features: jsonb("features").$type<string[]>().default([]),
+  isFeaturedListing: boolean("is_featured_listing").default(false), // إدراج مميز
+  prioritySupport: boolean("priority_support").default(false), // دعم أولوية
+  analyticsAccess: boolean("analytics_access").default(false), // الوصول للتحليلات
+  customBranding: boolean("custom_branding").default(false), // علامة تجارية مخصصة
+  
+  // تواريخ الاشتراك
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  autoRenew: boolean("auto_renew").default(true),
+  
+  // الدفع
+  lastPaymentDate: timestamp("last_payment_date"),
+  nextPaymentDate: timestamp("next_payment_date"),
+  paymentMethod: text("payment_method"), // card, bank_transfer, cash
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// فئات المنتجات - Product Categories
+export const productCategories = pgTable("product_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  nameAr: text("name_ar").notNull(),
+  description: text("description"),
+  icon: text("icon"),
+  parentId: varchar("parent_id").references(() => productCategories.id), // للفئات الفرعية
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// منتجات السوق المتطور - Advanced Marketplace Products
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id), // Product owner
-  storeId: varchar("store_id").references(() => stores.id), // Optional: link to store
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id), // البائع
+  categoryId: varchar("category_id").notNull().references(() => productCategories.id),
+  
+  // معلومات المنتج الأساسية
   name: text("name").notNull(),
   description: text("description").notNull(),
-  price: decimal("price").notNull(),
-  imageUrl: text("image_url"),
-  category: text("category").notNull(),
-  location: text("location").notNull(), // Where product is available
-  isActive: boolean("is_active").default(true),
-  commissionRate: decimal("commission_rate").notNull().default("0.05"), // 5% default commission
+  shortDescription: text("short_description"), // وصف مختصر
+  sku: text("sku").unique(), // رمز المنتج
+  barcode: text("barcode"), // الباركود
+  
+  // الأسعار والخصومات
+  originalPrice: decimal("original_price").notNull(),
+  salePrice: decimal("sale_price"), // سعر الخصم
+  costPrice: decimal("cost_price"), // سعر التكلفة (للبائع فقط)
+  currency: text("currency").notNull().default("DZD"),
+  
+  // الصور والوسائط
+  images: jsonb("images").$type<string[]>().default([]),
+  videoUrl: text("video_url"), // فيديو المنتج
+  
+  // المخزون
+  stockQuantity: integer("stock_quantity").default(0),
+  lowStockThreshold: integer("low_stock_threshold").default(5),
+  stockStatus: text("stock_status").notNull().default("in_stock"), // in_stock, out_of_stock, low_stock
+  manageStock: boolean("manage_stock").default(true),
+  
+  // المواصفات والخيارات
+  attributes: jsonb("attributes").$type<{[key: string]: string}>().default({}), // اللون، الحجم، إلخ
+  variations: jsonb("variations").$type<Array<{name: string, price: decimal, sku?: string, stock?: number}>>().default([]),
+  
+  // التوصيل والشحن
+  weight: decimal("weight"), // الوزن بالكيلوغرام
+  dimensions: jsonb("dimensions").$type<{length: number, width: number, height: number}>(), // الأبعاد
+  shippingClass: text("shipping_class"), // فئة الشحن
+  
+  // SEO ومحركات البحث
+  slug: text("slug").unique(), // رابط صديق لمحركات البحث
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  tags: jsonb("tags").$type<string[]>().default([]),
+  
+  // الحالة والنشر
+  status: text("status").notNull().default("draft"), // draft, pending, published, rejected
+  isActive: boolean("is_active").default(false),
+  isFeatured: boolean("is_featured").default(false),
+  isDigital: boolean("is_digital").default(false), // منتج رقمي
+  
+  // إحصائيات
+  viewCount: integer("view_count").default(0),
+  orderCount: integer("order_count").default(0),
+  averageRating: decimal("average_rating", { precision: 3, scale: 2 }).default("0"),
+  totalReviews: integer("total_reviews").default(0),
+  
+  // تواريخ مهمة
+  publishedAt: timestamp("published_at"),
+  featuredUntil: timestamp("featured_until"),
+  saleStartDate: timestamp("sale_start_date"),
+  saleEndDate: timestamp("sale_end_date"),
+  
+  // العمولات والرسوم
+  commissionRate: decimal("commission_rate").notNull().default("0.05"),
+  marketplaceFee: decimal("marketplace_fee").default("0.02"), // رسوم السوق
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// تقييمات المنتجات - Product Reviews
+export const productReviews = pgTable("product_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  orderId: varchar("order_id").references(() => orders.id),
+  
+  rating: integer("rating").notNull(), // من 1 إلى 5
+  title: text("title"),
+  review: text("review"),
+  
+  // الصور والوسائط
+  images: jsonb("images").$type<string[]>().default([]),
+  videoUrl: text("video_url"),
+  
+  isVerified: boolean("is_verified").default(false), // تقييم موثق
+  isRecommended: boolean("is_recommended").default(true),
+  
+  // تفاعل المجتمع
+  helpfulCount: integer("helpful_count").default(0),
+  notHelpfulCount: integer("not_helpful_count").default(0),
+  
+  // رد البائع
+  vendorReply: text("vendor_reply"),
+  repliedAt: timestamp("replied_at"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -262,8 +466,7 @@ export const cartItems = pgTable("cart_items", {
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   buyerId: varchar("buyer_id").notNull().references(() => users.id), // Customer
-  sellerId: varchar("seller_id").notNull().references(() => users.id), // Store owner
-  storeId: varchar("store_id").references(() => stores.id), // Optional store reference
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id), // Vendor
   totalAmount: decimal("total_amount").notNull(), // Total order value
   status: text("status").notNull().default("pending"), // pending, confirmed, prepared, delivered, cancelled
   paymentMethod: text("payment_method").notNull().default("cash_on_delivery"), // cash_on_delivery, bank_transfer, etc.
@@ -323,20 +526,73 @@ export const invoiceItems = pgTable("invoice_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertStoreSchema = createInsertSchema(stores).omit({
+export const insertVendorCategorySchema = createInsertSchema(vendorCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVendorSchema = createInsertSchema(vendors).omit({
   id: true,
   status: true,
   isVerified: true,
   verifiedAt: true,
   approvedAt: true,
+  suspendedAt: true,
+  featuredUntil: true,
+  premiumUntil: true,
+  totalSales: true,
+  totalOrders: true,
+  totalProducts: true,
+  averageRating: true,
+  totalReviews: true,
   approvedBy: true,
   rejectionReason: true,
+  adminNotes: true,
   createdAt: true,
   updatedAt: true,
 });
 
+export const insertVendorRatingSchema = createInsertSchema(vendorRatings).omit({
+  id: true,
+  isVerified: true,
+  repliedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVendorSubscriptionSchema = createInsertSchema(vendorSubscriptions).omit({
+  id: true,
+  lastPaymentDate: true,
+  nextPaymentDate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductCategorySchema = createInsertSchema(productCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
+  stockStatus: true,
+  viewCount: true,
+  orderCount: true,
+  averageRating: true,
+  totalReviews: true,
+  publishedAt: true,
+  featuredUntil: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductReviewSchema = createInsertSchema(productReviews).omit({
+  id: true,
+  isVerified: true,
+  helpfulCount: true,
+  notHelpfulCount: true,
+  repliedAt: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -442,10 +698,20 @@ export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessions.$inferSelect;
 export type InsertOtp = z.infer<typeof insertOtpSchema>;
 export type OtpCode = typeof otpCodes.$inferSelect;
-export type InsertStore = z.infer<typeof insertStoreSchema>;
-export type Store = typeof stores.$inferSelect;
+export type InsertVendorCategory = z.infer<typeof insertVendorCategorySchema>;
+export type VendorCategory = typeof vendorCategories.$inferSelect;
+export type InsertVendor = z.infer<typeof insertVendorSchema>;
+export type Vendor = typeof vendors.$inferSelect;
+export type InsertVendorRating = z.infer<typeof insertVendorRatingSchema>;
+export type VendorRating = typeof vendorRatings.$inferSelect;
+export type InsertVendorSubscription = z.infer<typeof insertVendorSubscriptionSchema>;
+export type VendorSubscription = typeof vendorSubscriptions.$inferSelect;
+export type InsertProductCategory = z.infer<typeof insertProductCategorySchema>;
+export type ProductCategory = typeof productCategories.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
+export type InsertProductReview = z.infer<typeof insertProductReviewSchema>;
+export type ProductReview = typeof productReviews.$inferSelect;
 export type InsertAffiliateLink = z.infer<typeof insertAffiliateLinkSchema>;
 export type AffiliateLink = typeof affiliateLinks.$inferSelect;
 export type InsertCommission = z.infer<typeof insertCommissionSchema>;
