@@ -337,7 +337,7 @@ export const products = pgTable("products", {
   
   // المواصفات والخيارات
   attributes: jsonb("attributes").$type<{[key: string]: string}>().default({}), // اللون، الحجم، إلخ
-  variations: jsonb("variations").$type<Array<{name: string, price: decimal, sku?: string, stock?: number}>>().default([]),
+  variations: jsonb("variations").$type<Array<{name: string, price: string, sku?: string, stock?: number}>>().default([]),
   
   // التوصيل والشحن
   weight: decimal("weight"), // الوزن بالكيلوغرام
@@ -639,7 +639,7 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
 export const verificationRequests = pgTable("verification_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id), // User requesting verification
-  storeId: varchar("store_id").references(() => stores.id), // Optional: for store verification requests
+  vendorId: varchar("vendor_id").references(() => vendors.id), // Optional: for vendor verification requests
   requestType: text("request_type").notNull(), // "user" or "store"
   status: text("status").notNull().default("pending"), // pending, approved, rejected
   documents: jsonb("documents").$type<string[]>().default([]), // Document URLs submitted
