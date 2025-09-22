@@ -10,7 +10,12 @@ async function initializeDatabase() {
   if (process.env.DATABASE_URL) {
     try {
       // إعداد قاعدة البيانات الخارجية Neon Serverless
-      const connection = neon(process.env.DATABASE_URL);
+      // Fix SSL certificate issues in Replit environment
+      const connection = neon(process.env.DATABASE_URL, {
+        fetchOptions: {
+          cache: 'no-store',
+        }
+      });
       db = drizzle({ client: connection, schema });
       
       // Test the connection

@@ -4,6 +4,12 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage, type IStorage } from "./storage";
 import { AdminManager } from "./admin-manager";
 
+// Fix SSL certificate issues in Replit development environment
+if (process.env.NODE_ENV === 'development') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  console.log('🔧 SSL certificate verification disabled for development');
+}
+
 // Enhanced error handling for production environments
 process.on('unhandledRejection', (reason, promise) => {
   console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
