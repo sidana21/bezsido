@@ -206,8 +206,11 @@ const requireAdmin = async (req: any, res: any, next: any) => {
   
   // تحقق خاص للمشرفين - التوكن يجب أن يبدأ بـ admin-
   if (!token.startsWith('admin-')) {
-    return res.status(403).json({ message: "Admin access required" });
+    console.log(`❌ Token doesn't start with admin-: ${token.substring(0, 10)}...`);
+    return res.status(403).json({ message: "Unauthorized - Admin access required" });
   }
+  
+  console.log(`✅ Admin token detected: ${token.substring(0, 15)}...`);
   
   const session = await storage.getSessionByToken(token);
   if (!session) {
@@ -4164,12 +4167,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const emailConfigManager = new EmailConfigManager();
 
   // الحصول على حالة إعدادات البريد الإلكتروني
-  app.get("/api/admin/email-config/status", requireAuth, async (req: any, res) => {
+  app.get("/api/admin/email-config/status", requireAdmin, async (req: any, res) => {
     try {
-      // التحقق من صلاحيات الإدارة
-      if (!req.user?.isAdmin) {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
       
       const status = emailConfigManager.getStatus();
       const serviceStatus = emailService.getServiceStatus();
@@ -4188,12 +4187,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // تحديث إعدادات Gmail
-  app.post("/api/admin/email-config/gmail", requireAuth, async (req: any, res) => {
+  app.post("/api/admin/email-config/gmail", requireAdmin, async (req: any, res) => {
     try {
-      // التحقق من صلاحيات الإدارة  
-      if (!req.user?.isAdmin) {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
       
       const { user, password, fromEmail } = req.body;
       
@@ -4225,12 +4220,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // تحديث إعدادات SendGrid
-  app.post("/api/admin/email-config/sendgrid", requireAuth, async (req: any, res) => {
+  app.post("/api/admin/email-config/sendgrid", requireAdmin, async (req: any, res) => {
     try {
-      // التحقق من صلاحيات الإدارة
-      if (!req.user?.isAdmin) {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
       
       const { apiKey, fromEmail } = req.body;
       
@@ -4262,12 +4253,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // اختبار إرسال بريد إلكتروني تجريبي
-  app.post("/api/admin/email-config/test", requireAuth, async (req: any, res) => {
+  app.post("/api/admin/email-config/test", requireAdmin, async (req: any, res) => {
     try {
-      // التحقق من صلاحيات الإدارة
-      if (!req.user?.isAdmin) {
-        return res.status(403).json({ message: "Unauthorized - Admin access required" });
-      }
       
       const { testEmail } = req.body;
       
