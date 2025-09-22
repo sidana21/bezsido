@@ -121,6 +121,7 @@ export default function MyStore() {
       description: z.string().min(1, "وصف المنتج مطلوب"),
       price: z.string().min(1, "السعر مطلوب"),
       category: z.string().min(1, "فئة المنتج مطلوبة"),
+      location: z.string().min(1, "موقع المنتج مطلوب"),
     })),
     defaultValues: {
       name: "",
