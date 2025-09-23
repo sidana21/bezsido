@@ -140,6 +140,9 @@ export class AdminManager {
         location: "الجزائر",
         avatar: null,
         isOnline: true,
+        // Ensure proper timestamp handling
+        verifiedAt: null,
+        lastStreakDate: null,
       };
       
       console.log('Creating user with data:', userData);

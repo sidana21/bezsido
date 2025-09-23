@@ -392,13 +392,22 @@ export class DatabaseStorage implements IStorage {
       
       console.log('Creating user with data:', user);
       
+      // Sanitize timestamp fields to prevent empty string errors
+      const sanitizedUser = { ...user };
+      const timestampFields = ['verifiedAt', 'lastStreakDate', 'lastSeen', 'createdAt', 'updatedAt'];
+      timestampFields.forEach(field => {
+        if (sanitizedUser[field as keyof InsertUser] === '') {
+          (sanitizedUser as any)[field] = null;
+        }
+      });
+      
       const newUser = {
         id: randomUUID(),
-        ...user,
-        isOnline: user.isOnline ?? false,
+        ...sanitizedUser,
+        isOnline: sanitizedUser.isOnline ?? false,
         isVerified: false,
         verifiedAt: null,
-        isAdmin: user.isAdmin ?? false,
+        isAdmin: sanitizedUser.isAdmin ?? false,
         points: 0,
         streak: 0,
         lastStreakDate: null,

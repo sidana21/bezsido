@@ -194,6 +194,29 @@ function normalizePhoneNumber(phoneNumber: string): string {
   return normalized;
 }
 
+// Utility function to sanitize timestamp fields
+function sanitizeTimestampFields(data: any): any {
+  const sanitized = { ...data };
+  
+  // List of timestamp field names that might come as empty strings from forms
+  const timestampFields = [
+    'createdAt', 'updatedAt', 'verifiedAt', 'approvedAt', 'suspendedAt', 
+    'featuredUntil', 'premiumUntil', 'lastStreakDate', 'lastSeen',
+    'publishedAt', 'saleStartDate', 'saleEndDate', 'repliedAt',
+    'lastPaymentDate', 'nextPaymentDate', 'startDate', 'endDate',
+    'expiresAt', 'timestamp'
+  ];
+  
+  // Convert empty strings to null for timestamp fields
+  timestampFields.forEach(field => {
+    if (sanitized[field] === '') {
+      sanitized[field] = null;
+    }
+  });
+  
+  return sanitized;
+}
+
 // Middleware to check authentication
 const requireAuth = async (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -2225,8 +2248,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "المستخدم لديه بائع بالفعل" });
       }
 
+      // Sanitize timestamp fields to fix empty string issues
+      const sanitizedBody = sanitizeTimestampFields(req.body);
+      
       const vendorData = insertVendorSchema.parse({
-        ...req.body,
+        ...sanitizedBody,
         userId: req.userId,
       });
       
@@ -2238,7 +2264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("خطأ في إنشاء البائع:", error);
       if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+        return res.status(400).json({ message: "بيانات غير صالحة", errors: error.errors });
       }
       if (error instanceof Error) {
         res.status(400).json({ message: error.message });
@@ -2705,7 +2731,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/services", requireAuth, async (req: any, res) => {
     try {
-      const serviceData = insertServiceSchema.parse(req.body);
+      // Sanitize timestamp fields to fix empty string issues
+      const sanitizedBody = sanitizeTimestampFields(req.body);
+      
+      const serviceData = insertServiceSchema.parse(sanitizedBody);
       const service = await storage.createService(serviceData);
       res.json(service);
     } catch (error) {
