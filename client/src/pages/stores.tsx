@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plus, Package, MessageCircle, ShieldCheck, Crown, Zap, Heart, TrendingUp, Award, Sparkles, Car, Truck, Home, Wrench, Scissors, Baby } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { User, Vendor, Product } from "@shared/schema";
+import type { User, Vendor, Product, Service, ServiceCategory } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface VendorWithOwner extends Vendor {
@@ -25,43 +25,30 @@ export default function Stores() {
     queryKey: ["/api/user/current"],
   });
 
-  // Fetch all products from all stores for AliExpress-style display
-  const { data: allProducts = [], isLoading: isLoadingProducts } = useQuery<any[]>({
-    queryKey: ["/api/products", currentUser?.location],
-    queryFn: () => apiRequest(`/api/products?location=${encodeURIComponent(currentUser?.location || '')}`),
+  // Fetch all services from all vendors for service marketplace display
+  const { data: allServices = [], isLoading: isLoadingServices } = useQuery<Service[]>({
+    queryKey: ["/api/services", currentUser?.location],
+    queryFn: () => apiRequest(`/api/services?location=${encodeURIComponent(currentUser?.location || '')}`),
     enabled: !!currentUser,
   });
 
-  const { data: stores = [], isLoading: isLoadingStores } = useQuery<VendorWithOwner[]>({
-    queryKey: ["/api/stores", currentUser?.location],
-    queryFn: () => apiRequest(`/api/stores?location=${encodeURIComponent(currentUser?.location || '')}`),
+  const { data: serviceCategories = [], isLoading: isLoadingCategories } = useQuery<ServiceCategory[]>({
+    queryKey: ["/api/service-categories"],
     enabled: !!currentUser,
   });
 
-  const { data: cartItems = [] } = useQuery<any[]>({
-    queryKey: ["/api/cart"],
-  });
 
-  const startChatMutation = useMutation({
-    mutationFn: async (otherUserId: string) => {
+
+  const requestServiceMutation = useMutation({
+    mutationFn: async ({ serviceId, vendorId }: { serviceId: string; vendorId: string }) => {
       return apiRequest("/api/chats/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otherUserId }),
+        body: JSON.stringify({ otherUserId: vendorId }),
       });
     },
     onSuccess: (data: any) => {
       setLocation(`/chat/${data.chatId}`);
-    },
-  });
-
-  const addToCartMutation = useMutation({
-    mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
-      return apiRequest("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity: quantity.toString() }),
-      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
@@ -115,13 +102,12 @@ export default function Stores() {
     },
   });
 
-  // Filter products instead of stores for AliExpress-style search
-  const filteredProducts = allProducts.filter(product =>
-    product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product?.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product?.store?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product?.owner?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product?.category?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter services for service marketplace search
+  const filteredServices = allServices.filter(service =>
+    service?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    service?.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    service?.serviceType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    service?.location?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
 
@@ -153,19 +139,14 @@ export default function Stores() {
               <p className="text-white/80 text-sm">اكتشف مئات الخدمات المتنوعة من مقدمين موثوقين</p>
             </div>
           </div>
-          <Link href="/cart">
+          <Link href="/profile">
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-green-600 w-12 h-12 rounded-full relative"
-              data-testid="button-cart"
+              className="text-white hover:bg-green-600 w-12 h-12 rounded-full"
+              data-testid="button-profile"
             >
-              <ShoppingCart className="w-6 h-6" />
-              {cartItems.length > 0 && (
-                <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  {cartItems.length}
-                </Badge>
-              )}
+              <Crown className="w-6 h-6" />
             </Button>
           </Link>
         </div>
@@ -312,13 +293,13 @@ export default function Stores() {
         )}
 
         {/* Services Grid - Professional Style */}
-        {!isLoadingProducts && filteredProducts.length > 0 && (
+        {!isLoadingServices && filteredServices.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {filteredProducts.map((product) => (
+            {filteredServices.map((service) => (
               <div
-                key={product.id}
+                key={service.id}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer transform"
-                data-testid={`product-card-${product.id}`}
+                data-testid={`service-card-${service.id}`}
                 onClick={() => {/* TODO: Navigate to product detail */}}
               >
                 {/* Product Image - AliExpress Style */}
@@ -427,7 +408,7 @@ export default function Stores() {
         )}
 
         {/* Empty State - Premium */}
-        {!isLoadingProducts && filteredProducts.length === 0 && (
+        {!isLoadingServices && filteredServices.length === 0 && (
           <div className="text-center py-20">
             <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl">
               <Package className="w-16 h-16 text-gray-400" />
