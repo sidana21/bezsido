@@ -49,18 +49,15 @@ export default function Stores() {
     },
     onSuccess: (data: any) => {
       setLocation(`/chat/${data.chatId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       toast({
-        title: "تم الإضافة للسلة",
-        description: "تم إضافة المنتج إلى السلة بنجاح",
+        title: "تم بدء المحادثة",
+        description: "تم الاتصال بمقدم الخدمة بنجاح",
       });
     },
     onError: () => {
       toast({
         title: "خطأ",
-        description: "فشل في إضافة المنتج للسلة",
+        description: "فشل في الاتصال بمقدم الخدمة",
         variant: "destructive",
       });
     },
@@ -277,7 +274,7 @@ export default function Stores() {
         </div>
 
         {/* Loading State - Premium Services Grid */}
-        {isLoadingProducts && (
+        {isLoadingServices && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
               <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden animate-pulse">
@@ -300,16 +297,16 @@ export default function Stores() {
                 key={service.id}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer transform"
                 data-testid={`service-card-${service.id}`}
-                onClick={() => {/* TODO: Navigate to product detail */}}
+                onClick={() => {/* TODO: Navigate to service detail */}}
               >
-                {/* Product Image - AliExpress Style */}
+                {/* Service Image - AliExpress Style */}
                 <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
-                  {product.imageUrl ? (
+                  {service.images && service.images.length > 0 ? (
                     <img
-                      src={product.imageUrl}
-                      alt={product.name}
+                      src={service.images[0]}
+                      alt={service.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      data-testid={`img-product-${product.id}`}
+                      data-testid={`img-service-${service.id}`}
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center">
@@ -339,22 +336,22 @@ export default function Stores() {
                       className="bg-whatsapp-green hover:bg-green-600 text-white shadow-md h-8 px-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        addToCartMutation.mutate({ productId: product.id });
+                        requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId });
                       }}
-                      disabled={addToCartMutation.isPending}
-                      data-testid={`button-add-cart-${product.id}`}
+                      disabled={requestServiceMutation.isPending}
+                      data-testid={`button-request-service-${service.id}`}
                     >
-                      <ShoppingCart className="w-3 h-3" />
+                      <MessageCircle className="w-3 h-3" />
                     </Button>
                   </div>
                 </div>
 
-                {/* Product Info - AliExpress Style */}
+                {/* Service Info - AliExpress Style */}
                 <div className="p-3 space-y-2">
-                  {/* Product Price - Most Prominent */}
+                  {/* Service Price - Most Prominent */}
                   <div className="flex items-center justify-between">
                     <div className="text-lg font-bold text-red-500">
-                      {parseInt(product?.price || '0').toLocaleString()} دج
+                      {parseInt(service?.basePrice || '0').toLocaleString()} دج
                     </div>
                     <div className="flex items-center gap-1">
                       <Star className="w-3 h-3 text-yellow-400 fill-current" />
@@ -362,20 +359,17 @@ export default function Stores() {
                     </div>
                   </div>
                   
-                  {/* Product Name */}
+                  {/* Service Name */}
                   <h3 className="font-medium text-sm text-gray-800 dark:text-white line-clamp-2 leading-4 group-hover:text-whatsapp-green transition-colors">
-                    {product?.name || 'اسم المنتج'}
+                    {service?.name || 'اسم الخدمة'}
                   </h3>
                   
-                  {/* Store Name - Like AliExpress */}
+                  {/* Service Provider Name */}
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <Store className="w-3 h-3" />
                     <span className="truncate">
-                      {product?.store?.name || product?.owner?.name || 'متجر'}
+                      مقدم خدمة
                     </span>
-                    {(product?.store?.isVerified || product?.owner?.isVerified) && (
-                      <ShieldCheck className="w-3 h-3 text-blue-500 flex-shrink-0" />
-                    )}
                   </div>
                   
                   {/* Category Badge */}
@@ -383,23 +377,23 @@ export default function Stores() {
                     variant="secondary" 
                     className="text-xs h-5 px-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                   >
-                    {product?.category || 'تصنيف'}
+                    {service?.serviceType || 'نوع الخدمة'}
                   </Badge>
                   
-                  {/* Quick Buy Button */}
+                  {/* Request Service Button */}
                   <Button
                     size="sm"
                     variant="outline"
                     className="w-full mt-2 h-7 text-xs border-gray-200 hover:border-whatsapp-green hover:text-whatsapp-green transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
-                      buyNowMutation.mutate({ product, sellerId: product.userId });
+                      requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId });
                     }}
-                    disabled={buyNowMutation.isPending}
-                    data-testid={`button-buy-now-${product.id}`}
+                    disabled={requestServiceMutation.isPending}
+                    data-testid={`button-request-now-${service.id}`}
                   >
                     <MessageCircle className="w-3 h-3 mr-1" />
-                    اشتري الآن
+                    اطلب الآن
                   </Button>
                 </div>
               </div>
