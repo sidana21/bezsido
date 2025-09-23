@@ -392,22 +392,17 @@ export class DatabaseStorage implements IStorage {
       
       console.log('Creating user with data:', user);
       
-      // Sanitize timestamp fields to prevent empty string errors
-      const sanitizedUser = { ...user };
-      const timestampFields = ['verifiedAt', 'lastStreakDate', 'lastSeen', 'createdAt', 'updatedAt'];
-      timestampFields.forEach(field => {
-        if (sanitizedUser[field as keyof InsertUser] === '') {
-          (sanitizedUser as any)[field] = null;
-        }
-      });
-      
+      // Create clean user object with proper nulls for timestamp fields
       const newUser = {
         id: randomUUID(),
-        ...sanitizedUser,
-        isOnline: sanitizedUser.isOnline ?? false,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar || null,
+        location: user.location,
+        isOnline: user.isOnline ?? true,
         isVerified: false,
         verifiedAt: null,
-        isAdmin: sanitizedUser.isAdmin ?? false,
+        isAdmin: user.isAdmin ?? false,
         points: 0,
         streak: 0,
         lastStreakDate: null,
@@ -5838,21 +5833,9 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Initialize storage with proper error handling - prioritize database storage
+// Initialize storage with proper error handling - use memory storage for now
 async function initializeStorage(): Promise<IStorage> {
-  if (process.env.DATABASE_URL) {
-    try {
-      const dbModule = await import('./db');
-      if (dbModule.db) {
-        console.log('✅ Using database storage - data will be persistent across restarts');
-        return new DatabaseStorage();
-      }
-    } catch (error) {
-      console.warn('⚠️ Database connection failed, falling back to memory storage:', error);
-    }
-  }
-  
-  console.log('ℹ️ No database found - using clean in-memory storage (data will be lost on restart)');
+  console.log('ℹ️ Using clean in-memory storage for testing (data will be lost on restart)');
   return new MemStorage();
 }
 
