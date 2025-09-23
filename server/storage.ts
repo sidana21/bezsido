@@ -66,7 +66,7 @@ import {
   type CustomerTag,
   type InsertCustomerTag,
   type QuickReply,
-  type InsertQuickReply
+  type InsertQuickReply,
   type Invoice,
   type InsertInvoice,
   type InvoiceItem,
@@ -1571,7 +1571,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getStore(storeId: string): Promise<Store | undefined> {
+  async getStore(storeId: string): Promise<Vendor | undefined> {
     try {
       if (!db) {
         const dbModule = await import('./db');
@@ -1588,7 +1588,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createStore(store: InsertStore): Promise<Store> {
+  async createStore(store: InsertVendor): Promise<Vendor> {
     try {
       if (!db) {
         const dbModule = await import('./db');
@@ -1603,7 +1603,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined> {
+  async updateStore(storeId: string, updates: Partial<InsertVendor>): Promise<Vendor | undefined> {
     try {
       if (!db) {
         const dbModule = await import('./db');
@@ -1621,7 +1621,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Store | undefined> {
+  async updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Vendor | undefined> {
     try {
       if (!db) {
         const dbModule = await import('./db');
@@ -1652,7 +1652,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       const result = await db.select().from(products)
-        .where(eq(products.storeId, storeId));
+        .where(eq(products.vendorId, storeId));
       return result;
     } catch (error) {
       console.error('Error getting store products:', error);
@@ -1660,7 +1660,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getAllStores(): Promise<Store[]> {
+  async getAllStores(): Promise<Vendor[]> {
     try {
       if (!db) {
         const dbModule = await import('./db');
@@ -1675,7 +1675,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUserStore(userId: string): Promise<Store | undefined> {
+  async getUserStore(userId: string): Promise<Vendor | undefined> {
     try {
       if (!db) {
         const dbModule = await import('./db');
@@ -3104,7 +3104,7 @@ export class DatabaseStorage implements IStorage {
           eq(reminders.userId, userId),
           eq(reminders.isCompleted, false)
         ))
-        .orderBy(reminders.reminderTime);
+        .orderBy(reminders.reminderAt);
     } catch (error) {
       console.error('Error getting reminders:', error);
       return [];
@@ -3162,9 +3162,9 @@ export class DatabaseStorage implements IStorage {
         .from(reminders)
         .where(and(
           eq(reminders.isCompleted, false),
-          sql`${reminders.reminderTime} <= NOW()`
+          sql`${reminders.reminderAt} <= NOW()`
         ))
-        .orderBy(reminders.reminderTime);
+        .orderBy(reminders.reminderAt);
     } catch (error) {
       console.error('Error getting due reminders:', error);
       return [];
@@ -4834,15 +4834,15 @@ export class MemStorage implements IStorage {
     return [];
   }
 
-  async getStore(storeId: string): Promise<Store | undefined> {
+  async getStore(storeId: string): Promise<Vendor | undefined> {
     return undefined;
   }
 
-  async getUserStore(userId: string): Promise<Store | undefined> {
+  async getUserStore(userId: string): Promise<Vendor | undefined> {
     return undefined;
   }
 
-  async createStore(store: InsertStore): Promise<Store> {
+  async createStore(store: InsertVendor): Promise<Vendor> {
     const newStore: Store = {
       id: randomUUID(),
       ...store,
@@ -4859,11 +4859,11 @@ export class MemStorage implements IStorage {
     return newStore;
   }
 
-  async updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined> {
+  async updateStore(storeId: string, updates: Partial<InsertVendor>): Promise<Vendor | undefined> {
     return undefined;
   }
 
-  async updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Store | undefined> {
+  async updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Vendor | undefined> {
     return undefined;
   }
 
@@ -4966,19 +4966,19 @@ export class MemStorage implements IStorage {
     return vendorsList;
   }
 
-  async getAllStores(): Promise<Store[]> {
+  async getAllStores(): Promise<Vendor[]> {
     return Array.from(this.vendors.values());
   }
 
-  async getStore(storeId: string): Promise<Store | undefined> {
+  async getStore(storeId: string): Promise<Vendor | undefined> {
     return this.vendors.get(storeId);
   }
 
-  async getUserStore(userId: string): Promise<Store | undefined> {
+  async getUserStore(userId: string): Promise<Vendor | undefined> {
     return Array.from(this.vendors.values()).find(store => store.userId === userId);
   }
 
-  async createStore(store: InsertStore): Promise<Store> {
+  async createStore(store: InsertVendor): Promise<Vendor> {
     const newStore: Store = {
       id: randomUUID(),
       ...store,
@@ -4990,7 +4990,7 @@ export class MemStorage implements IStorage {
     return newStore;
   }
 
-  async updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined> {
+  async updateStore(storeId: string, updates: Partial<InsertVendor>): Promise<Vendor | undefined> {
     const store = this.vendors.get(storeId);
     if (!store) return undefined;
 
@@ -4999,7 +4999,7 @@ export class MemStorage implements IStorage {
     return updatedStore;
   }
 
-  async updateStoreStatus(storeId: string, isActive: boolean): Promise<Store | undefined> {
+  async updateStoreStatus(storeId: string, isActive: boolean): Promise<Vendor | undefined> {
     return this.updateStore(storeId, { isActive });
   }
 
