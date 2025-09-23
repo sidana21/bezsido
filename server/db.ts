@@ -1,5 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
+import { Pool } from 'pg';
+import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 import { sql } from 'drizzle-orm';
 
@@ -9,18 +11,52 @@ let db: any = null;
 async function initializeDatabase() {
   if (process.env.DATABASE_URL) {
     try {
-      // إعداد قاعدة البيانات الخارجية Neon Serverless
-      // Fix SSL certificate issues in Replit environment
-      const connection = neon(process.env.DATABASE_URL, {
-        fetchOptions: {
-          cache: 'no-store',
-        }
-      });
-      db = drizzle({ client: connection, schema });
+      // Try Neon serverless first, fallback to traditional pg on Render
+      console.log('🔧 Attempting database connection...');
       
-      // Test the connection
-      await db.execute(sql`SELECT 1`);
-      console.log('✅ Neon serverless database connection established');
+      // For Render deployment, use traditional pg driver for better reliability
+      if (process.env.RENDER || process.env.NODE_ENV === 'production') {
+        console.log('📡 Using traditional PostgreSQL connection for production/Render...');
+        
+        // Parse connection string and add timeout parameters for Neon on Render
+        const connectionString = process.env.DATABASE_URL.includes('connect_timeout') 
+          ? process.env.DATABASE_URL 
+          : `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes('?') ? '&' : '?'}sslmode=require&connect_timeout=15&pool_timeout=15`;
+        
+        const pool = new Pool({
+          connectionString,
+          ssl: { rejectUnauthorized: false },
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 15000,
+          max: 5, // Limit connections for Neon
+        });
+        
+        db = drizzlePg({ client: pool, schema });
+      } else {
+        // Use Neon serverless for development
+        console.log('🚀 Using Neon serverless for development...');
+        const connection = neon(process.env.DATABASE_URL, {
+          fetchOptions: {
+            cache: 'no-store',
+          },
+        });
+        db = drizzle({ client: connection, schema });
+      }
+      
+      // Test the connection with retry logic for cold starts
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          await db.execute(sql`SELECT 1`);
+          console.log('✅ Database connection established successfully');
+          break;
+        } catch (error) {
+          retries--;
+          if (retries === 0) throw error;
+          console.log(`⏳ Database cold start detected, retrying... (${retries} attempts left)`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
       
       // Create tables if they don't exist
       await ensureTablesExist();
@@ -29,6 +65,7 @@ async function initializeDatabase() {
       return true;
     } catch (error) {
       console.warn('⚠️ Failed to connect to database, falling back to in-memory storage:', error);
+      console.warn('💡 For Render deployment, ensure DATABASE_URL includes connection timeout parameters');
       db = null;
       return false;
     }

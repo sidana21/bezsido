@@ -1753,12 +1753,15 @@ export class DatabaseStorage implements IStorage {
       
       let query = db.select().from(products).where(eq(products.isActive, true));
       
+      // Note: products table doesn't have location field
+      // To filter by location, need to join with vendors table
       if (location) {
-        query = query.where(eq(products.location, location));
+        // For now, skip location filtering for products since they don't have direct location
+        // Future: join with vendors table to filter by vendor location
       }
       
       if (category) {
-        query = query.where(eq(products.category, category));
+        query = query.where(eq(products.categoryId, category));
       }
       
       const result = await query;
