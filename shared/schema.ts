@@ -163,7 +163,22 @@ export const insertStickerSchema = createInsertSchema(stickers).omit({
   createdAt: true,
 });
 
-// فئات البائعين - Vendor Categories
+// فئات الخدمات المتعددة - Service Categories  
+export const serviceCategories = pgTable("service_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // Transportation, Delivery, Home Services, etc.
+  nameAr: text("name_ar").notNull(), // النقل، التوصيل، خدمات منزلية
+  description: text("description"),
+  icon: text("icon"), // Car, Truck, Home, etc.
+  color: text("color").default("#3B82F6"),
+  commissionRate: decimal("commission_rate").notNull().default("0.05"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// فئات البائعين - Vendor Categories (متوافق مع النظام الحالي)
 export const vendorCategories = pgTable("vendor_categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -371,6 +386,75 @@ export const products = pgTable("products", {
   // العمولات والرسوم
   commissionRate: decimal("commission_rate").notNull().default("0.05"),
   marketplaceFee: decimal("marketplace_fee").default("0.02"), // رسوم السوق
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// خدمات متعددة - Multi Services (تاكسي، توصيل، خدمات أخرى)
+export const services = pgTable("services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id), // مقدم الخدمة
+  categoryId: varchar("category_id").notNull().references(() => serviceCategories.id),
+  
+  // معلومات الخدمة الأساسية
+  name: text("name").notNull(), // اسم الخدمة
+  description: text("description").notNull(), // وصف الخدمة
+  shortDescription: text("short_description"), // وصف مختصر
+  
+  // الأسعار والتكلفة
+  basePrice: decimal("base_price").notNull(), // السعر الأساسي
+  pricePerKm: decimal("price_per_km"), // سعر كل كيلومتر (للتاكسي)
+  pricePerHour: decimal("price_per_hour"), // سعر كل ساعة
+  minimumCharge: decimal("minimum_charge").default("0"), // أقل مبلغ
+  currency: text("currency").notNull().default("DZD"),
+  
+  // الصور والوسائط
+  images: jsonb("images").$type<string[]>().default([]),
+  videoUrl: text("video_url"),
+  
+  // معلومات الخدمة المتخصصة
+  serviceType: text("service_type").notNull(), // taxi, delivery, cleaning, repair, etc.
+  availability: text("availability").notNull().default("available"), // available, busy, offline
+  estimatedDuration: integer("estimated_duration"), // المدة المتوقعة بالدقائق
+  maxCapacity: integer("max_capacity"), // العدد الأقصى (للتاكسي/التوصيل)
+  
+  // المواصفات والمميزات
+  features: jsonb("features").$type<string[]>().default([]), // مميزات الخدمة
+  equipment: jsonb("equipment").$type<string[]>().default([]), // معدات مطلوبة
+  requirements: jsonb("requirements").$type<string[]>().default([]), // متطلبات
+  
+  // المنطقة الجغرافية
+  serviceAreas: jsonb("service_areas").$type<string[]>().default([]), // مناطق الخدمة
+  location: text("location").notNull(), // الموقع الأساسي
+  latitude: decimal("latitude"), // الإحداثيات
+  longitude: decimal("longitude"),
+  radius: integer("radius").default(10), // نطاق الخدمة بالكيلومتر
+  
+  // أوقات العمل
+  workingHours: jsonb("working_hours").$type<{[key: string]: {open: string, close: string, isOpen: boolean}}>().default({}),
+  isAvailable24x7: boolean("is_available_24x7").default(false),
+  
+  // الحالة والنشر
+  status: text("status").notNull().default("draft"), // draft, pending, published, rejected
+  isActive: boolean("is_active").default(false),
+  isFeatured: boolean("is_featured").default(false),
+  isEmergencyService: boolean("is_emergency_service").default(false), // خدمة طارئة
+  
+  // إحصائيات
+  viewCount: integer("view_count").default(0),
+  orderCount: integer("order_count").default(0),
+  averageRating: decimal("average_rating", { precision: 3, scale: 2 }).default("0"),
+  totalReviews: integer("total_reviews").default(0),
+  completionRate: decimal("completion_rate", { precision: 3, scale: 2 }).default("0"), // معدل إتمام الخدمات
+  
+  // تواريخ مهمة
+  publishedAt: timestamp("published_at"),
+  featuredUntil: timestamp("featured_until"),
+  
+  // العمولات والرسوم
+  commissionRate: decimal("commission_rate").notNull().default("0.05"),
+  platformFee: decimal("platform_fee").default("0.02"),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -957,3 +1041,29 @@ export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
 export type InvoiceItem = typeof invoiceItems.$inferSelect;
+
+// Multi-Service Schemas - مخططات الخدمات المتعددة
+export const insertServiceCategorySchema = createInsertSchema(serviceCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertServiceSchema = createInsertSchema(services).omit({
+  id: true,
+  publishedAt: true,
+  featuredUntil: true,
+  viewCount: true,
+  orderCount: true,
+  averageRating: true,
+  totalReviews: true,
+  completionRate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for Multi-Service tables
+export type InsertServiceCategory = z.infer<typeof insertServiceCategorySchema>;
+export type ServiceCategory = typeof serviceCategories.$inferSelect;
+export type InsertService = z.infer<typeof insertServiceSchema>;
+export type Service = typeof services.$inferSelect;

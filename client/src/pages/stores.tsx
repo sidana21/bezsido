@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plus, Package, MessageCircle, ShieldCheck, Crown, Zap, Heart, TrendingUp, Award, Sparkles } from "lucide-react";
+import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plus, Package, MessageCircle, ShieldCheck, Crown, Zap, Heart, TrendingUp, Award, Sparkles, Car, Truck, Home, Wrench, Scissors, Baby } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { User, Vendor, Product } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -149,8 +149,8 @@ export default function Stores() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-white to-white/90 bg-clip-text">متجر BizChat</h1>
-              <p className="text-white/80 text-sm">اكتشف آلاف المنتجات من متاجر موثوقة</p>
+              <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-white to-white/90 bg-clip-text">خدمات BizChat</h1>
+              <p className="text-white/80 text-sm">اكتشف مئات الخدمات المتنوعة من مقدمين موثوقين</p>
             </div>
           </div>
           <Link href="/cart">
@@ -180,8 +180,8 @@ export default function Stores() {
               <Package className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">منتجات من {currentUser?.location}</h2>
-              <p className="text-gray-600 dark:text-gray-300 text-lg">آلاف المنتجات من متاجر محلية موثوقة</p>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">خدمات متاحة في {currentUser?.location}</h2>
+              <p className="text-gray-600 dark:text-gray-300 text-lg">مئات الخدمات المتنوعة من مقدمين محليين موثوقين</p>
             </div>
           </div>
         </div>
@@ -193,12 +193,84 @@ export default function Stores() {
           </div>
           <Input
             type="text"
-            placeholder="ابحث عن منتج، متجر أو فئة..."
+            placeholder="ابحث عن خدمة، مقدم خدمة أو نوع خدمة..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pr-16 text-lg h-16 rounded-2xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl focus:shadow-2xl transition-all duration-300 focus:scale-[1.02]"
             data-testid="input-search-stores"
           />
+        </div>
+
+        {/* Service Categories - Professional Grid */}
+        <div className="mb-10">
+          <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">فئات الخدمات</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {/* Transportation Services */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Car className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold text-gray-800 dark:text-white mb-1">تاكسي</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">نقل الركاب</p>
+              </div>
+            </div>
+
+            {/* Delivery Services */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Truck className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold text-gray-800 dark:text-white mb-1">توصيل</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">نقل البضائع</p>
+              </div>
+            </div>
+
+            {/* Home Services */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Home className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold text-gray-800 dark:text-white mb-1">خدمات منزلية</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">تنظيف وصيانة</p>
+              </div>
+            </div>
+
+            {/* Repair Services */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Wrench className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold text-gray-800 dark:text-white mb-1">إصلاحات</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">صيانة تقنية</p>
+              </div>
+            </div>
+
+            {/* Beauty Services */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Scissors className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold text-gray-800 dark:text-white mb-1">تجميل</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">حلاقة وتجميل</p>
+              </div>
+            </div>
+
+            {/* Care Services */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Baby className="w-8 h-8 text-white" />
+                </div>
+                <h4 className="font-bold text-gray-800 dark:text-white mb-1">رعاية</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">رعاية أطفال ومسنين</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Promote Banner - Ultra Premium */}
@@ -210,20 +282,20 @@ export default function Stores() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-3xl mb-6 backdrop-blur-sm">
               <Store className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-white/90 bg-clip-text">أضف متجرك</h2>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed">انضم إلى شبكة المتاجر المحلية الرائدة واعرض منتجاتك لآلاف العملاء</p>
-            <Link href="/my-store">
+            <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-white/90 bg-clip-text">قدم خدماتك</h2>
+            <p className="text-xl text-white/90 mb-8 leading-relaxed">انضم إلى منصة الخدمات المحلية الرائدة وقدم خدماتك لآلاف العملاء في منطقتك</p>
+            <Link href="/my-vendor">
               <Button
                 className="bg-white text-purple-600 hover:bg-white/90 text-lg px-8 py-4 rounded-2xl font-bold shadow-xl transition-all duration-300 hover:scale-105"
-                data-testid="button-add-store"
+                data-testid="button-add-service"
               >
-                سجل متجرك مجاناً الآن
+                سجل خدماتك مجاناً الآن
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Loading State - Premium Products Grid */}
+        {/* Loading State - Premium Services Grid */}
         {isLoadingProducts && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
@@ -239,7 +311,7 @@ export default function Stores() {
           </div>
         )}
 
-        {/* Products Grid - AliExpress Style */}
+        {/* Services Grid - Professional Style */}
         {!isLoadingProducts && filteredProducts.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {filteredProducts.map((product) => (
@@ -361,16 +433,16 @@ export default function Stores() {
               <Package className="w-16 h-16 text-gray-400" />
             </div>
             <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-              {searchQuery ? "لا توجد منتجات تطابق البحث" : "لا توجد منتجات في هذه المنطقة حالياً"}
+              {searchQuery ? "لا توجد خدمات تطابق البحث" : "لا توجد خدمات في هذه المنطقة حالياً"}
             </h3>
             {!searchQuery && (
               <p className="text-gray-500 text-lg mb-8">
-                كن أول من يعرض منتجاته في هذه المنطقة!
+                كن أول من يقدم خدماته في هذه المنطقة!
               </p>
             )}
-            <Link href="/my-store">
+            <Link href="/my-vendor">
               <Button className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-                أضف منتجاتك
+                أضف خدماتك
               </Button>
             </Link>
           </div>
@@ -379,10 +451,10 @@ export default function Stores() {
 
       {/* Floating Action Button - Premium */}
       <div className="fixed bottom-24 left-6 z-50">
-        <Link href="/my-store">
+        <Link href="/my-vendor">
           <Button
             className="w-20 h-20 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-2xl transition-all duration-300 hover:scale-110 animate-bounce"
-            data-testid="fab-my-store"
+            data-testid="fab-my-service"
           >
             <Store className="h-8 w-8 text-white" />
           </Button>
