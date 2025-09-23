@@ -37,6 +37,8 @@ import {
   insertReminderSchema,
   insertCustomerTagSchema,
   insertQuickReplySchema,
+  insertServiceCategorySchema,
+  insertServiceSchema,
   type Vendor,
   type VendorCategory,
   type VendorRating,
@@ -56,7 +58,9 @@ import {
   type UserMission,
   type Reminder,
   type CustomerTag,
-  type QuickReply
+  type QuickReply,
+  type ServiceCategory,
+  type Service
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { emailService } from "./services/emailService";
@@ -2649,6 +2653,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to clear cart" });
+    }
+  });
+
+  // Service Categories endpoints
+  app.get("/api/service-categories", async (req: any, res) => {
+    try {
+      const categories = await storage.getServiceCategories();
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ message: "فشل في جلب فئات الخدمات" });
+    }
+  });
+
+  app.post("/api/service-categories", requireAuth, async (req: any, res) => {
+    try {
+      const categoryData = insertServiceCategorySchema.parse(req.body);
+      const category = await storage.createServiceCategory(categoryData);
+      res.json(category);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
+      }
+      res.status(500).json({ message: "فشل في إنشاء فئة الخدمة" });
+    }
+  });
+
+  // Services endpoints
+  app.get("/api/services", async (req: any, res) => {
+    try {
+      const { location, categoryId, serviceType, availability } = req.query;
+      const services = await storage.getServices(location, categoryId, serviceType, availability);
+      res.json(services);
+    } catch (error) {
+      res.status(500).json({ message: "فشل في جلب الخدمات" });
+    }
+  });
+
+  app.get("/api/services/:serviceId", async (req: any, res) => {
+    try {
+      const { serviceId } = req.params;
+      const service = await storage.getService(serviceId);
+      if (!service) {
+        return res.status(404).json({ message: "الخدمة غير موجودة" });
+      }
+      res.json(service);
+    } catch (error) {
+      res.status(500).json({ message: "فشل في جلب الخدمة" });
+    }
+  });
+
+  app.post("/api/services", requireAuth, async (req: any, res) => {
+    try {
+      const serviceData = insertServiceSchema.parse(req.body);
+      const service = await storage.createService(serviceData);
+      res.json(service);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
+      }
+      res.status(500).json({ message: "فشل في إنشاء الخدمة" });
     }
   });
 
