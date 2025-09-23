@@ -14,14 +14,21 @@ async function initializeDatabase() {
       // Try Neon serverless first, fallback to traditional pg on Render
       console.log('🔧 Attempting database connection...');
       
+      // Clean the DATABASE_URL - remove 'psql ' prefix if it exists
+      let cleanDatabaseUrl = process.env.DATABASE_URL;
+      if (cleanDatabaseUrl.startsWith('psql ')) {
+        cleanDatabaseUrl = cleanDatabaseUrl.replace('psql ', '');
+        console.log('🔧 Cleaned DATABASE_URL by removing psql prefix');
+      }
+      
       // For Render deployment, use traditional pg driver for better reliability
       if (process.env.RENDER || process.env.NODE_ENV === 'production') {
         console.log('📡 Using traditional PostgreSQL connection for production/Render...');
         
         // Parse connection string and add timeout parameters for Neon on Render
-        const connectionString = process.env.DATABASE_URL.includes('connect_timeout') 
-          ? process.env.DATABASE_URL 
-          : `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes('?') ? '&' : '?'}sslmode=require&connect_timeout=15&pool_timeout=15`;
+        const connectionString = cleanDatabaseUrl.includes('connect_timeout') 
+          ? cleanDatabaseUrl 
+          : `${cleanDatabaseUrl}${cleanDatabaseUrl.includes('?') ? '&' : '?'}sslmode=require&connect_timeout=15&pool_timeout=15`;
         
         const pool = new Pool({
           connectionString,
@@ -35,7 +42,7 @@ async function initializeDatabase() {
       } else {
         // Use Neon serverless for development
         console.log('🚀 Using Neon serverless for development...');
-        const connection = neon(process.env.DATABASE_URL, {
+        const connection = neon(cleanDatabaseUrl, {
           fetchOptions: {
             cache: 'no-store',
           },
@@ -361,4 +368,4 @@ async function ensureTablesExist() {
 // Initialize database connection (but don't await it here)
 initializeDatabase();
 
-export { db, ensureTablesExist };
+export { db, ensureTablesExist, initializeDatabase };
