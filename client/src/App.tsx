@@ -11,6 +11,7 @@ import Chat from "@/pages/chat";
 import Status from "@/pages/status";
 import Calls from "@/pages/calls";
 import Vendors from "@/pages/vendors";
+import Stores from "@/pages/stores";
 import ProductDetail from "@/pages/product-detail";
 import MyVendor from "@/pages/my-vendor";
 import VendorProfile from "@/pages/vendor-profile";
@@ -104,6 +105,7 @@ function Router() {
             <Route path="/status" component={Status} />
             <Route path="/calls" component={Calls} />
             <Route path="/vendors" component={Vendors} />
+            <Route path="/stores" component={Stores} />
             <Route path="/product/:productId" component={ProductDetail} />
             <Route path="/my-vendor" component={MyVendor} />
             <Route path="/vendor/:vendorId" component={VendorProfile} />

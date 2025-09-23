@@ -2146,6 +2146,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stores API aliases - point to vendors for backward compatibility
+  app.get("/api/stores", async (req: any, res) => {
+    try {
+      const { location, categoryId, status } = req.query;
+      const vendors = await storage.getVendors(location, categoryId, status);
+      res.json(vendors);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get stores" });
+    }
+  });
+
   app.get("/api/vendors/featured", async (req: any, res) => {
     try {
       const vendors = await storage.getFeaturedVendors();
