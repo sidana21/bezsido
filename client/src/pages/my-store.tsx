@@ -21,9 +21,10 @@ interface VendorWithOwner extends Vendor {
 }
 
 const storeFormSchema = insertVendorSchema.extend({
-  name: z.string().min(1, "اسم المتجر مطلوب"),
+  businessName: z.string().min(1, "اسم المتجر مطلوب"),
+  displayName: z.string().min(1, "الاسم التجاري مطلوب"),
   description: z.string().min(1, "وصف المتجر مطلوب"),
-  category: z.string().min(1, "فئة المتجر مطلوبة"),
+  categoryId: z.string().min(1, "فئة المتجر مطلوبة"),
   location: z.string().min(1, "موقع المتجر مطلوب"),
 });
 
@@ -56,26 +57,28 @@ export default function MyStore() {
   const form = useForm<StoreFormData>({
     resolver: zodResolver(storeFormSchema),
     defaultValues: {
-      name: "",
+      businessName: "",
+      displayName: "",
       description: "",
-      category: "",
+      categoryId: "",
       location: "",
       phoneNumber: "",
-      imageUrl: "",
-      isOpen: true,
+      logoUrl: "",
+      isActive: true,
     },
   });
 
   const editForm = useForm<StoreFormData>({
     resolver: zodResolver(storeFormSchema),
     defaultValues: {
-      name: "",
+      businessName: "",
+      displayName: "",
       description: "",
-      category: "",
+      categoryId: "",
       location: "",
       phoneNumber: "",
-      imageUrl: "",
-      isOpen: true,
+      logoUrl: "",
+      isActive: true,
     },
   });
 
@@ -148,13 +151,14 @@ export default function MyStore() {
   useEffect(() => {
     if (userStore && isEditDialogOpen) {
       editForm.reset({
-        name: userStore.name,
+        businessName: userStore.businessName,
+        displayName: userStore.displayName,
         description: userStore.description,
-        category: userStore.category,
+        categoryId: userStore.categoryId,
         location: userStore.location,
         phoneNumber: userStore.phoneNumber || "",
-        imageUrl: userStore.imageUrl || "",
-        isOpen: userStore.isOpen,
+        logoUrl: userStore.logoUrl || "",
+        isActive: userStore.isActive,
       });
     }
   }, [userStore, isEditDialogOpen, editForm]);
@@ -404,7 +408,7 @@ export default function MyStore() {
     const formData = form.getValues();
     
     // Validate required fields
-    if (!formData.name || !formData.description || !formData.category || !formData.location) {
+    if (!formData.businessName || !formData.displayName || !formData.description || !formData.categoryId || !formData.location) {
       toast({
         title: "خطأ في البيانات",
         description: "يرجى ملء جميع الحقول المطلوبة",
@@ -537,14 +541,15 @@ export default function MyStore() {
 
   const openEditDialog = () => {
     if (userStore) {
-      form.reset({
-        name: userStore.name,
+      editForm.reset({
+        businessName: userStore.businessName,
+        displayName: userStore.displayName,
         description: userStore.description,
-        category: userStore.category,
+        categoryId: userStore.categoryId,
         location: userStore.location,
         phoneNumber: userStore.phoneNumber || "",
-        imageUrl: userStore.imageUrl || "",
-        isOpen: userStore.isOpen ?? true,
+        logoUrl: userStore.logoUrl || "",
+        isActive: userStore.isActive ?? true,
       });
       setIsEditDialogOpen(true);
     }
@@ -596,15 +601,28 @@ export default function MyStore() {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">اسم المتجر *</Label>
+                      <Label htmlFor="businessName">اسم النشاط التجاري *</Label>
                       <Input
-                        id="name"
-                        {...form.register("name")}
+                        id="businessName"
+                        {...form.register("businessName")}
                         placeholder="متجر الإلكترونيات"
                         data-testid="input-store-name"
                       />
-                      {form.formState.errors.name && (
-                        <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                      {form.formState.errors.businessName && (
+                        <p className="text-sm text-red-500">{form.formState.errors.businessName.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="displayName">الاسم التجاري *</Label>
+                      <Input
+                        id="displayName"
+                        {...form.register("displayName")}
+                        placeholder="متجر الإلكترونيات للعموم"
+                        data-testid="input-store-display-name"
+                      />
+                      {form.formState.errors.displayName && (
+                        <p className="text-sm text-red-500">{form.formState.errors.displayName.message}</p>
                       )}
                     </div>
 
@@ -622,15 +640,15 @@ export default function MyStore() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="category">فئة المتجر *</Label>
+                      <Label htmlFor="categoryId">فئة المتجر *</Label>
                       <Input
-                        id="category"
-                        {...form.register("category")}
+                        id="categoryId"
+                        {...form.register("categoryId")}
                         placeholder="إلكترونيات، ملابس، طعام، إلخ"
                         data-testid="input-store-category"
                       />
-                      {form.formState.errors.category && (
-                        <p className="text-sm text-red-500">{form.formState.errors.category.message}</p>
+                      {form.formState.errors.categoryId && (
+                        <p className="text-sm text-red-500">{form.formState.errors.categoryId.message}</p>
                       )}
                     </div>
 
@@ -690,7 +708,7 @@ export default function MyStore() {
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center flex-wrap gap-2">
                     <StoreIcon className="w-5 h-5 ml-2" />
-                    {userStore.name}
+                    {userStore.displayName || userStore.businessName}
                   </div>
                   <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                     <DialogTrigger asChild>
@@ -710,14 +728,26 @@ export default function MyStore() {
                       </DialogHeader>
                       <form onSubmit={editForm.handleSubmit(handleUpdateStore)} className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="editName">اسم المتجر *</Label>
+                          <Label htmlFor="editBusinessName">اسم النشاط التجاري *</Label>
                           <Input
-                            id="editName"
-                            {...editForm.register("name")}
+                            id="editBusinessName"
+                            {...editForm.register("businessName")}
                             placeholder="متجر الإلكترونيات"
                           />
-                          {editForm.formState.errors.name && (
-                            <p className="text-sm text-red-500">{editForm.formState.errors.name.message}</p>
+                          {editForm.formState.errors.businessName && (
+                            <p className="text-sm text-red-500">{editForm.formState.errors.businessName.message}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="editDisplayName">الاسم التجاري *</Label>
+                          <Input
+                            id="editDisplayName"
+                            {...editForm.register("displayName")}
+                            placeholder="متجر الإلكترونيات للعموم"
+                          />
+                          {editForm.formState.errors.displayName && (
+                            <p className="text-sm text-red-500">{editForm.formState.errors.displayName.message}</p>
                           )}
                         </div>
 
@@ -734,14 +764,14 @@ export default function MyStore() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="editCategory">فئة المتجر *</Label>
+                          <Label htmlFor="editCategoryId">فئة المتجر *</Label>
                           <Input
-                            id="editCategory"
-                            {...editForm.register("category")}
+                            id="editCategoryId"
+                            {...editForm.register("categoryId")}
                             placeholder="إلكترونيات"
                           />
-                          {editForm.formState.errors.category && (
-                            <p className="text-sm text-red-500">{editForm.formState.errors.category.message}</p>
+                          {editForm.formState.errors.categoryId && (
+                            <p className="text-sm text-red-500">{editForm.formState.errors.categoryId.message}</p>
                           )}
                         </div>
 
@@ -786,8 +816,8 @@ export default function MyStore() {
                     </DialogContent>
                   </Dialog>
                   <div className="flex gap-2">
-                    <Badge className={`${userStore.isOpen ? 'bg-green-500' : 'bg-red-500'}`}>
-                      {userStore.isOpen ? 'مفتوح' : 'مغلق'}
+                    <Badge className={`${userStore.isActive ? 'bg-green-500' : 'bg-red-500'}`}>
+                      {userStore.isActive ? 'مفتوح' : 'مغلق'}
                     </Badge>
                     <Badge className={`${
                       userStore.status === 'approved' ? 'bg-green-500' :
@@ -846,7 +876,7 @@ export default function MyStore() {
                     )}
                     <div className="flex items-center text-gray-600 dark:text-gray-400">
                       <Settings className="w-4 h-4 ml-2" />
-                      {userStore.category}
+                      {userStore.categoryId}
                     </div>
                   </div>
                   <div>
@@ -1152,15 +1182,28 @@ export default function MyStore() {
             </DialogHeader>
             <form onSubmit={form.handleSubmit(handleUpdateStore)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">اسم المتجر *</Label>
+                <Label htmlFor="businessName">اسم النشاط التجاري *</Label>
                 <Input
-                  id="name"
-                  {...form.register("name")}
+                  id="businessName"
+                  {...form.register("businessName")}
                   placeholder="متجر الإلكترونيات"
                   data-testid="input-edit-store-name"
                 />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                {form.formState.errors.businessName && (
+                  <p className="text-sm text-red-500">{form.formState.errors.businessName.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="displayName">الاسم التجاري *</Label>
+                <Input
+                  id="displayName"
+                  {...form.register("displayName")}
+                  placeholder="متجر الإلكترونيات للعموم"
+                  data-testid="input-edit-store-display-name"
+                />
+                {form.formState.errors.displayName && (
+                  <p className="text-sm text-red-500">{form.formState.errors.displayName.message}</p>
                 )}
               </div>
 
@@ -1178,15 +1221,15 @@ export default function MyStore() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">فئة المتجر *</Label>
+                <Label htmlFor="categoryId">فئة المتجر *</Label>
                 <Input
-                  id="category"
-                  {...form.register("category")}
+                  id="categoryId"
+                  {...form.register("categoryId")}
                   placeholder="إلكترونيات، ملابس، طعام، إلخ"
                   data-testid="input-edit-store-category"
                 />
-                {form.formState.errors.category && (
-                  <p className="text-sm text-red-500">{form.formState.errors.category.message}</p>
+                {form.formState.errors.categoryId && (
+                  <p className="text-sm text-red-500">{form.formState.errors.categoryId.message}</p>
                 )}
               </div>
 
