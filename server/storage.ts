@@ -3528,6 +3528,8 @@ export class MemStorage implements IStorage {
   private storyLikes = new Map<string, StoryLike>();
   private storyComments = new Map<string, StoryComment>();
   private signupTokens = new Map<string, { email: string; token: string; expiresAt: Date }>();
+  private serviceCategories = new Map<string, ServiceCategory>();
+  private services = new Map<string, Service>();
 
   constructor() {
     // Initialize only default features - NO MOCK DATA
@@ -3536,6 +3538,8 @@ export class MemStorage implements IStorage {
     this.initializeDefaultStickers();
     // Initialize vendor categories and sample vendors
     this.initializeDefaultVendorData();
+    // Initialize service categories and sample services
+    this.initializeDefaultServiceData();
   }
 
   // User methods
@@ -5585,6 +5589,218 @@ export class MemStorage implements IStorage {
   
   async deleteProductCategory(categoryId: string): Promise<boolean> {
     return this.productCategories.delete(categoryId);
+  }
+
+  // فئات الخدمات - Service Categories
+  async getServiceCategories(): Promise<ServiceCategory[]> {
+    return Array.from(this.serviceCategories.values());
+  }
+
+  async getServiceCategory(categoryId: string): Promise<ServiceCategory | undefined> {
+    return this.serviceCategories.get(categoryId);
+  }
+
+  async createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory> {
+    const newCategory: ServiceCategory = {
+      id: randomUUID(),
+      ...category,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.serviceCategories.set(newCategory.id, newCategory);
+    return newCategory;
+  }
+
+  // الخدمات - Services
+  async getServices(location?: string, categoryId?: string, serviceType?: string, availability?: string): Promise<Service[]> {
+    let services = Array.from(this.services.values());
+
+    if (location) {
+      services = services.filter(service => service.location.includes(location));
+    }
+    if (categoryId) {
+      services = services.filter(service => service.categoryId === categoryId);
+    }
+    if (serviceType) {
+      services = services.filter(service => service.serviceType === serviceType);
+    }
+    if (availability) {
+      services = services.filter(service => service.availability === availability);
+    }
+
+    return services;
+  }
+
+  async getService(serviceId: string): Promise<Service | undefined> {
+    return this.services.get(serviceId);
+  }
+
+  async createService(service: InsertService): Promise<Service> {
+    const newService: Service = {
+      id: randomUUID(),
+      ...service,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.services.set(newService.id, newService);
+    return newService;
+  }
+
+  async getServicesByCategory(categoryId: string): Promise<Service[]> {
+    return Array.from(this.services.values())
+      .filter(service => service.categoryId === categoryId);
+  }
+
+  // تهيئة البيانات الأولية للخدمات
+  private async initializeDefaultServiceData(): Promise<void> {
+    try {
+      // إضافة فئات الخدمات
+      const taxiCategory: ServiceCategory = {
+        id: randomUUID(),
+        name: "Transportation",
+        nameAr: "النقل",
+        description: "Taxi and transportation services",
+        icon: "Car",
+        color: "#F59E0B",
+        commissionRate: "0.10",
+        isActive: true,
+        sortOrder: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.serviceCategories.set(taxiCategory.id, taxiCategory);
+
+      const deliveryCategory: ServiceCategory = {
+        id: randomUUID(),
+        name: "Delivery",
+        nameAr: "التوصيل",
+        description: "Delivery and courier services",
+        icon: "Truck",
+        color: "#3B82F6",
+        commissionRate: "0.08",
+        isActive: true,
+        sortOrder: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.serviceCategories.set(deliveryCategory.id, deliveryCategory);
+
+      const homeServicesCategory: ServiceCategory = {
+        id: randomUUID(),
+        name: "Home Services",
+        nameAr: "الخدمات المنزلية",
+        description: "Home cleaning and maintenance services",
+        icon: "Home",
+        color: "#10B981",
+        commissionRate: "0.12",
+        isActive: true,
+        sortOrder: 3,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.serviceCategories.set(homeServicesCategory.id, homeServicesCategory);
+
+      // إضافة خدمات عينة
+      const taxiService: Service = {
+        id: randomUUID(),
+        vendorId: "sample-vendor-1",
+        categoryId: taxiCategory.id,
+        name: "تاكسي سريع",
+        description: "خدمة تاكسي متاحة على مدار الساعة في جميع أنحاء المدينة",
+        shortDescription: "تاكسي سريع وموثوق",
+        basePrice: "150",
+        pricePerKm: "25",
+        minimumCharge: "100",
+        currency: "DZD",
+        images: [],
+        serviceType: "taxi",
+        availability: "available",
+        estimatedDuration: 15,
+        maxCapacity: 4,
+        features: ["مكيف هواء", "راديو", "مقاعد مريحة"],
+        serviceAreas: ["الجزائر العاصمة", "وهران", "قسنطينة"],
+        location: "الجزائر العاصمة",
+        radius: 50,
+        isAvailable24x7: true,
+        status: "published",
+        isActive: true,
+        isFeatured: true,
+        averageRating: "4.8",
+        totalReviews: 156,
+        commissionRate: "0.10",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.services.set(taxiService.id, taxiService);
+
+      const deliveryService: Service = {
+        id: randomUUID(),
+        vendorId: "sample-vendor-2",
+        categoryId: deliveryCategory.id,
+        name: "توصيل سريع",
+        description: "خدمة توصيل الطعام والمشتريات في نفس اليوم",
+        shortDescription: "توصيل سريع في نفس اليوم",
+        basePrice: "200",
+        pricePerKm: "15",
+        minimumCharge: "150",
+        currency: "DZD",
+        images: [],
+        serviceType: "delivery",
+        availability: "available",
+        estimatedDuration: 30,
+        maxCapacity: 50,
+        features: ["توصيل سريع", "تتبع الطلب", "دفع عند الاستلام"],
+        serviceAreas: ["الجزائر العاصمة", "البليدة"],
+        location: "الجزائر العاصمة",
+        radius: 30,
+        isAvailable24x7: false,
+        status: "published",
+        isActive: true,
+        isFeatured: false,
+        averageRating: "4.5",
+        totalReviews: 89,
+        commissionRate: "0.08",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.services.set(deliveryService.id, deliveryService);
+
+      const cleaningService: Service = {
+        id: randomUUID(),
+        vendorId: "sample-vendor-3",
+        categoryId: homeServicesCategory.id,
+        name: "تنظيف المنازل",
+        description: "خدمة تنظيف المنازل الشاملة مع فريق مدرب ومعدات احترافية",
+        shortDescription: "تنظيف منازل احترافي",
+        basePrice: "3000",
+        pricePerHour: "800",
+        minimumCharge: "2000",
+        currency: "DZD",
+        images: [],
+        serviceType: "cleaning",
+        availability: "available",
+        estimatedDuration: 120,
+        features: ["معدات احترافية", "مواد تنظيف آمنة", "فريق مدرب"],
+        equipment: ["مكنسة كهربائية", "أدوات تنظيف", "مواد تعقيم"],
+        serviceAreas: ["الجزائر العاصمة"],
+        location: "الجزائر العاصمة",
+        radius: 25,
+        isAvailable24x7: false,
+        status: "published",
+        isActive: true,
+        isFeatured: true,
+        averageRating: "4.9",
+        totalReviews: 67,
+        commissionRate: "0.12",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.services.set(cleaningService.id, cleaningService);
+
+      console.log(`✅ Initialized ${this.serviceCategories.size} service categories and ${this.services.size} sample services`);
+    } catch (error) {
+      console.error('خطأ في تهيئة بيانات الخدمات:', error);
+    }
   }
 
   // Admin dashboard stats for MemStorage (placeholder)
