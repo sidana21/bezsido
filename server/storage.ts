@@ -1599,7 +1599,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       if (category) {
-        query = query.where(eq(vendors.category, category));
+        query = query.where(eq(vendors.categoryId, category));
       }
       
       const result = await query;
