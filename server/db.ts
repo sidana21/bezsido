@@ -159,8 +159,199 @@ async function ensureTablesExist() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    // Create vendor_categories table for service providers
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS vendor_categories (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        name_ar TEXT NOT NULL,
+        description TEXT,
+        icon TEXT,
+        color TEXT DEFAULT '#3B82F6',
+        commission_rate DECIMAL NOT NULL DEFAULT '0.05',
+        is_active BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create service_categories table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS service_categories (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        name_ar TEXT NOT NULL,
+        description TEXT,
+        icon TEXT,
+        color TEXT DEFAULT '#3B82F6',
+        commission_rate DECIMAL NOT NULL DEFAULT '0.05',
+        is_active BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create vendors table for service providers
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS vendors (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL REFERENCES users(id),
+        business_name TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        category_id VARCHAR NOT NULL REFERENCES vendor_categories(id),
+        logo_url TEXT,
+        banner_url TEXT,
+        location TEXT NOT NULL,
+        address TEXT,
+        phone_number TEXT,
+        whatsapp_number TEXT,
+        email TEXT,
+        website TEXT,
+        social_links JSONB DEFAULT '{}',
+        status TEXT NOT NULL DEFAULT 'pending',
+        is_active BOOLEAN DEFAULT false,
+        is_verified BOOLEAN DEFAULT false,
+        is_featured BOOLEAN DEFAULT false,
+        is_premium BOOLEAN DEFAULT false,
+        verified_at TIMESTAMP,
+        approved_at TIMESTAMP,
+        suspended_at TIMESTAMP,
+        featured_until TIMESTAMP,
+        premium_until TIMESTAMP,
+        total_sales DECIMAL DEFAULT '0',
+        total_orders INTEGER DEFAULT 0,
+        total_products INTEGER DEFAULT 0,
+        average_rating DECIMAL DEFAULT '0',
+        total_reviews INTEGER DEFAULT 0,
+        working_hours JSONB DEFAULT '{}',
+        delivery_areas JSONB DEFAULT '[]',
+        delivery_fee DECIMAL DEFAULT '0',
+        min_order_amount DECIMAL DEFAULT '0',
+        approved_by VARCHAR REFERENCES users(id),
+        rejection_reason TEXT,
+        admin_notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create services table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS services (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        vendor_id VARCHAR NOT NULL REFERENCES vendors(id),
+        category_id VARCHAR NOT NULL REFERENCES service_categories(id),
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        short_description TEXT,
+        base_price DECIMAL NOT NULL,
+        price_per_km DECIMAL,
+        price_per_hour DECIMAL,
+        minimum_charge DECIMAL DEFAULT '0',
+        currency TEXT NOT NULL DEFAULT 'DZD',
+        images JSONB DEFAULT '[]',
+        video_url TEXT,
+        service_type TEXT NOT NULL,
+        availability TEXT NOT NULL DEFAULT 'available',
+        estimated_duration INTEGER,
+        max_capacity INTEGER,
+        features JSONB DEFAULT '[]',
+        equipment JSONB DEFAULT '[]',
+        requirements JSONB DEFAULT '[]',
+        service_areas JSONB DEFAULT '[]',
+        location TEXT NOT NULL,
+        latitude DECIMAL,
+        longitude DECIMAL,
+        radius INTEGER DEFAULT 10,
+        working_hours JSONB DEFAULT '{}',
+        is_available_24x7 BOOLEAN DEFAULT false,
+        status TEXT NOT NULL DEFAULT 'draft',
+        is_active BOOLEAN DEFAULT false,
+        is_featured BOOLEAN DEFAULT false,
+        is_emergency_service BOOLEAN DEFAULT false,
+        view_count INTEGER DEFAULT 0,
+        order_count INTEGER DEFAULT 0,
+        average_rating DECIMAL DEFAULT '0',
+        total_reviews INTEGER DEFAULT 0,
+        completion_rate DECIMAL DEFAULT '0',
+        published_at TIMESTAMP,
+        featured_until TIMESTAMP,
+        commission_rate DECIMAL NOT NULL DEFAULT '0.05',
+        platform_fee DECIMAL DEFAULT '0.02',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create product_categories table 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS product_categories (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        name_ar TEXT NOT NULL,
+        description TEXT,
+        icon TEXT,
+        parent_id VARCHAR,
+        is_active BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create products table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS products (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        vendor_id VARCHAR NOT NULL REFERENCES vendors(id),
+        category_id VARCHAR NOT NULL REFERENCES product_categories(id),
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        short_description TEXT,
+        sku TEXT UNIQUE,
+        barcode TEXT,
+        original_price DECIMAL NOT NULL,
+        sale_price DECIMAL,
+        cost_price DECIMAL,
+        currency TEXT NOT NULL DEFAULT 'DZD',
+        images JSONB DEFAULT '[]',
+        video_url TEXT,
+        stock_quantity INTEGER DEFAULT 0,
+        low_stock_threshold INTEGER DEFAULT 5,
+        stock_status TEXT NOT NULL DEFAULT 'in_stock',
+        manage_stock BOOLEAN DEFAULT true,
+        attributes JSONB DEFAULT '{}',
+        variations JSONB DEFAULT '[]',
+        weight DECIMAL,
+        dimensions JSONB,
+        shipping_class TEXT,
+        slug TEXT UNIQUE,
+        meta_title TEXT,
+        meta_description TEXT,
+        tags JSONB DEFAULT '[]',
+        status TEXT NOT NULL DEFAULT 'draft',
+        is_active BOOLEAN DEFAULT false,
+        is_featured BOOLEAN DEFAULT false,
+        is_digital BOOLEAN DEFAULT false,
+        view_count INTEGER DEFAULT 0,
+        order_count INTEGER DEFAULT 0,
+        average_rating DECIMAL DEFAULT '0',
+        total_reviews INTEGER DEFAULT 0,
+        published_at TIMESTAMP,
+        featured_until TIMESTAMP,
+        sale_start_date TIMESTAMP,
+        sale_end_date TIMESTAMP,
+        commission_rate DECIMAL NOT NULL DEFAULT '0.05',
+        marketplace_fee DECIMAL DEFAULT '0.02',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
     
-    console.log('📋 Essential database tables created/verified successfully');
+    console.log('📋 All database tables created/verified successfully (users, sessions, chats, messages, vendors, services, products)!');
   } catch (error) {
     console.warn('⚠️ Warning: Failed to create some tables:', error);
     // Don't fail completely, the app might still work
