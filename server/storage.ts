@@ -70,10 +70,14 @@ import {
   type Invoice,
   type InsertInvoice,
   type InvoiceItem,
-  type InsertInvoiceItem
+  type InsertInvoiceItem,
+  type ServiceCategory,
+  type InsertServiceCategory,
+  type Service,
+  type InsertService
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -308,6 +312,25 @@ export interface IStorage {
   updateQuickReply(replyId: string, updates: Partial<InsertQuickReply>): Promise<QuickReply | undefined>;
   incrementQuickReplyUsage(replyId: string): Promise<void>;
   deleteQuickReply(replyId: string): Promise<void>;
+
+  // Service Categories - فئات الخدمات
+  getServiceCategories(): Promise<ServiceCategory[]>;
+  getServiceCategory(categoryId: string): Promise<ServiceCategory | undefined>;
+  createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory>;
+  updateServiceCategory(categoryId: string, updates: Partial<InsertServiceCategory>): Promise<ServiceCategory | undefined>;
+  deleteServiceCategory(categoryId: string): Promise<boolean>;
+
+  // Services - الخدمات المتعددة
+  getServices(location?: string, categoryId?: string, serviceType?: string, availability?: string): Promise<Service[]>;
+  getService(serviceId: string): Promise<Service | undefined>;
+  getUserServices(vendorId: string): Promise<Service[]>;
+  getServicesByCategory(categoryId: string): Promise<Service[]>;
+  createService(service: InsertService): Promise<Service>;
+  updateService(serviceId: string, updates: Partial<InsertService>): Promise<Service | undefined>;
+  updateServiceAvailability(serviceId: string, availability: string): Promise<Service | undefined>;
+  deleteService(serviceId: string): Promise<boolean>;
+  getFeaturedServices(location?: string): Promise<Service[]>;
+  searchServices(query: string, location?: string): Promise<Service[]>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
