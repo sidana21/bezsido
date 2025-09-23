@@ -67,9 +67,13 @@ import {
   type InsertCustomerTag,
   type QuickReply,
   type InsertQuickReply
+  type Invoice,
+  type InsertInvoice,
+  type InvoiceItem,
+  type InsertInvoiceItem
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -1343,7 +1347,7 @@ export class DatabaseStorage implements IStorage {
         { id: "messaging", name: "المراسلة", description: "إرسال واستقبال الرسائل الفورية", isEnabled: true, category: "messaging", priority: 1 },
         { id: "stories", name: "الحالات", description: "مشاركة الحالات والقصص", isEnabled: true, category: "social", priority: 2 },
         { id: "marketplace", name: "السوق", description: "بيع وشراء المنتجات", isEnabled: true, category: "marketplace", priority: 3 },
-        { id: "stores", name: "المتاجر", description: "إنشاء وإدارة المتاجر", isEnabled: true, category: "marketplace", priority: 4 },
+        { id: "vendors", name: "المتاجر", description: "إنشاء وإدارة المتاجر", isEnabled: true, category: "marketplace", priority: 4 },
         { id: "neighborhoods", name: "مجتمع الحي", description: "التواصل مع الجيران وطلب المساعدة", isEnabled: true, category: "social", priority: 5 },
         { id: "affiliate", name: "التسويق بالعمولة", description: "كسب المال من خلال التسويق", isEnabled: true, category: "marketplace", priority: 6 },
         { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 7 },
@@ -1549,20 +1553,20 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      let query = db.select().from(stores).where(eq(stores.isActive, true));
+      let query = db.select().from(vendors).where(eq(vendors.isActive, true));
       
       if (location) {
-        query = query.where(eq(stores.location, location));
+        query = query.where(eq(vendors.location, location));
       }
       
       if (category) {
-        query = query.where(eq(stores.category, category));
+        query = query.where(eq(vendors.category, category));
       }
       
       const result = await query;
       return result;
     } catch (error) {
-      console.error('Error getting stores:', error);
+      console.error('Error getting vendors:', error);
       return [];
     }
   }
@@ -1574,8 +1578,8 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      const result = await db.select().from(stores)
-        .where(eq(stores.id, storeId))
+      const result = await db.select().from(vendors)
+        .where(eq(vendors.id, storeId))
         .limit(1);
       return result[0] || undefined;
     } catch (error) {
@@ -1591,7 +1595,7 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      const result = await db.insert(stores).values(store).returning();
+      const result = await db.insert(vendors).values(store).returning();
       return result[0];
     } catch (error) {
       console.error('Error creating store:', error);
@@ -1606,9 +1610,9 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      const result = await db.update(stores)
+      const result = await db.update(vendors)
         .set(updates)
-        .where(eq(stores.id, storeId))
+        .where(eq(vendors.id, storeId))
         .returning();
       return result[0] || undefined;
     } catch (error) {
@@ -1624,14 +1628,14 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      const result = await db.update(stores)
+      const result = await db.update(vendors)
         .set({ 
           status, 
           reviewedBy,
           reviewedAt: new Date(),
           rejectionReason: rejectionReason || null
         })
-        .where(eq(stores.id, storeId))
+        .where(eq(vendors.id, storeId))
         .returning();
       return result[0] || undefined;
     } catch (error) {
@@ -1663,10 +1667,10 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      const result = await db.select().from(stores);
+      const result = await db.select().from(vendors);
       return result;
     } catch (error) {
-      console.error('Error getting all stores:', error);
+      console.error('Error getting all vendors:', error);
       return [];
     }
   }
@@ -1678,7 +1682,7 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      const result = await db.select().from(stores).where(eq(stores.userId, userId)).limit(1);
+      const result = await db.select().from(vendors).where(eq(vendors.userId, userId)).limit(1);
       return result[0] || undefined;
     } catch (error) {
       console.error('Error getting user store:', error);
@@ -1693,7 +1697,7 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      const result = await db.delete(stores).where(eq(stores.id, storeId)).returning();
+      const result = await db.delete(vendors).where(eq(vendors.id, storeId)).returning();
       return result.length > 0;
     } catch (error) {
       console.error('Error deleting store:', error);
@@ -2075,9 +2079,9 @@ export class DatabaseStorage implements IStorage {
       const totalUsers = await db.select({ count: sql`count(*)` })
         .from(users);
       
-      // Get stores count  
+      // Get vendors count  
       const totalStores = await db.select({ count: sql`count(*)` })
-        .from(stores);
+        .from(vendors);
       
       return {
         pendingVerificationRequests: Number(pendingRequests[0]?.count || 0),
@@ -3915,7 +3919,7 @@ export class MemStorage implements IStorage {
       { id: "messaging", name: "المراسلة", description: "إرسال واستقبال الرسائل الفورية", isEnabled: true, category: "messaging", priority: 1, createdAt: new Date(), updatedAt: new Date() },
       { id: "stories", name: "الحالات", description: "مشاركة الحالات والقصص", isEnabled: true, category: "social", priority: 2, createdAt: new Date(), updatedAt: new Date() },
       { id: "marketplace", name: "السوق", description: "بيع وشراء المنتجات", isEnabled: true, category: "marketplace", priority: 3, createdAt: new Date(), updatedAt: new Date() },
-      { id: "stores", name: "المتاجر", description: "إنشاء وإدارة المتاجر", isEnabled: true, category: "marketplace", priority: 4, createdAt: new Date(), updatedAt: new Date() },
+      { id: "vendors", name: "المتاجر", description: "إنشاء وإدارة المتاجر", isEnabled: true, category: "marketplace", priority: 4, createdAt: new Date(), updatedAt: new Date() },
       { id: "neighborhoods", name: "مجتمع الحي", description: "التواصل مع الجيران وطلب المساعدة", isEnabled: true, category: "social", priority: 5, createdAt: new Date(), updatedAt: new Date() },
       { id: "affiliate", name: "التسويق بالعمولة", description: "كسب المال من خلال التسويق", isEnabled: true, category: "marketplace", priority: 6, createdAt: new Date(), updatedAt: new Date() },
       { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 7, createdAt: new Date(), updatedAt: new Date() },
@@ -4949,29 +4953,29 @@ export class MemStorage implements IStorage {
 
   // Store methods
   async getStores(location?: string, category?: string): Promise<Vendor[]> {
-    let storesList = Array.from(this.stores.values());
+    let vendorsList = Array.from(this.vendors.values());
     
     if (location) {
-      storesList = storesList.filter(store => store.location === location);
+      vendorsList = vendorsList.filter(store => store.location === location);
     }
     
     if (category) {
-      storesList = storesList.filter(store => store.category === category);
+      vendorsList = vendorsList.filter(store => store.category === category);
     }
     
-    return storesList;
+    return vendorsList;
   }
 
   async getAllStores(): Promise<Store[]> {
-    return Array.from(this.stores.values());
+    return Array.from(this.vendors.values());
   }
 
   async getStore(storeId: string): Promise<Store | undefined> {
-    return this.stores.get(storeId);
+    return this.vendors.get(storeId);
   }
 
   async getUserStore(userId: string): Promise<Store | undefined> {
-    return Array.from(this.stores.values()).find(store => store.userId === userId);
+    return Array.from(this.vendors.values()).find(store => store.userId === userId);
   }
 
   async createStore(store: InsertStore): Promise<Store> {
@@ -4982,16 +4986,16 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.stores.set(newStore.id, newStore);
+    this.vendors.set(newStore.id, newStore);
     return newStore;
   }
 
   async updateStore(storeId: string, updates: Partial<InsertStore>): Promise<Store | undefined> {
-    const store = this.stores.get(storeId);
+    const store = this.vendors.get(storeId);
     if (!store) return undefined;
 
     const updatedStore = { ...store, ...updates, updatedAt: new Date() };
-    this.stores.set(storeId, updatedStore);
+    this.vendors.set(storeId, updatedStore);
     return updatedStore;
   }
 
@@ -5000,7 +5004,7 @@ export class MemStorage implements IStorage {
   }
 
   async deleteStore(storeId: string): Promise<boolean> {
-    return this.stores.delete(storeId);
+    return this.vendors.delete(storeId);
   }
 
   // Product methods
