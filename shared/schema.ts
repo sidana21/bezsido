@@ -956,6 +956,66 @@ export const quickReplies = pgTable("quick_replies", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Business Posts for Instagram-like feed
+export const businessPosts = pgTable("business_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  imageUrl: text("image_url"),
+  businessName: text("business_name"),
+  location: text("location"),
+  category: text("category"),
+  productName: text("product_name"),
+  productPrice: text("product_price"),
+  productOriginalPrice: text("product_original_price"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Business Stories for Instagram-like stories
+export const businessStories = pgTable("business_stories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  businessName: text("business_name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  content: text("content"),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at").default(sql`NOW() + INTERVAL '24 hours'`),
+});
+
+// Post Likes
+export const postLikes = pgTable("post_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => businessPosts.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Post Saves
+export const postSaves = pgTable("post_saves", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => businessPosts.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Post Comments
+export const postComments = pgTable("post_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => businessPosts.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Story Views
+export const storyViews = pgTable("story_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storyId: varchar("story_id").notNull().references(() => businessStories.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas for new tables
 export const insertNeighborhoodGroupSchema = createInsertSchema(neighborhoodGroups).omit({
   id: true,
@@ -1005,6 +1065,39 @@ export const insertQuickReplySchema = createInsertSchema(quickReplies).omit({
   usageCount: true,
   createdAt: true,
   updatedAt: true,
+});
+
+// Business Posts and Stories schemas
+export const insertBusinessPostSchema = createInsertSchema(businessPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBusinessStorySchema = createInsertSchema(businessStories).omit({
+  id: true,
+  createdAt: true,
+  expiresAt: true,
+});
+
+export const insertPostLikeSchema = createInsertSchema(postLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPostSaveSchema = createInsertSchema(postSaves).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPostCommentSchema = createInsertSchema(postComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStoryViewSchema = createInsertSchema(storyViews).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Invoice schemas - مخططات الفواتير
@@ -1067,3 +1160,17 @@ export type InsertServiceCategory = z.infer<typeof insertServiceCategorySchema>;
 export type ServiceCategory = typeof serviceCategories.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Service = typeof services.$inferSelect;
+
+// Business Posts and Stories types
+export type InsertBusinessPost = z.infer<typeof insertBusinessPostSchema>;
+export type BusinessPost = typeof businessPosts.$inferSelect;
+export type InsertBusinessStory = z.infer<typeof insertBusinessStorySchema>;
+export type BusinessStory = typeof businessStories.$inferSelect;
+export type InsertPostLike = z.infer<typeof insertPostLikeSchema>;
+export type PostLike = typeof postLikes.$inferSelect;
+export type InsertPostSave = z.infer<typeof insertPostSaveSchema>;
+export type PostSave = typeof postSaves.$inferSelect;
+export type InsertPostComment = z.infer<typeof insertPostCommentSchema>;
+export type PostComment = typeof postComments.$inferSelect;
+export type InsertStoryView = z.infer<typeof insertStoryViewSchema>;
+export type StoryView = typeof storyViews.$inferSelect;
