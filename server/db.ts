@@ -4,18 +4,59 @@ import { Pool } from 'pg';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 import { sql } from 'drizzle-orm';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 // Allow application to work without database in production
 let db: any = null;
 
+// Function to save DATABASE_URL to local config
+function saveDatabaseConfig(databaseUrl: string) {
+  try {
+    const configPath = join(process.cwd(), 'database-config.json');
+    const config = existsSync(configPath) 
+      ? JSON.parse(readFileSync(configPath, 'utf8'))
+      : {};
+    
+    config.DATABASE_URL = databaseUrl;
+    config.lastUpdated = new Date().toISOString();
+    config.note = "رابط قاعدة البيانات الخارجية المحفوظ تلقائياً";
+    
+    writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log('💾 تم حفظ رابط قاعدة البيانات في الملف المحلي');
+  } catch (error) {
+    console.warn('⚠️ فشل في حفظ إعدادات قاعدة البيانات:', error);
+  }
+}
+
+// Function to load DATABASE_URL from local config
+function loadDatabaseConfig(): string | null {
+  try {
+    const configPath = join(process.cwd(), 'database-config.json');
+    if (existsSync(configPath)) {
+      const config = JSON.parse(readFileSync(configPath, 'utf8'));
+      if (config.DATABASE_URL && config.DATABASE_URL.trim()) {
+        console.log('📂 تم تحميل رابط قاعدة البيانات من الملف المحلي');
+        return config.DATABASE_URL;
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ فشل في قراءة إعدادات قاعدة البيانات:', error);
+  }
+  return null;
+}
+
 async function initializeDatabase() {
-  if (process.env.DATABASE_URL) {
+  // Try environment variable first, then local config
+  let databaseUrl = process.env.DATABASE_URL || loadDatabaseConfig();
+  
+  if (databaseUrl) {
     try {
       // Try Neon serverless first, fallback to traditional pg on Render
       console.log('🔧 Attempting database connection...');
       
       // Clean the DATABASE_URL - remove 'psql ' prefix if it exists
-      let cleanDatabaseUrl = process.env.DATABASE_URL;
+      let cleanDatabaseUrl = databaseUrl;
       if (cleanDatabaseUrl.startsWith('psql ')) {
         cleanDatabaseUrl = cleanDatabaseUrl.replace('psql ', '');
         console.log('🔧 Cleaned DATABASE_URL by removing psql prefix');
@@ -35,7 +76,7 @@ async function initializeDatabase() {
         console.log('📡 Using traditional PostgreSQL connection for production/Render...');
         
         // Configure SSL first based on DATABASE_URL requirements
-        let sslConfig = false; // Default no SSL
+        let sslConfig: boolean | { rejectUnauthorized: boolean } = false; // Default no SSL
         let sslMode = 'disable'; // Default SSL mode
         
         if (cleanDatabaseUrl.includes('sslmode=require') || 
@@ -80,6 +121,12 @@ async function initializeDatabase() {
         try {
           await db.execute(sql`SELECT 1`);
           console.log('✅ Database connection established successfully');
+          
+          // Save DATABASE_URL to local config for future use
+          if (process.env.DATABASE_URL) {
+            saveDatabaseConfig(process.env.DATABASE_URL);
+          }
+          
           break;
         } catch (error) {
           retries--;
