@@ -55,7 +55,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
   // إعداد hook المكالمات
   const voiceCalls = useVoiceCalls({
-    currentUserId: currentUser?.id,
+    currentUserId: currentUser?.id || '',
     onIncomingCall: (call) => {
       console.log('📞 مكالمة واردة جديدة في ChatArea:', call);
       toast({

@@ -8,11 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plus, Package, MessageCircle, ShieldCheck, Crown, Zap, Heart, TrendingUp, Award, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { User, Store as StoreType, Product } from "@shared/schema";
+import type { User, Vendor as StoreType, Product } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface StoreWithOwner extends StoreType {
   owner: User;
+  name: string;
+  category: string;
+  id: string;
 }
 
 export default function StoresPremium() {

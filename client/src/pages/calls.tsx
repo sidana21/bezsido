@@ -80,7 +80,7 @@ export default function Calls() {
   });
 
   const getCallIcon = (call: CallRecord) => {
-    const isOutgoing = call.callerId === currentUser?.id;
+    const isOutgoing = call.callerId === (currentUser?.id || '');
     const isVideo = call.callType === 'video';
     
     if (call.status === 'missed') {

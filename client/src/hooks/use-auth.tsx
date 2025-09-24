@@ -101,6 +101,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const temporaryUser = {
             id: backupData.id,
             name: backupData.name,
+            email: backupData.email || '',
+            points: backupData.points || 0,
+            streak: backupData.streak || 0,
             phoneNumber: backupData.phoneNumber,
             location: backupData.location || 'الجزائر',
             avatar: backupData.avatar || null,
@@ -109,8 +112,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isOnline: true,
             lastSeen: new Date(),
             verifiedAt: backupData.verifiedAt || null,
-            profileCount: 0,
-            notificationCount: 0,
             lastStreakDate: null,
             createdAt: new Date(),
             updatedAt: new Date()
