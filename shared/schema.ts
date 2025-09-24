@@ -6,7 +6,6 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull().unique(),
-  phoneNumber: varchar("phone_number"),
   name: text("name").notNull(),
   avatar: text("avatar"),
   location: text("location").notNull(), // المنطقة الجغرافية
@@ -22,7 +21,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Sessions table for phone authentication
+// Sessions table for email authentication
 export const sessions = pgTable("sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -206,9 +205,8 @@ export const vendors = pgTable("vendors", {
   bannerUrl: text("banner_url"), // صورة غلاف
   location: text("location").notNull(),
   address: text("address"), // العنوان التفصيلي
-  phoneNumber: text("phone_number"),
-  whatsappNumber: text("whatsapp_number"),
   email: text("email"),
+  whatsappNumber: text("whatsapp_number"),
   website: text("website"),
   socialLinks: jsonb("social_links").$type<{facebook?: string, instagram?: string, twitter?: string}>().default({}),
   
@@ -532,7 +530,7 @@ export const contacts = pgTable("contacts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id), // User who added the contact
   contactUserId: varchar("contact_user_id").references(() => users.id), // Contact's user ID (if they have app)
-  phoneNumber: varchar("phone_number").notNull(), // Contact's phone number
+  email: varchar("email").notNull(), // Contact's email
   name: text("name").notNull(), // Contact's name (user-defined)
   isAppUser: boolean("is_app_user").default(false), // Whether contact has the app
   createdAt: timestamp("created_at").defaultNow(),
@@ -556,7 +554,7 @@ export const orders = pgTable("orders", {
   status: text("status").notNull().default("pending"), // pending, confirmed, prepared, delivered, cancelled
   paymentMethod: text("payment_method").notNull().default("cash_on_delivery"), // cash_on_delivery, bank_transfer, etc.
   deliveryAddress: text("delivery_address").notNull(), // Customer delivery address
-  customerPhone: text("customer_phone").notNull(), // Customer contact
+  customerEmail: text("customer_email").notNull(), // Customer contact
   customerName: text("customer_name").notNull(), // Customer name
   notes: text("notes"), // Order notes/comments
   orderDate: timestamp("order_date").defaultNow(),
@@ -583,7 +581,6 @@ export const invoices = pgTable("invoices", {
   userId: varchar("user_id").notNull().references(() => users.id), // منشئ الفاتورة
   invoiceNumber: varchar("invoice_number").notNull().unique(), // رقم الفاتورة
   customerName: text("customer_name").notNull(), // اسم العميل
-  customerPhone: varchar("customer_phone"), // هاتف العميل
   customerEmail: text("customer_email"), // إيميل العميل
   customerAddress: text("customer_address"), // عنوان العميل
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(), // المجموع الفرعي

@@ -168,32 +168,12 @@ const audioUpload = multer({
   }
 });
 
-// Phone number normalization utility
-function normalizePhoneNumber(phoneNumber: string): string {
-  if (!phoneNumber) return phoneNumber;
+// Email normalization utility
+function normalizeEmail(email: string): string {
+  if (!email) return email;
   
-  // Remove all spaces, dashes, dots, and parentheses
-  let normalized = phoneNumber.replace(/[\s\-\.\(\)]/g, '');
-  
-  // Handle Algerian numbers specifically
-  if (normalized.startsWith('00213')) {
-    // 00213 -> +213
-    normalized = '+' + normalized.substring(2);
-  } else if (normalized.startsWith('213') && !normalized.startsWith('+213')) {
-    // 213 -> +213
-    normalized = '+' + normalized;
-  } else if (normalized.startsWith('0') && !normalized.startsWith('00')) {
-    // 0555123456 -> +213555123456 (Algerian local format)
-    normalized = '+213' + normalized.substring(1);
-  } else if (!normalized.startsWith('+') && normalized.length === 9) {
-    // 555123456 -> +213555123456 (Algerian without prefix)
-    normalized = '+213' + normalized;
-  } else if (!normalized.startsWith('+')) {
-    // Add + if it's missing but looks like international format
-    if (normalized.length >= 10) {
-      normalized = '+' + normalized;
-    }
-  }
+  // Normalize email to lowercase and trim whitespace
+  let normalized = email.toLowerCase().trim();
   
   return normalized;
 }
@@ -710,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         code: error?.code,
         constraint: error?.constraint,
         name: error?.name,
-        phoneNumber: req.body?.phoneNumber,
+        email: req.body?.email,
         hasStorage: !!storage,
         storageType: storage ? storage.constructor.name : null,
         environment: process.env.NODE_ENV,
@@ -722,7 +702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle unique constraint violations (duplicate phone)
       if (error.code === '23505') {
-        if (error.constraint?.includes('phone_number') || error.constraint?.includes('phoneNumber') || error.message?.includes('phone')) {
+        if (error.constraint?.includes('email') || error.message?.includes('email')) {
           return res.status(409).json({ 
             success: false,
             message: "هذا الرقم مسجل بالفعل، يمكنك تسجيل الدخول مباشرة" 
@@ -1032,19 +1012,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const demoUsers = [
         {
           name: "أحمد التاجر",
-          phoneNumber: "+213771234567",
+          email: "ahmed@example.com",
           avatar: null,
           location: "الجزائر"
         },
         {
           name: "فاطمة البائعة",
-          phoneNumber: "+213772345678", 
+          email: "fatma@example.com", 
           avatar: null,
           location: "الجزائر"
         },
         {
           name: "محمد صاحب المتجر",
-          phoneNumber: "+213773456789",
+          email: "mohamed@example.com",
           avatar: null,
           location: "الجزائر"
         }
@@ -1053,7 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = [];
       for (const userData of demoUsers) {
         // Check if user already exists
-        const existingUser = await storage.getUserByPhoneNumber(userData.phoneNumber);
+        const existingUser = await storage.getUserByEmail(userData.email);
         if (existingUser) {
           console.log(`✓ المستخدم ${userData.name} موجود بالفعل`);
           users.push(existingUser);
@@ -1075,7 +1055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: "الجزائر",
         userId: users[0].id,
         imageUrl: null,
-        phoneNumber: users[0].phoneNumber,
+        email: users[0].email,
         isOpen: true,
         isActive: true
       });
@@ -1090,7 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: "الجزائر",
         userId: users[1].id,
         imageUrl: null,
-        phoneNumber: users[1].phoneNumber,
+        email: users[1].email,
         isOpen: true,
         isActive: true
       });
@@ -1105,7 +1085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: "الجزائر",
         userId: users[2].id,
         imageUrl: null,
-        phoneNumber: users[2].phoneNumber,
+        email: users[2].email,
         isOpen: true,
         isActive: true
       });
@@ -1297,12 +1277,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Not found" });
     }
     try {
-      const { phoneNumber } = req.body;
-      if (!phoneNumber) {
-        return res.status(400).json({ message: "Phone number required" });
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email required" });
       }
       
-      const user = await storage.getUserByPhoneNumber(phoneNumber);
+      const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -1389,19 +1369,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session recovery endpoint for advanced user protection
   app.post("/api/auth/recover-session", async (req, res) => {
     try {
-      const { phoneNumber, userId } = req.body;
+      const { email, userId } = req.body;
       
-      if (!phoneNumber || !userId) {
+      if (!email || !userId) {
         return res.status(400).json({ 
           success: false, 
           message: "بيانات الاسترداد مطلوبة" 
         });
       }
       
-      console.log("🔄 Attempting session recovery for:", phoneNumber);
+      console.log("🔄 Attempting session recovery for:", email);
       
       // Verify user exists and matches provided data
-      const user = await storage.getUserByPhoneNumber(phoneNumber);
+      const user = await storage.getUserByEmail(email);
       if (!user || user.id !== userId) {
         return res.status(404).json({ 
           success: false, 
@@ -2614,13 +2594,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/contacts/search", requireAuth, async (req: any, res) => {
     try {
-      const { phoneNumber } = req.body;
+      const { email } = req.body;
       
-      if (!phoneNumber) {
-        return res.status(400).json({ message: "Phone number is required" });
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
       }
       
-      const user = await storage.searchUserByPhoneNumber(phoneNumber);
+      const user = await storage.searchUserByEmail(email);
       res.json({ user: user || null, hasApp: !!user });
     } catch (error) {
       res.status(500).json({ message: "Failed to search user" });
@@ -3366,7 +3346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (user) {
             await storage.updateUser(updatedRequest.userId, {
               name: user.name,
-              phoneNumber: user.phoneNumber,
+              email: user.email,
               location: user.location
             });
           }
@@ -3397,7 +3377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const searchTerm = search.toString().toLowerCase();
         filteredUsers = users.filter(user => 
           user.name.toLowerCase().includes(searchTerm) || 
-          user.phoneNumber.includes(searchTerm)
+          user.email.includes(searchTerm)
         );
       }
       
@@ -3597,7 +3577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const searchTerm = search.toString().toLowerCase();
         users = users.filter(user => 
           user.name.toLowerCase().includes(searchTerm) ||
-          user.phoneNumber.includes(searchTerm)
+          user.email.includes(searchTerm)
         );
       }
       
@@ -3687,7 +3667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return {
               ...request,
               userName: user?.name || 'مستخدم غير معروف',
-              userPhone: user?.phoneNumber || 'غير محدد',
+              userEmail: user?.email || 'غير محدد',
               userLocation: user?.location || 'غير محدد',
             };
           } catch (error) {

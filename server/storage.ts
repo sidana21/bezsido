@@ -108,8 +108,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
-  searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+  searchUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined>;
   updateUserOnlineStatus(id: string, isOnline: boolean): Promise<void>;
@@ -1930,8 +1929,8 @@ export class DatabaseStorage implements IStorage {
     throw new Error('Not implemented');
   }
 
-  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
-    return this.getUserByPhoneNumber(phoneNumber);
+  async searchUserByEmail(email: string): Promise<User | undefined> {
+    return this.getUserByEmail(email);
   }
 
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
@@ -4453,8 +4452,8 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
-    return this.getUserByPhoneNumber(phoneNumber);
+  async searchUserByEmail(email: string): Promise<User | undefined> {
+    return this.getUserByEmail(email);
   }
 
   async getServiceCategories(): Promise<ServiceCategory[]> {
@@ -4561,8 +4560,8 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(u => (u.email || '').toLowerCase().trim() === e);
   }
 
-  async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.phoneNumber === phoneNumber);
+  async searchUserByEmail(email: string): Promise<User | undefined> {
+    return this.getUserByEmail(email);
   }
 
   async createUser(user: InsertUser): Promise<User> {
@@ -6178,8 +6177,8 @@ export class MemStorage implements IStorage {
     return newContact;
   }
 
-  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
-    return this.getUserByPhoneNumber(phoneNumber);
+  async searchUserByEmail(email: string): Promise<User | undefined> {
+    return this.getUserByEmail(email);
   }
 
   // Cart methods (stub implementation)
@@ -6953,8 +6952,8 @@ export class MemStorage implements IStorage {
     return false;
   }
 
-  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
-    return this.getUserByPhoneNumber(phoneNumber);
+  async searchUserByEmail(email: string): Promise<User | undefined> {
+    return this.getUserByEmail(email);
   }
 
   async getServiceCategories(): Promise<ServiceCategory[]> {
