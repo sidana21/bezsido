@@ -36,11 +36,12 @@ export function FeaturesProvider({ children }: { children: ReactNode }) {
 
   const { data: apiFeatures, isLoading, error } = useQuery<AppFeature[]>({
     queryKey: ["/api/features"],
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes in production
-    refetchOnWindowFocus: true,
-    refetchInterval: process.env.NODE_ENV === 'production' ? 30 * 1000 : 3 * 1000,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+    gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus to prevent excessive calls
+    refetchInterval: false, // Disable automatic refetching - features don't change frequently
+    retry: 2, // Reduce retry attempts
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
   // Use API features if available, otherwise fallback to defaults
