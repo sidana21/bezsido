@@ -3518,6 +3518,215 @@ export class DatabaseStorage implements IStorage {
       return { total: 0, paid: 0, overdue: 0, draft: 0 };
     }
   }
+
+  // فئات البائعين - Vendor Categories Implementation
+  async getVendorCategories(): Promise<VendorCategory[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const categories = await db.select().from(vendorCategories).orderBy(vendorCategories.sortOrder);
+      
+      // Initialize default categories if table is empty
+      if (categories.length === 0) {
+        await this.initializeDefaultVendorCategories();
+        return await db.select().from(vendorCategories).orderBy(vendorCategories.sortOrder);
+      }
+      
+      return categories;
+    } catch (error) {
+      console.error('Error getting vendor categories:', error);
+      return [];
+    }
+  }
+
+  async getVendorCategory(categoryId: string): Promise<VendorCategory | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendorCategories).where(eq(vendorCategories.id, categoryId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting vendor category:', error);
+      return undefined;
+    }
+  }
+
+  async createVendorCategory(category: InsertVendorCategory): Promise<VendorCategory> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newCategory = {
+        id: randomUUID(),
+        ...category,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      const result = await db.insert(vendorCategories).values(newCategory).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating vendor category:', error);
+      throw error;
+    }
+  }
+
+  async updateVendorCategory(categoryId: string, updates: Partial<InsertVendorCategory>): Promise<VendorCategory | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(vendorCategories)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(vendorCategories.id, categoryId))
+        .returning();
+      
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating vendor category:', error);
+      return undefined;
+    }
+  }
+
+  async deleteVendorCategory(categoryId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(vendorCategories).where(eq(vendorCategories.id, categoryId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting vendor category:', error);
+      return false;
+    }
+  }
+
+  private async initializeDefaultVendorCategories(): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      console.log('Initializing default vendor categories...');
+      
+      const defaultCategories = [
+        {
+          id: 'electronics',
+          name: 'Electronics',
+          nameAr: 'الإلكترونيات',
+          description: 'Electronic devices and gadgets',
+          icon: '📱',
+          color: '#3B82F6',
+          sortOrder: 1,
+          isActive: true,
+          commissionRate: '0.05'
+        },
+        {
+          id: 'fashion',
+          name: 'Fashion',
+          nameAr: 'الأزياء',
+          description: 'Clothing and accessories',
+          icon: '👕',
+          color: '#EC4899',
+          sortOrder: 2,
+          isActive: true,
+          commissionRate: '0.05'
+        },
+        {
+          id: 'food',
+          name: 'Food & Beverage',
+          nameAr: 'الأطعمة والمشروبات',
+          description: 'Food, beverages and restaurants',
+          icon: '🍕',
+          color: '#F59E0B',
+          sortOrder: 3,
+          isActive: true,
+          commissionRate: '0.05'
+        },
+        {
+          id: 'home',
+          name: 'Home & Garden',
+          nameAr: 'المنزل والحديقة',
+          description: 'Home appliances and garden items',
+          icon: '🏠',
+          color: '#10B981',
+          sortOrder: 4,
+          isActive: true,
+          commissionRate: '0.05'
+        },
+        {
+          id: 'beauty',
+          name: 'Beauty & Health',
+          nameAr: 'الجمال والصحة',
+          description: 'Beauty products and health items',
+          icon: '💄',
+          color: '#8B5CF6',
+          sortOrder: 5,
+          isActive: true,
+          commissionRate: '0.05'
+        },
+        {
+          id: 'sports',
+          name: 'Sports & Fitness',
+          nameAr: 'الرياضة واللياقة',
+          description: 'Sports equipment and fitness gear',
+          icon: '⚽',
+          color: '#EF4444',
+          sortOrder: 6,
+          isActive: true,
+          commissionRate: '0.05'
+        },
+        {
+          id: 'books',
+          name: 'Books & Education',
+          nameAr: 'الكتب والتعليم',
+          description: 'Books, educational materials',
+          icon: '📚',
+          color: '#6366F1',
+          sortOrder: 7,
+          isActive: true,
+          commissionRate: '0.05'
+        },
+        {
+          id: 'services',
+          name: 'Services',
+          nameAr: 'الخدمات',
+          description: 'Professional and personal services',
+          icon: '🔧',
+          color: '#06B6D4',
+          sortOrder: 8,
+          isActive: true,
+          commissionRate: '0.05'
+        }
+      ];
+
+      // Insert default categories
+      for (const category of defaultCategories) {
+        await db.insert(vendorCategories).values({
+          ...category,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }).onConflictDoNothing();
+      }
+      
+      console.log(`✅ Initialized ${defaultCategories.length} default vendor categories`);
+    } catch (error) {
+      console.error('Error initializing default vendor categories:', error);
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database
