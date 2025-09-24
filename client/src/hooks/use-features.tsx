@@ -23,12 +23,28 @@ interface FeaturesContextType {
 const FeaturesContext = createContext<FeaturesContextType | undefined>(undefined);
 
 export function FeaturesProvider({ children }: { children: ReactNode }) {
-  const { data: features = [], isLoading } = useQuery<AppFeature[]>({
+  // Default features as fallback if API fails on Render
+  const defaultFeatures: AppFeature[] = [
+    { id: 'messaging', name: 'المراسلة', description: 'إرسال واستقبال الرسائل', isEnabled: true, category: 'messaging', priority: 1, createdAt: new Date(), updatedAt: new Date() },
+    { id: 'stories', name: 'الحالات', description: 'مشاركة الحالات والقصص', isEnabled: true, category: 'social', priority: 2, createdAt: new Date(), updatedAt: new Date() },
+    { id: 'voice_calls', name: 'المكالمات', description: 'إجراء مكالمات صوتية', isEnabled: true, category: 'communication', priority: 3, createdAt: new Date(), updatedAt: new Date() },
+    { id: 'marketplace', name: 'السوق', description: 'بيع وشراء المنتجات', isEnabled: true, category: 'marketplace', priority: 4, createdAt: new Date(), updatedAt: new Date() },
+    { id: 'cart', name: 'السلة', description: 'إدارة مشتريات وطلبات المتجر', isEnabled: true, category: 'marketplace', priority: 5, createdAt: new Date(), updatedAt: new Date() },
+    { id: 'neighborhoods', name: 'مجتمع الحي', description: 'التواصل مع الجيران', isEnabled: true, category: 'social', priority: 6, createdAt: new Date(), updatedAt: new Date() },
+    { id: 'affiliate', name: 'التسويق', description: 'كسب المال من التسويق', isEnabled: true, category: 'marketplace', priority: 7, createdAt: new Date(), updatedAt: new Date() }
+  ];
+
+  const { data: apiFeatures, isLoading, error } = useQuery<AppFeature[]>({
     queryKey: ["/api/features"],
-    staleTime: 1 * 1000, // Cache for 1 second only for real-time updates
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchInterval: 3 * 1000, // Refetch every 3 seconds for immediate updates
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes in production
+    refetchOnWindowFocus: true,
+    refetchInterval: process.env.NODE_ENV === 'production' ? 30 * 1000 : 3 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  // Use API features if available, otherwise fallback to defaults
+  const features = !error && apiFeatures && apiFeatures.length > 0 ? apiFeatures : defaultFeatures;
 
   const isFeatureEnabled = (featureId: string): boolean => {
     const feature = features.find(f => f.id === featureId);
