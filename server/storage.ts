@@ -3727,6 +3727,486 @@ export class DatabaseStorage implements IStorage {
       console.error('Error initializing default vendor categories:', error);
     }
   }
+
+  // Vendor Categories
+  async getVendorCategories(): Promise<VendorCategory[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendorCategories).orderBy(vendorCategories.sortOrder);
+      return result;
+    } catch (error) {
+      console.error('Error getting vendor categories:', error);
+      return [];
+    }
+  }
+
+  async getVendorCategory(categoryId: string): Promise<VendorCategory | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendorCategories).where(eq(vendorCategories.id, categoryId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting vendor category:', error);
+      return undefined;
+    }
+  }
+
+  async createVendorCategory(category: InsertVendorCategory): Promise<VendorCategory> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newCategory = {
+        id: randomUUID(),
+        ...category,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const result = await db.insert(vendorCategories).values(newCategory).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating vendor category:', error);
+      throw error;
+    }
+  }
+
+  async updateVendorCategory(categoryId: string, updates: Partial<InsertVendorCategory>): Promise<VendorCategory | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(vendorCategories)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(vendorCategories.id, categoryId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating vendor category:', error);
+      return undefined;
+    }
+  }
+
+  async deleteVendorCategory(categoryId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(vendorCategories).where(eq(vendorCategories.id, categoryId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting vendor category:', error);
+      return false;
+    }
+  }
+
+  // Vendors
+  async getVendors(location?: string, categoryId?: string, status?: string): Promise<Vendor[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(vendors);
+      const conditions = [];
+      
+      if (location) {
+        conditions.push(sql`${vendors.location} ILIKE ${'%' + location + '%'}`);
+      }
+      if (categoryId) {
+        conditions.push(eq(vendors.categoryId, categoryId));
+      }
+      if (status) {
+        conditions.push(eq(vendors.status, status));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      const result = await query;
+      return result;
+    } catch (error) {
+      console.error('Error getting vendors:', error);
+      return [];
+    }
+  }
+
+  async getAllVendors(): Promise<Vendor[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendors);
+      return result;
+    } catch (error) {
+      console.error('Error getting all vendors:', error);
+      return [];
+    }
+  }
+
+  async getFeaturedVendors(): Promise<Vendor[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendors)
+        .where(and(eq(vendors.isFeatured, true), eq(vendors.status, 'approved')));
+      return result;
+    } catch (error) {
+      console.error('Error getting featured vendors:', error);
+      return [];
+    }
+  }
+
+  async getVendor(vendorId: string): Promise<Vendor | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendors).where(eq(vendors.id, vendorId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting vendor:', error);
+      return undefined;
+    }
+  }
+
+  async getUserVendor(userId: string): Promise<Vendor | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendors).where(eq(vendors.userId, userId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting user vendor:', error);
+      return undefined;
+    }
+  }
+
+  async createVendor(vendor: InsertVendor): Promise<Vendor> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newVendor = {
+        id: randomUUID(),
+        ...vendor,
+        status: vendor.status || 'pending',
+        isActive: vendor.isActive || false,
+        isFeatured: vendor.isFeatured || false,
+        totalSales: vendor.totalSales || '0',
+        totalOrders: vendor.totalOrders || 0,
+        totalProducts: vendor.totalProducts || 0,
+        averageRating: vendor.averageRating || '0',
+        totalReviews: vendor.totalReviews || 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const result = await db.insert(vendors).values(newVendor).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating vendor:', error);
+      throw error;
+    }
+  }
+
+  async updateVendor(vendorId: string, updates: Partial<InsertVendor>): Promise<Vendor | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(vendors)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(vendors.id, vendorId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating vendor:', error);
+      return undefined;
+    }
+  }
+
+  async updateVendorStatus(vendorId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Vendor | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const updates: any = {
+        status,
+        updatedAt: new Date()
+      };
+
+      if (status === 'approved') {
+        updates.approvedBy = reviewedBy;
+        updates.approvedAt = new Date();
+      } else if (status === 'rejected' && rejectionReason) {
+        updates.rejectionReason = rejectionReason;
+      }
+      
+      const result = await db.update(vendors)
+        .set(updates)
+        .where(eq(vendors.id, vendorId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating vendor status:', error);
+      return undefined;
+    }
+  }
+
+  async deleteVendor(vendorId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(vendors).where(eq(vendors.id, vendorId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting vendor:', error);
+      return false;
+    }
+  }
+
+  async getVendorProducts(vendorId: string): Promise<Product[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(products).where(eq(products.vendorId, vendorId));
+      return result;
+    } catch (error) {
+      console.error('Error getting vendor products:', error);
+      return [];
+    }
+  }
+
+  async getUserProducts(userId: string): Promise<Product[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // First get the vendor for this user
+      const vendor = await this.getUserVendor(userId);
+      if (!vendor) return [];
+      
+      // Then get all products for this vendor
+      return this.getVendorProducts(vendor.id);
+    } catch (error) {
+      console.error('Error getting user products:', error);
+      return [];
+    }
+  }
+
+  // Vendor Ratings
+  async getVendorRatings(vendorId: string): Promise<VendorRating[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendorRatings).where(eq(vendorRatings.vendorId, vendorId));
+      return result;
+    } catch (error) {
+      console.error('Error getting vendor ratings:', error);
+      return [];
+    }
+  }
+
+  async createVendorRating(rating: InsertVendorRating): Promise<VendorRating> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newRating = {
+        id: randomUUID(),
+        ...rating,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const result = await db.insert(vendorRatings).values(newRating).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating vendor rating:', error);
+      throw error;
+    }
+  }
+
+  async updateVendorRating(ratingId: string, updates: Partial<InsertVendorRating>): Promise<VendorRating | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(vendorRatings)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(vendorRatings.id, ratingId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating vendor rating:', error);
+      return undefined;
+    }
+  }
+
+  async deleteVendorRating(ratingId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(vendorRatings).where(eq(vendorRatings.id, ratingId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting vendor rating:', error);
+      return false;
+    }
+  }
+
+  async getVendorAverageRating(vendorId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({ 
+        average: sql<number>`AVG(${vendorRatings.rating})` 
+      }).from(vendorRatings).where(eq(vendorRatings.vendorId, vendorId));
+      
+      return result[0]?.average || 0;
+    } catch (error) {
+      console.error('Error getting vendor average rating:', error);
+      return 0;
+    }
+  }
+
+  // Vendor Subscriptions
+  async getVendorSubscription(vendorId: string): Promise<VendorSubscription | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(vendorSubscriptions).where(eq(vendorSubscriptions.vendorId, vendorId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting vendor subscription:', error);
+      return undefined;
+    }
+  }
+
+  async createVendorSubscription(subscription: InsertVendorSubscription): Promise<VendorSubscription> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newSubscription = {
+        id: randomUUID(),
+        ...subscription,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const result = await db.insert(vendorSubscriptions).values(newSubscription).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating vendor subscription:', error);
+      throw error;
+    }
+  }
+
+  async updateVendorSubscription(subscriptionId: string, updates: Partial<InsertVendorSubscription>): Promise<VendorSubscription | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(vendorSubscriptions)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(vendorSubscriptions.id, subscriptionId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating vendor subscription:', error);
+      return undefined;
+    }
+  }
+
+  async renewVendorSubscription(vendorId: string): Promise<VendorSubscription | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const subscription = await this.getVendorSubscription(vendorId);
+      if (!subscription) return undefined;
+      
+      const newExpiryDate = new Date();
+      newExpiryDate.setMonth(newExpiryDate.getMonth() + 1); // Extend by 1 month
+      
+      const result = await db.update(vendorSubscriptions)
+        .set({ 
+          expiresAt: newExpiryDate,
+          isActive: true,
+          updatedAt: new Date() 
+        })
+        .where(eq(vendorSubscriptions.id, subscription.id))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error renewing vendor subscription:', error);
+      return undefined;
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database
