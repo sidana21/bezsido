@@ -355,13 +355,13 @@ export interface IStorage {
   searchServices(query: string, location?: string): Promise<Service[]>;
 
   // Invoice Management - إدارة الفواتير
-  getUserInvoices(userId: string): Promise<Invoice[]>;
+  getUserInvoices(userId: string, status?: string): Promise<Invoice[]>;
   getInvoiceStats(userId: string): Promise<{ total: number; paid: number; overdue: number; draft: number }>;
-  getInvoiceWithItems(invoiceId: string): Promise<Invoice & { items: InvoiceItem[] } | undefined>;
-  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
-  updateInvoice(invoiceId: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined>;
-  updateInvoiceStatus(invoiceId: string, status: string): Promise<Invoice | undefined>;
-  deleteInvoice(invoiceId: string): Promise<boolean>;
+  getInvoiceWithItems(invoiceId: string, userId?: string): Promise<{ invoice: Invoice; items: InvoiceItem[] } | undefined>;
+  createInvoice(invoiceData: InsertInvoice, items: InsertInvoiceItem[]): Promise<Invoice>;
+  updateInvoice(invoiceId: string, userId: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined>;
+  updateInvoiceStatus(invoiceId: string, status: string, userId: string, paidAt?: Date): Promise<Invoice | undefined>;
+  deleteInvoice(invoiceId: string, userId: string): Promise<boolean>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database

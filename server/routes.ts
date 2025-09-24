@@ -39,6 +39,8 @@ import {
   insertQuickReplySchema,
   insertServiceCategorySchema,
   insertServiceSchema,
+  insertInvoiceSchema,
+  insertInvoiceItemSchema,
   type Vendor,
   type VendorCategory,
   type VendorRating,
@@ -60,7 +62,9 @@ import {
   type CustomerTag,
   type QuickReply,
   type ServiceCategory,
-  type Service
+  type Service,
+  type Invoice,
+  type InvoiceItem
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { emailService } from "./services/emailService";
