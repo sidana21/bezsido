@@ -582,7 +582,19 @@ export class DatabaseStorage implements IStorage {
       }
       
       const result = await db.select().from(sessions).where(eq(sessions.token, token)).limit(1);
-      return result[0] || undefined;
+      const session = result[0];
+      
+      // Check if session exists and is not expired
+      if (session && session.expiresAt > new Date()) {
+        return session;
+      }
+      
+      // If session is expired, delete it
+      if (session) {
+        await this.deleteSession(token);
+      }
+      
+      return undefined;
     } catch (error) {
       console.error('Error getting session by token:', error);
       return undefined;
