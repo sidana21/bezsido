@@ -6,6 +6,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull().unique(),
+  phoneNumber: varchar("phone_number"),
   name: text("name").notNull(),
   avatar: text("avatar"),
   location: text("location").notNull(), // المنطقة الجغرافية

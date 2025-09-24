@@ -108,6 +108,8 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+  searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined>;
   updateUserOnlineStatus(id: string, isOnline: boolean): Promise<void>;
@@ -209,6 +211,14 @@ export interface IStorage {
   deleteVendor(vendorId: string): Promise<boolean>;
   getVendorProducts(vendorId: string): Promise<Product[]>;
   getUserProducts(userId: string): Promise<Product[]>;
+  
+  // Store aliases for backward compatibility 
+  createStore(store: InsertVendor): Promise<Vendor>;
+  updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Vendor | undefined>;
+  getAllStores(): Promise<Vendor[]>;
+  getUserStore(userId: string): Promise<Vendor | undefined>;
+  deleteStore(storeId: string): Promise<boolean>;
+  getStoreProducts(storeId: string): Promise<Product[]>;
 
   // تقييمات البائعين - Vendor Ratings
   getVendorRatings(vendorId: string): Promise<VendorRating[]>;
@@ -343,6 +353,15 @@ export interface IStorage {
   deleteService(serviceId: string): Promise<boolean>;
   getFeaturedServices(location?: string): Promise<Service[]>;
   searchServices(query: string, location?: string): Promise<Service[]>;
+
+  // Invoice Management - إدارة الفواتير
+  getUserInvoices(userId: string): Promise<Invoice[]>;
+  getInvoiceStats(userId: string): Promise<{ total: number; paid: number; overdue: number; draft: number }>;
+  getInvoiceWithItems(invoiceId: string): Promise<Invoice & { items: InvoiceItem[] } | undefined>;
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  updateInvoice(invoiceId: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined>;
+  updateInvoiceStatus(invoiceId: string, status: string): Promise<Invoice | undefined>;
+  deleteInvoice(invoiceId: string): Promise<boolean>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
