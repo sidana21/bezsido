@@ -1,5 +1,7 @@
 {
-  "DATABASE_URL": "postgresql://postgres:password@helium/heliumdb?sslmode=disable",
   "note": "رابط قاعدة البيانات الخارجية المحفوظ تلقائياً",
-  "lastUpdated": "2025-09-24T13:39:00.858Z"
+  "warning": "هذا الملف للتطوير المحلي فقط ولن يؤثر على النشر على Render",
+  "production_note": "في بيئة الإنتاج، يتم استخدام متغير البيئة DATABASE_URL فقط",
+  "lastUpdated": "2025-09-24T13:44:35.481Z",
+  "DATABASE_URL": "postgresql://postgres:password@helium/heliumdb?sslmode=disable"
 }

@@ -47,8 +47,14 @@ function loadDatabaseConfig(): string | null {
 }
 
 async function initializeDatabase() {
-  // Try environment variable first, then local config
-  let databaseUrl = process.env.DATABASE_URL || loadDatabaseConfig();
+  // In production (Render/deployment), ONLY use environment variable
+  // In development, try environment variable first, then local config
+  let databaseUrl: string | null = process.env.DATABASE_URL || null;
+  
+  // Only load local config in development mode
+  if (!databaseUrl && process.env.NODE_ENV !== 'production' && !process.env.RENDER) {
+    databaseUrl = loadDatabaseConfig();
+  }
   
   if (databaseUrl) {
     try {
@@ -148,8 +154,14 @@ async function initializeDatabase() {
       return false;
     }
   } else {
-    console.log('ℹ️ No DATABASE_URL provided, using in-memory storage');
-    return false;
+    if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+      console.error('🚨 CRITICAL: No DATABASE_URL found in production environment!');
+      console.error('💡 Make sure DATABASE_URL is set in your Render environment variables');
+      throw new Error('DATABASE_URL is required in production');
+    } else {
+      console.log('ℹ️ No DATABASE_URL provided, using in-memory storage');
+      return false;
+    }
   }
 }
 
