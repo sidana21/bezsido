@@ -13,12 +13,37 @@ export async function apiRequest(
 ): Promise<any> {
   const token = localStorage.getItem("auth_token");
   
+  // Build headers object
+  const headers: Record<string, string> = {};
+  
+  // Copy existing headers
+  if (options.headers) {
+    if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+    } else if (Array.isArray(options.headers)) {
+      options.headers.forEach(([key, value]) => {
+        headers[key] = value;
+      });
+    } else {
+      Object.assign(headers, options.headers);
+    }
+  }
+  
+  // Add auth token if available
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  // If body is present and no Content-Type is set, assume JSON
+  if (options.body && !headers['Content-Type'] && !headers['content-type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
   const response = await fetch(url, {
     ...options,
-    headers: {
-      ...options.headers,
-      ...(token && { "Authorization": `Bearer ${token}` }),
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -68,6 +93,7 @@ export const getQueryFn: <T>(options: {
     
     const res = await fetch(queryKey.join("/") as string, {
       headers: {
+        'Content-Type': 'application/json',
         ...(token && { "Authorization": `Bearer ${token}` }),
       },
     });
