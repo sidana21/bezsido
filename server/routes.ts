@@ -4667,6 +4667,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New enhanced OTP user creation route (based on user's code)
+  app.post("/api/enhanced-user-creation", async (req, res) => {
+    try {
+      const { name, email, password } = req.body;
+      
+      // Validate required fields
+      if (!name || !email || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "الاسم والبريد الإلكتروني وكلمة المرور مطلوبة" 
+        });
+      }
+
+      // Use the enhanced OTP functionality from user's code
+      const newUser = await emailService.createUserWithOTP(name, email, password);
+      
+      res.json({
+        success: true,
+        message: "تم إنشاء المستخدم وإرسال OTP بنجاح",
+        user: {
+          name: newUser.name,
+          email: newUser.email,
+          hasOTP: true
+        }
+      });
+    } catch (error) {
+      console.error("Error in enhanced user creation:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "حدث خطأ أثناء إنشاء المستخدم" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
