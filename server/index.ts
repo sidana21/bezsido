@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage, type IStorage } from "./storage";
@@ -24,8 +25,18 @@ process.on('uncaughtException', (error) => {
 });
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// إعداد CORS للسماح بالطلبات من أي مصدر (مطلوب لـ Render)
+app.use(cors({ 
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  credentials: false
+}));
+
+// إعداد middleware لمعالجة البيانات
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
