@@ -77,9 +77,9 @@ class EmailService {
     }
   }
 
-  // Generate secure 6-digit OTP
-  generateOTP(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+  // Generate secure 6-digit OTP (enhanced version from user code)
+  generateOTP(length: number = 6): string {
+    return Math.floor(100000 + Math.random() * 900000).toString().substring(0, length);
   }
 
   // Send email using available service (prioritizes SendGrid)
@@ -183,6 +183,38 @@ class EmailService {
       text,
       html,
     });
+  }
+
+  // Enhanced OTP sending function with user creation (based on user's code)
+  async sendOtpForUserCreation(email: string, otp: string, userName: string): Promise<boolean> {
+    try {
+      await this.sendOTP(email, otp, userName);
+      console.log(`تم إرسال OTP إلى ${email}: ${otp}`);
+      return true;
+    } catch (err) {
+      console.error("فشل إرسال OTP:", err);
+      throw err;
+    }
+  }
+
+  // Create user with OTP (enhanced version from user's code)
+  async createUserWithOTP(name: string, email: string, password: string): Promise<{ name: string; email: string; password: string; otp: string }> {
+    // توليد OTP
+    const otp = this.generateOTP();
+
+    // إرسال OTP بالبريد
+    await this.sendOtpForUserCreation(email, otp, name);
+
+    // إنشاء بيانات المستخدم مع OTP
+    const newUser = {
+      name,
+      email, 
+      password,
+      otp
+    };
+
+    console.log("تم إنشاء المستخدم وإرسال OTP:", { ...newUser, password: '[HIDDEN]' });
+    return newUser;
   }
 
   // Check which email service is available
