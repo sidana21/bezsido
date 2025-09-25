@@ -4685,6 +4685,341 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =================================
+  // TAXI SERVICE API ROUTES
+  // =================================
+
+  // Get available taxi services
+  app.get("/api/services", async (req, res) => {
+    try {
+      const { serviceType } = req.query;
+      const services = await storage.getServices();
+      
+      // Filter by service type if provided
+      const filteredServices = serviceType 
+        ? services.filter(service => service.serviceType === serviceType)
+        : services;
+        
+      res.json(filteredServices);
+    } catch (error) {
+      console.error("Error getting services:", error);
+      res.status(500).json({ message: "Failed to get services" });
+    }
+  });
+
+  // Book a taxi
+  app.post("/api/taxi/book", requireAuth, async (req: any, res) => {
+    try {
+      const bookingData = {
+        ...req.body,
+        userId: req.userId,
+        status: 'pending',
+        id: randomUUID(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Create taxi booking (using orders table for now)
+      const booking = await storage.createOrder({
+        userId: req.userId,
+        vendorId: req.body.vendorId || 'taxi-system',
+        totalAmount: req.body.estimatedPrice.toString(),
+        status: 'pending',
+        deliveryAddress: req.body.destination,
+        notes: `نوع الخدمة: ${req.body.serviceType}\nنقطة الانطلاق: ${req.body.pickupLocation}\nالوجهة: ${req.body.destination}\nعدد الركاب: ${req.body.passengerCount}`
+      });
+
+      if (booking) {
+        res.json({
+          id: booking.id,
+          ...req.body,
+          status: 'pending',
+          createdAt: new Date()
+        });
+      } else {
+        res.status(500).json({ message: "Failed to create booking" });
+      }
+    } catch (error) {
+      console.error("Error booking taxi:", error);
+      res.status(500).json({ message: "Failed to book taxi" });
+    }
+  });
+
+  // Cancel taxi booking
+  app.post("/api/taxi/bookings/:id/cancel", requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updatedOrder = await storage.updateOrderStatus(id, 'cancelled');
+      if (updatedOrder) {
+        res.json({ message: "Booking cancelled successfully" });
+      } else {
+        res.status(404).json({ message: "Booking not found" });
+      }
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      res.status(500).json({ message: "Failed to cancel booking" });
+    }
+  });
+
+  // Driver: Get or create taxi service
+  app.get("/api/taxi/driver/service", requireAuth, async (req: any, res) => {
+    try {
+      const services = await storage.getServices();
+      const driverService = services.find(service => 
+        service.vendorId && service.serviceType === 'taxi'
+      );
+      
+      if (driverService) {
+        res.json(driverService);
+      } else {
+        res.json(null);
+      }
+    } catch (error) {
+      console.error("Error getting driver service:", error);
+      res.status(500).json({ message: "Failed to get driver service" });
+    }
+  });
+
+  // Driver: Create/Update taxi service
+  app.post("/api/taxi/driver/service", requireAuth, async (req: any, res) => {
+    try {
+      // First create/get vendor for the driver
+      const vendorCategories = await storage.getVendorCategories();
+      let transportCategory = vendorCategories.find(cat => cat.name === 'Transportation');
+      
+      if (!transportCategory) {
+        transportCategory = await storage.createVendorCategory({
+          name: 'Transportation',
+          nameAr: 'النقل',
+          description: 'خدمات النقل والتاكسي',
+          icon: 'Car',
+          color: '#3B82F6'
+        });
+      }
+
+      // Create vendor if not exists
+      const vendors = await storage.getVendors();
+      let driverVendor = vendors.find(vendor => vendor.userId === req.userId);
+      
+      if (!driverVendor && transportCategory) {
+        driverVendor = await storage.createVendor({
+          userId: req.userId,
+          businessName: req.body.vehicleModel + ' التاكسي',
+          displayName: 'خدمة تاكسي',
+          description: `خدمة تاكسي ${req.body.vehicleType} - ${req.body.vehicleModel}`,
+          categoryId: transportCategory.id,
+          location: 'الجزائر',
+          status: 'approved',
+          isActive: true,
+          isVerified: true
+        });
+      }
+
+      if (driverVendor) {
+        // Create service categories if not exists
+        const serviceCategories = await storage.getServiceCategories();
+        let taxiCategory = serviceCategories.find(cat => cat.name === 'Taxi');
+        
+        if (!taxiCategory) {
+          taxiCategory = await storage.createServiceCategory({
+            name: 'Taxi',
+            nameAr: 'تاكسي',
+            description: 'خدمات التاكسي',
+            icon: 'Car'
+          });
+        }
+
+        if (taxiCategory) {
+          // Create the taxi service
+          const serviceData = {
+            vendorId: driverVendor.id,
+            categoryId: taxiCategory.id,
+            name: `تاكسي ${req.body.vehicleModel}`,
+            description: `خدمة تاكسي ${req.body.vehicleType} - ${req.body.vehicleModel} - ${req.body.vehicleColor}`,
+            serviceType: 'taxi',
+            basePrice: parseFloat(req.body.basePrice),
+            pricePerKm: parseFloat(req.body.pricePerKm),
+            maxCapacity: parseInt(req.body.maxCapacity),
+            features: req.body.features || [],
+            serviceAreas: req.body.serviceAreas || [],
+            workingHours: req.body.workingHours,
+            isAvailable24x7: req.body.isAvailable24x7 || false,
+            isActive: true,
+            status: 'published'
+          };
+
+          const service = await storage.createService(serviceData);
+          res.json(service);
+        } else {
+          res.status(500).json({ message: "Failed to create service category" });
+        }
+      } else {
+        res.status(500).json({ message: "Failed to create vendor" });
+      }
+    } catch (error) {
+      console.error("Error creating driver service:", error);
+      res.status(500).json({ message: "Failed to create driver service" });
+    }
+  });
+
+  // Driver: Update taxi service
+  app.patch("/api/taxi/driver/service/:id", requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = {
+        name: `تاكسي ${req.body.vehicleModel}`,
+        description: `خدمة تاكسي ${req.body.vehicleType} - ${req.body.vehicleModel} - ${req.body.vehicleColor}`,
+        basePrice: parseFloat(req.body.basePrice),
+        pricePerKm: parseFloat(req.body.pricePerKm),
+        maxCapacity: parseInt(req.body.maxCapacity),
+        features: req.body.features || [],
+        serviceAreas: req.body.serviceAreas || [],
+        workingHours: req.body.workingHours,
+        isAvailable24x7: req.body.isAvailable24x7 || false
+      };
+
+      const service = await storage.updateService(id, updateData);
+      res.json(service);
+    } catch (error) {
+      console.error("Error updating driver service:", error);
+      res.status(500).json({ message: "Failed to update driver service" });
+    }
+  });
+
+  // Driver: Get pending bookings
+  app.get("/api/taxi/driver/bookings", requireAuth, async (req: any, res) => {
+    try {
+      // Get orders where status is pending and contains taxi booking info
+      const orders = await storage.getOrders();
+      const driverBookings = orders.filter(order => 
+        order.notes?.includes('نوع الخدمة:') && 
+        ['pending', 'confirmed'].includes(order.status)
+      );
+
+      // Transform orders to taxi booking format
+      const taxiBookings = driverBookings.map(order => ({
+        id: order.id,
+        pickupLocation: order.notes?.match(/نقطة الانطلاق: ([^\n]+)/)?.[1] || '',
+        destination: order.notes?.match(/الوجهة: ([^\n]+)/)?.[1] || '',
+        passengerCount: parseInt(order.notes?.match(/عدد الركاب: (\d+)/)?.[1] || '1'),
+        estimatedPrice: parseFloat(order.totalAmount),
+        status: order.status === 'confirmed' ? 'accepted' : order.status,
+        notes: order.notes,
+        customer: {
+          name: order.customerName || 'عميل',
+          phone: order.customerPhone || '',
+          avatar: ''
+        },
+        createdAt: order.createdAt?.toISOString() || new Date().toISOString()
+      }));
+
+      res.json(taxiBookings);
+    } catch (error) {
+      console.error("Error getting driver bookings:", error);
+      res.status(500).json({ message: "Failed to get driver bookings" });
+    }
+  });
+
+  // Driver: Accept booking
+  app.post("/api/taxi/bookings/:id/accept", requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updatedOrder = await storage.updateOrderStatus(id, 'confirmed');
+      if (updatedOrder) {
+        res.json({ message: "Booking accepted successfully" });
+      } else {
+        res.status(404).json({ message: "Booking not found" });
+      }
+    } catch (error) {
+      console.error("Error accepting booking:", error);
+      res.status(500).json({ message: "Failed to accept booking" });
+    }
+  });
+
+  // Driver: Update booking status
+  app.post("/api/taxi/bookings/:id/status", requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      // Map taxi statuses to order statuses
+      const statusMap: Record<string, string> = {
+        'picked_up': 'processing',
+        'completed': 'completed',
+        'cancelled': 'cancelled'
+      };
+
+      const orderStatus = statusMap[status] || status;
+      const updatedOrder = await storage.updateOrderStatus(id, orderStatus);
+      
+      if (updatedOrder) {
+        res.json({ message: "Booking status updated successfully" });
+      } else {
+        res.status(404).json({ message: "Booking not found" });
+      }
+    } catch (error) {
+      console.error("Error updating booking status:", error);
+      res.status(500).json({ message: "Failed to update booking status" });
+    }
+  });
+
+  // Driver: Update online status
+  app.post("/api/taxi/driver/status", requireAuth, async (req: any, res) => {
+    try {
+      const { availability } = req.body;
+      
+      // For now, we'll just return success
+      // In a real implementation, you'd update the service availability
+      res.json({ 
+        message: "Status updated successfully",
+        availability: availability
+      });
+    } catch (error) {
+      console.error("Error updating driver status:", error);
+      res.status(500).json({ message: "Failed to update driver status" });
+    }
+  });
+
+  // Driver: Get stats
+  app.get("/api/taxi/driver/stats", requireAuth, async (req: any, res) => {
+    try {
+      // Get completed orders for this driver
+      const orders = await storage.getOrders();
+      const driverOrders = orders.filter(order => 
+        order.notes?.includes('نوع الخدمة:') && 
+        order.status === 'completed'
+      );
+
+      const totalRides = driverOrders.length;
+      const totalEarnings = driverOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
+      const averageRating = 4.8; // Mock data for now
+      const totalReviews = Math.max(totalRides, 15); // Mock data
+      const completionRate = totalRides > 0 ? 95 : 0; // Mock data
+      const onlineHours = 8 * totalRides; // Mock calculation
+
+      res.json({
+        totalRides,
+        totalEarnings,
+        averageRating,
+        totalReviews,
+        completionRate,
+        onlineHours
+      });
+    } catch (error) {
+      console.error("Error getting driver stats:", error);
+      res.status(500).json({ 
+        totalRides: 0,
+        totalEarnings: 0,
+        averageRating: 0,
+        totalReviews: 0,
+        completionRate: 0,
+        onlineHours: 0
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
