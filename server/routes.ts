@@ -916,31 +916,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       diagnostics.errors.push(`Storage test: ${error.message}`);
     }
 
-    // Check email service configuration
-    const emailDiagnostics = {
-      configured: false,
-      service: 'None',
-      envVars: {
-        GMAIL_USER: !!process.env.GMAIL_USER,
-        GMAIL_APP_PASSWORD: !!process.env.GMAIL_APP_PASSWORD,
-        SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
-        FROM_EMAIL: !!process.env.FROM_EMAIL,
-        GMAIL_USER_VALUE: process.env.GMAIL_USER ? 'SET' : 'NOT_SET',
-        GMAIL_APP_PASSWORD_VALUE: process.env.GMAIL_APP_PASSWORD ? 'SET' : 'NOT_SET'
-      },
-      status: {}
-    };
-
+    // Check email service configuration  
     try {
-      const emailStatus = await emailService.getServiceStatus();
-      emailDiagnostics.configured = emailStatus.hasService;
-      emailDiagnostics.service = emailStatus.service;
-      emailDiagnostics.status = emailStatus;
-    } catch (error: any) {
-      diagnostics.errors.push(`Email service check: ${error.message}`);
-    }
+      const emailDiagnostics = {
+        configured: false,
+        service: 'None',
+        envVars: {
+          GMAIL_USER: !!process.env.GMAIL_USER,
+          GMAIL_APP_PASSWORD: !!process.env.GMAIL_APP_PASSWORD,
+          SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+          FROM_EMAIL: !!process.env.FROM_EMAIL,
+          GMAIL_USER_VALUE: process.env.GMAIL_USER ? 'SET' : 'NOT_SET',
+          GMAIL_APP_PASSWORD_VALUE: process.env.GMAIL_APP_PASSWORD ? 'SET' : 'NOT_SET'
+        },
+        status: {} as any
+      };
 
-    (diagnostics as any).emailService = emailDiagnostics;
+      try {
+        const emailStatus = await emailService.getServiceStatus();
+        emailDiagnostics.configured = emailStatus.hasService;
+        emailDiagnostics.service = emailStatus.service;
+        emailDiagnostics.status = emailStatus;
+      } catch (error: any) {
+        diagnostics.errors.push(`Email service check: ${error.message}`);
+      }
+
+      (diagnostics as any).emailService = emailDiagnostics;
+    } catch (error: any) {
+      diagnostics.errors.push(`Email diagnostics: ${error.message}`);
+    }
 
     res.json(diagnostics);
   });
@@ -4567,14 +4571,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       
       const status = emailConfigManager.getStatus();
-      const serviceStatus = emailService.getServiceStatus();
+      const serviceStatus = await emailService.getServiceStatus();
+      
+      // تحقق من وجود متغيرات البيئة
+      const envVars = {
+        GMAIL_USER: !!process.env.GMAIL_USER,
+        GMAIL_APP_PASSWORD: !!process.env.GMAIL_APP_PASSWORD,  
+        SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+        FROM_EMAIL: !!process.env.FROM_EMAIL,
+        values: {
+          GMAIL_USER: process.env.GMAIL_USER || 'NOT_SET',
+          FROM_EMAIL: process.env.FROM_EMAIL || 'NOT_SET'
+        }
+      };
+      
+      const hasEnvVars = envVars.GMAIL_USER || envVars.GMAIL_APP_PASSWORD || envVars.SENDGRID_API_KEY;
+      
+      // اختبار الاتصال
+      let connectionTest = null;
+      try {
+        connectionTest = await emailService.testConnection();
+      } catch (error) {
+        connectionTest = { success: false, message: `Connection test failed: ${error}` };
+      }
       
       res.json({
         ...status,
         currentService: serviceStatus.service,
         hasActiveService: serviceStatus.hasService,
         fromEmail: serviceStatus.fromEmail,
-        configSource: serviceStatus.configSource
+        configSource: serviceStatus.configSource,
+        environmentVariables: envVars,
+        hasEnvironmentConfig: hasEnvVars,
+        canUseAdminPanel: !hasEnvVars,
+        connectionTest,
+        recommendation: hasEnvVars ? 
+          "Environment variables detected. Either use environment variables OR admin panel, not both. Remove environment variables to use admin panel." :
+          "No environment variables found. You can use the admin panel to configure email service."
       });
     } catch (error) {
       console.error("Error getting email config status:", error);
@@ -4590,6 +4623,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user || !password) {
         return res.status(400).json({ message: "Gmail user and password are required" });
+      }
+
+      // تحقق من وجود متغيرات البيئة التي قد تتعارض
+      const hasEnvVars = process.env.GMAIL_USER || process.env.GMAIL_APP_PASSWORD;
+      
+      if (hasEnvVars) {
+        return res.status(400).json({ 
+          message: "Cannot use admin panel when environment variables are set. Environment variables take priority. Remove GMAIL_USER and GMAIL_APP_PASSWORD from Render environment to use admin panel configuration.",
+          envVarsDetected: {
+            GMAIL_USER: !!process.env.GMAIL_USER,
+            GMAIL_APP_PASSWORD: !!process.env.GMAIL_APP_PASSWORD
+          }
+        });
       }
       
       // حفظ الإعدادات
@@ -4607,7 +4653,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         message: "Gmail configuration saved successfully",
-        testResult
+        testResult,
+        warning: "Configuration saved locally. This will only work if no environment variables are set."
       });
     } catch (error) {
       console.error("Error saving Gmail config:", error);
@@ -4623,6 +4670,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!apiKey || !fromEmail) {
         return res.status(400).json({ message: "SendGrid API key and from email are required" });
+      }
+
+      // تحقق من وجود متغيرات البيئة التي قد تتعارض
+      const hasEnvVars = process.env.SENDGRID_API_KEY;
+      
+      if (hasEnvVars) {
+        return res.status(400).json({ 
+          message: "Cannot use admin panel when environment variables are set. Environment variables take priority. Remove SENDGRID_API_KEY from Render environment to use admin panel configuration.",
+          envVarsDetected: {
+            SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY
+          }
+        });
       }
       
       // حفظ الإعدادات
