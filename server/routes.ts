@@ -4744,7 +4744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // إنشاء transporter مؤقت للاختبار
       const nodemailer = await import('nodemailer');
-      const testTransporter = nodemailer.default.createTransporter({
+      const testTransporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
           user: gmailUser,

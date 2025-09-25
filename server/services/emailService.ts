@@ -35,16 +35,24 @@ class EmailService {
     }
 
     if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-      this.gmailTransporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
-        },
-      });
-      this.fromEmail = process.env.GMAIL_USER;
-      console.log('✅ Gmail initialized from environment variables');
-      serviceInitialized = true;
+      try {
+        this.gmailTransporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_APP_PASSWORD,
+          },
+          debug: process.env.NODE_ENV === 'development', // Enable debug in development
+          logger: process.env.NODE_ENV === 'development' // Enable logging in development
+        });
+        this.fromEmail = process.env.GMAIL_USER;
+        console.log('✅ Gmail initialized from environment variables');
+        console.log(`📧 Gmail User: ${process.env.GMAIL_USER}`);
+        console.log(`📧 From Email: ${this.fromEmail}`);
+        serviceInitialized = true;
+      } catch (error) {
+        console.error('❌ Gmail initialization failed:', error);
+      }
     }
 
     // ثانياً: إذا لم توجد متغيرات البيئة، استخدم الإعدادات المحفوظة
