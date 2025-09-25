@@ -4707,6 +4707,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // اختبار Gmail OTP مع credentials محددة
+  app.post("/api/admin/email-config/test-gmail", requireAdmin, async (req: any, res) => {
+    try {
+      const { gmailUser, gmailPassword, testEmail } = req.body;
+      
+      if (!gmailUser || !gmailPassword || !testEmail) {
+        return res.status(400).json({ 
+          message: "Gmail user, password, and test email are required" 
+        });
+      }
+      
+      console.log(`🧪 Testing Gmail OTP with user: ${gmailUser}`);
+      console.log(`🎯 Sending test to: ${testEmail}`);
+      
+      // إنشاء transporter مؤقت للاختبار
+      const nodemailer = await import('nodemailer');
+      const testTransporter = nodemailer.default.createTransporter({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPassword,
+        },
+      });
+      
+      // اختبار الاتصال أولاً
+      try {
+        await testTransporter.verify();
+        console.log('✅ Gmail connection verified successfully');
+      } catch (verifyError: any) {
+        console.error('❌ Gmail connection failed:', verifyError.message);
+        return res.status(400).json({ 
+          success: false,
+          message: `Gmail connection failed: ${verifyError.message}`,
+          error: verifyError.code || 'UNKNOWN_ERROR'
+        });
+      }
+      
+      // إرسال OTP تجريبي
+      const testOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log(`🔑 Generated test OTP: ${testOtp}`);
+      
+      const mailOptions = {
+        from: gmailUser,
+        to: testEmail,
+        subject: 'رمز التحقق التجريبي - BizChat Test',
+        html: `
+          <div dir="rtl" style="text-align: center; font-family: Arial, sans-serif;">
+            <h2>🧪 اختبار خدمة البريد الإلكتروني</h2>
+            <p>رمز التحقق التجريبي الخاص بك:</p>
+            <h1 style="color: #4CAF50; font-size: 48px; letter-spacing: 8px;">${testOtp}</h1>
+            <p style="color: #666;">هذا اختبار من لوحة الإدارة</p>
+            <p style="color: #999; font-size: 12px;">تم الإرسال: ${new Date().toLocaleString('ar-DZ')}</p>
+          </div>
+        `
+      };
+      
+      try {
+        await testTransporter.sendMail(mailOptions);
+        console.log('✅ Test email sent successfully');
+        
+        res.json({ 
+          success: true,
+          message: "Gmail test successful! OTP sent.", 
+          otp: testOtp,
+          testEmail: testEmail,
+          gmailUser: gmailUser
+        });
+      } catch (sendError: any) {
+        console.error('❌ Failed to send email:', sendError.message);
+        res.status(500).json({ 
+          success: false,
+          message: `Failed to send email: ${sendError.message}`,
+          error: sendError.code || 'SEND_FAILED'
+        });
+      }
+      
+    } catch (error: any) {
+      console.error("Error testing Gmail:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to test Gmail configuration",
+        error: error.message 
+      });
+    }
+  });
+
   // اختبار إرسال بريد إلكتروني تجريبي
   app.post("/api/admin/email-config/test", requireAdmin, async (req: any, res) => {
     try {

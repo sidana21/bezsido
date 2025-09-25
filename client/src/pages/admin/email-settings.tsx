@@ -38,6 +38,13 @@ export default function EmailSettings() {
   });
   
   const [testEmail, setTestEmail] = useState('');
+  
+  // Gmail test form state (separate from configuration)
+  const [gmailTestData, setGmailTestData] = useState({
+    gmailUser: '',
+    gmailPassword: '',
+    testEmail: ''
+  });
 
   // Get email config status
   const { data: emailStatus, isLoading } = useQuery<EmailConfigStatus>({
@@ -117,6 +124,31 @@ export default function EmailSettings() {
     },
   });
 
+  // Gmail test mutation (separate from configuration)
+  const gmailTestMutation = useMutation({
+    mutationFn: async (data: typeof gmailTestData) => {
+      return apiRequest('/api/admin/email-config/test-gmail', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: '🎉 نجح اختبار Gmail!',
+        description: `تم إرسال رمز OTP: ${data.otp} إلى ${data.testEmail}`,
+        duration: 10000,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: '❌ فشل اختبار Gmail',
+        description: error.message || 'تحقق من صحة البيانات',
+        variant: 'destructive',
+        duration: 10000,
+      });
+    },
+  });
+
   // Auto-fill Gmail fromEmail when user changes
   useEffect(() => {
     if (gmailData.user && !gmailData.fromEmail) {
@@ -180,6 +212,19 @@ export default function EmailSettings() {
     testEmailMutation.mutate(testEmail);
   };
 
+  const handleGmailTest = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gmailTestData.gmailUser || !gmailTestData.gmailPassword || !gmailTestData.testEmail) {
+      toast({
+        title: '❌ بيانات مطلوبة',
+        description: 'يرجى إدخال جميع البيانات المطلوبة للاختبار',
+        variant: 'destructive',
+      });
+      return;
+    }
+    gmailTestMutation.mutate(gmailTestData);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -235,12 +280,100 @@ export default function EmailSettings() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="gmail" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="gmail-test" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="gmail-test">🧪 اختبار Gmail</TabsTrigger>
           <TabsTrigger value="gmail">Gmail</TabsTrigger>
           <TabsTrigger value="sendgrid">SendGrid</TabsTrigger>
           <TabsTrigger value="test">اختبار الإرسال</TabsTrigger>
         </TabsList>
+
+        {/* Gmail Test Tab - First tab for easy testing */}
+        <TabsContent value="gmail-test">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                🧪 اختبار Gmail OTP
+              </CardTitle>
+              <CardDescription>
+                اختبر إعدادات Gmail مباشرة قبل الحفظ - لا يتم حفظ البيانات
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Alert className="mb-4 bg-blue-50 border-blue-200">
+                <AlertDescription>
+                  <strong>كيفية إنشاء App Password:</strong><br/>
+                  1️⃣ اذهب إلى <strong>Google Account → Security</strong><br/>
+                  2️⃣ فعّل <strong>2-Step Verification</strong> أولاً<br/>
+                  3️⃣ اذهب إلى <strong>App Passwords</strong> وأنشئ كلمة مرور جديدة<br/>
+                  4️⃣ استخدم كلمة المرور المكونة من 16 رقم (بدون مسافات)
+                </AlertDescription>
+              </Alert>
+              
+              <form onSubmit={handleGmailTest} className="space-y-4">
+                <div>
+                  <Label htmlFor="test-gmail-user">البريد الإلكتروني Gmail</Label>
+                  <Input
+                    id="test-gmail-user"
+                    type="email"
+                    placeholder="almardanivlog@gmail.com"
+                    value={gmailTestData.gmailUser}
+                    onChange={(e) => setGmailTestData(prev => ({ ...prev, gmailUser: e.target.value }))}
+                    data-testid="input-test-gmail-user"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="test-gmail-password">App Password (16 رقم)</Label>
+                  <Input
+                    id="test-gmail-password"
+                    type="password"
+                    placeholder="abcdefghijklmnop (16 رقم بدون مسافات)"
+                    value={gmailTestData.gmailPassword}
+                    onChange={(e) => setGmailTestData(prev => ({ ...prev, gmailPassword: e.target.value }))}
+                    data-testid="input-test-gmail-password"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="test-target-email">البريد المرسل إليه للاختبار</Label>
+                  <Input
+                    id="test-target-email"
+                    type="email" 
+                    placeholder="test@example.com"
+                    value={gmailTestData.testEmail}
+                    onChange={(e) => setGmailTestData(prev => ({ ...prev, testEmail: e.target.value }))}
+                    data-testid="input-test-target-email"
+                  />
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  disabled={gmailTestMutation.isPending}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-test-gmail"
+                >
+                  {gmailTestMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      جاري الاختبار...
+                    </>
+                  ) : (
+                    <>
+                      🧪 اختبار Gmail OTP الآن
+                    </>
+                  )}
+                </Button>
+                
+                <Alert className="mt-4 bg-yellow-50 border-yellow-200">
+                  <AlertDescription>
+                    💡 <strong>نصيحة:</strong> إذا نجح الاختبار، يمكنك استخدام نفس البيانات في قسم "Gmail" للحفظ الدائم
+                  </AlertDescription>
+                </Alert>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Gmail Configuration */}
         <TabsContent value="gmail">
