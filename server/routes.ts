@@ -916,6 +916,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       diagnostics.errors.push(`Storage test: ${error.message}`);
     }
 
+    // Check email service configuration
+    const emailDiagnostics = {
+      configured: false,
+      service: 'None',
+      envVars: {
+        GMAIL_USER: !!process.env.GMAIL_USER,
+        GMAIL_APP_PASSWORD: !!process.env.GMAIL_APP_PASSWORD,
+        SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+        FROM_EMAIL: !!process.env.FROM_EMAIL,
+        GMAIL_USER_VALUE: process.env.GMAIL_USER ? 'SET' : 'NOT_SET',
+        GMAIL_APP_PASSWORD_VALUE: process.env.GMAIL_APP_PASSWORD ? 'SET' : 'NOT_SET'
+      },
+      status: {}
+    };
+
+    try {
+      const emailStatus = await emailService.getServiceStatus();
+      emailDiagnostics.configured = emailStatus.hasService;
+      emailDiagnostics.service = emailStatus.service;
+      emailDiagnostics.status = emailStatus;
+    } catch (error: any) {
+      diagnostics.errors.push(`Email service check: ${error.message}`);
+    }
+
+    (diagnostics as any).emailService = emailDiagnostics;
+
     res.json(diagnostics);
   });
 
