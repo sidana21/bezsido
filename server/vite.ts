@@ -30,7 +30,7 @@ export async function setupVite(app: Express, server: Server) {
   };
 
   // Resolve the async config
-  const resolvedConfig = typeof viteConfig === 'function' ? await viteConfig() : viteConfig;
+  const resolvedConfig = typeof viteConfig === 'function' ? await viteConfig({ command: 'serve', mode: 'development' }) : viteConfig;
   
   const vite = await createViteServer({
     ...resolvedConfig,
