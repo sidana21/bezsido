@@ -440,8 +440,64 @@ async function ensureTablesExist() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    // Create app_features table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS app_features (
+        id VARCHAR PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        is_enabled BOOLEAN DEFAULT true,
+        category TEXT NOT NULL DEFAULT 'general',
+        priority INTEGER DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create admin_credentials table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS admin_credentials (
+        id VARCHAR PRIMARY KEY DEFAULT 'admin_settings',
+        email TEXT NOT NULL,
+        password TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create stickers table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS stickers (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        image_url TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'general',
+        is_active BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create stories table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS stories (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL REFERENCES users(id),
+        location TEXT NOT NULL,
+        content TEXT,
+        image_url TEXT,
+        video_url TEXT,
+        background_color TEXT DEFAULT '#075e54',
+        text_color TEXT DEFAULT '#ffffff',
+        timestamp TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP NOT NULL,
+        view_count TEXT DEFAULT '0',
+        viewers JSONB DEFAULT '[]'
+      )
+    `);
     
-    console.log('📋 All database tables created/verified successfully (users, sessions, chats, messages, vendors, services, products)!');
+    console.log('📋 All database tables created/verified successfully (users, sessions, chats, messages, vendors, services, products, app_features, admin_credentials, stickers, stories)!');
   } catch (error) {
     console.warn('⚠️ Warning: Failed to create some tables:', error);
     // Don't fail completely, the app might still work
