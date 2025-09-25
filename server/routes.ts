@@ -354,18 +354,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let emailSent = false;
       let emailError = null;
       
-      try {
-        emailSent = await emailService.sendOTP(normalizedEmail, code);
-        if (emailSent) {
-          console.log(`✅ Email OTP sent successfully to ${normalizedEmail}: ${code}`);
+      // Check if email service is configured
+      const emailServiceStatus = emailService.getAvailableService();
+      
+      if (emailServiceStatus === 'None') {
+        emailError = "خدمة البريد الإلكتروني غير مُعدَّة. يرجى إعداد Gmail أو SendGrid في متغيرات البيئة.";
+        console.error('❌ No email service configured');
+      } else {
+        try {
+          emailSent = await emailService.sendOTP(normalizedEmail, code);
+          if (emailSent) {
+            console.log(`✅ Email OTP sent successfully via ${emailServiceStatus} to ${normalizedEmail}: ${code}`);
+          } else {
+            emailError = `فشل إرسال البريد عبر ${emailServiceStatus}`;
+            console.error(`❌ Failed to send email via ${emailServiceStatus}`);
+          }
+        } catch (error: any) {
+          emailError = error.message;
+          console.error('❌ Email sending error:', error);
         }
-      } catch (error: any) {
-        emailError = error.message;
-        console.error('❌ Email sending error:', error);
       }
       
       // Only show OTP directly in development mode for security
       const shouldShowOTP = process.env.NODE_ENV === 'development';
+      
+      // In production, if email fails, return error instead of success
+      if (!shouldShowOTP && !emailSent) {
+        return res.status(500).json({ 
+          success: false,
+          message: "فشل في إرسال رمز التحقق. يرجى التأكد من إعدادات البريد الإلكتروني أو الاتصال بالدعم الفني.",
+          error: "EMAIL_SERVICE_ERROR"
+        });
+      }
       
       let message = "";
       if (shouldShowOTP) {
@@ -382,9 +402,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log for debugging (be careful with OTP in production logs)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`OTP for ${normalizedEmail}: ${code} (Email delivered: ${emailSent})`);
+        console.log(`OTP for ${normalizedEmail}: ${code} (Email delivered: ${emailSent}, Service: ${emailServiceStatus})`);
       } else {
-        console.log(`OTP sent to ${normalizedEmail} (Email delivered: ${emailSent})`);
+        console.log(`OTP sent to ${normalizedEmail} (Email delivered: ${emailSent}, Service: ${emailServiceStatus})`);
       }
       
       res.json({ 
@@ -394,6 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         code: shouldShowOTP ? code : undefined,
         showDirectly: shouldShowOTP,
         emailDelivered: emailSent,
+        emailService: emailServiceStatus,
         // Don't expose email errors in production
         emailError: process.env.NODE_ENV === 'development' ? emailError : undefined
       });

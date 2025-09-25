@@ -41,15 +41,24 @@ export async function apiRequest(
     headers['Content-Type'] = 'application/json';
   }
   
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = `${response.status}: ${response.statusText}`;
-    let errorCode = 'UNKNOWN_ERROR';
+  // Add timeout to prevent hanging requests (30 seconds for email operations)
+  const timeoutMs = 30000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `${response.status}: ${response.statusText}`;
+      let errorCode = 'UNKNOWN_ERROR';
     
     try {
       const errorData = JSON.parse(errorText);
@@ -78,9 +87,16 @@ export async function apiRequest(
     (error as any).code = errorCode;
     (error as any).status = response.status;
     throw error;
-  }
+    }
 
-  return response.json();
+    return response.json();
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('انتهت مهلة الطلب. يرجى التحقق من إعدادات البريد الإلكتروني وإعادة المحاولة');
+    }
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
