@@ -367,13 +367,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Only show OTP directly in development mode for security
       const shouldShowOTP = process.env.NODE_ENV === 'development';
       
-      let message = "تم إرسال رمز التحقق عبر البريد الإلكتروني";
+      let message = "";
       if (shouldShowOTP) {
         message = emailSent ? 
           `تم إرسال الرمز عبر البريد الإلكتروني وهو: ${code}` : 
-          `رمز التحقق: ${code}`;
-      } else if (!emailSent && emailError) {
-        message = "حدث خطأ في إرسال البريد الإلكتروني، يرجى التأكد من صحة عنوان البريد والمحاولة مرة أخرى";
+          `رمز التحقق: ${code} (خدمة الإيميل غير متاحة)`;
+      } else {
+        if (emailSent) {
+          message = "تم إرسال رمز التحقق عبر البريد الإلكتروني";
+        } else {
+          message = "حدث خطأ في إرسال البريد الإلكتروني، يرجى التأكد من إعدادات البريد الإلكتروني والمحاولة مرة أخرى";
+        }
       }
       
       // Log for debugging (be careful with OTP in production logs)
