@@ -23,6 +23,8 @@ import NotFound from "@/pages/not-found";
 import Cart from "@/pages/cart";
 import Orders from "@/pages/orders";
 import Neighborhoods from "@/pages/neighborhoods";
+import Taxi from "@/pages/taxi";
+import TaxiDriver from "@/pages/taxi-driver";
 // Admin Pages
 import { AdminLogin } from "@/pages/admin/admin-login";
 import { AdminDashboard } from "@/pages/admin/admin-dashboard";
@@ -112,6 +114,8 @@ function Router() {
             <Route path="/cart" component={Cart} />
             <Route path="/orders" component={Orders} />
             <Route path="/neighborhoods" component={Neighborhoods} />
+            <Route path="/taxi" component={Taxi} />
+            <Route path="/taxi-driver" component={TaxiDriver} />
             <Route path="/affiliate" component={Affiliate} />
             <Route path="/affiliate/:uniqueCode" component={AffiliateRedirect} />
             <Route path="/profile" component={Profile} />
