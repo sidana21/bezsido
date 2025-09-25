@@ -184,26 +184,30 @@ export default function Stores() {
           <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">فئات الخدمات</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {/* Transportation Services */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Car className="w-8 h-8 text-white" />
+            <Link href="/taxi">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Car className="w-8 h-8 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">تاكسي</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">نقل الركاب</p>
                 </div>
-                <h4 className="font-bold text-gray-800 dark:text-white mb-1">تاكسي</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">نقل الركاب</p>
               </div>
-            </div>
+            </Link>
 
             {/* Delivery Services */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Truck className="w-8 h-8 text-white" />
+            <Link href="/taxi-driver">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Truck className="w-8 h-8 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">لوحة السائق</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">إدارة خدمة التاكسي</p>
                 </div>
-                <h4 className="font-bold text-gray-800 dark:text-white mb-1">توصيل</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">نقل البضائع</p>
               </div>
-            </div>
+            </Link>
 
             {/* Home Services */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
