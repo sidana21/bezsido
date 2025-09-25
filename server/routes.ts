@@ -4651,11 +4651,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (hasEnvVars) {
         return res.status(400).json({ 
-          message: "Cannot use admin panel when environment variables are set. Environment variables take priority. Remove GMAIL_USER and GMAIL_APP_PASSWORD from Render environment to use admin panel configuration.",
+          message: "متغيرات البيئة موجودة ولها الأولوية. لا يمكن تعديل الإعدادات من لوحة الإدارة عندما تكون متغيرات البيئة معرّفة في Render. استخدم وظيفة 'اختبار Gmail' أدناه للتحقق من عمل الخدمة.",
           envVarsDetected: {
             GMAIL_USER: !!process.env.GMAIL_USER,
             GMAIL_APP_PASSWORD: !!process.env.GMAIL_APP_PASSWORD
-          }
+          },
+          suggestion: "Use the Gmail test function below to verify your environment variables are working correctly."
         });
       }
       
