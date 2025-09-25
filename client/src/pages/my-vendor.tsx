@@ -28,9 +28,13 @@ import {
   Users,
   ShoppingBag,
   Camera,
-  Settings
+  Settings,
+  Smartphone,
+  Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import MobileProductUpload from '@/components/mobile-product-upload';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface VendorCategory {
   id: string;
@@ -99,7 +103,9 @@ type VendorFormData = z.infer<typeof vendorSchema>;
 
 export default function MyVendorPage() {
   const [isEditing, setIsEditing] = useState(false);
+  const [showMobileUpload, setShowMobileUpload] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Get vendor categories
   const { data: categories = [] } = useQuery<VendorCategory[]>({
@@ -315,6 +321,73 @@ export default function MyVendorPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Mobile Product Upload */}
+          {isMobile && (
+            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-700">
+                  <Smartphone className="h-5 w-5" />
+                  إضافة منتجات عبر الهاتف
+                </CardTitle>
+                <CardDescription>
+                  أضف منتجاتك بسهولة من خلال كاميرا الهاتف
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={() => setShowMobileUpload(true)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    size="lg"
+                  >
+                    <Camera className="h-5 w-5 ml-2" />
+                    رفع من الكاميرا
+                  </Button>
+                  <Button 
+                    onClick={() => setShowMobileUpload(true)}
+                    variant="outline" 
+                    className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                    size="lg"
+                  >
+                    <Upload className="h-5 w-5 ml-2" />
+                    رفع من المعرض
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-600 mt-3 text-center">
+                  واجهة محسنة للهواتف الذكية مع رفع سريع للصور
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Desktop Quick Actions */}
+          {!isMobile && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  إجراءات سريعة
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button variant="outline" className="h-20 flex-col space-y-2">
+                    <Plus className="w-6 h-6" />
+                    <span>إضافة منتج</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col space-y-2">
+                    <Settings className="w-6 h-6" />
+                    <span>إدارة المتجر</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col space-y-2">
+                    <TrendingUp className="w-6 h-6" />
+                    <span>التقارير</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Vendor Details */}
           <Card>
@@ -703,6 +776,19 @@ export default function MyVendorPage() {
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {/* Mobile Product Upload Modal */}
+      {showMobileUpload && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <MobileProductUpload
+            onSuccess={() => {
+              setShowMobileUpload(false);
+              queryClient.invalidateQueries({ queryKey: ['/api/user/vendor'] });
+            }}
+            onCancel={() => setShowMobileUpload(false)}
+          />
+        </div>
       )}
     </div>
   );
