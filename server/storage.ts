@@ -4486,6 +4486,8 @@ export class MemStorage implements IStorage {
     this.initializeDefaultVendorData();
     // Initialize service categories and sample services
     this.initializeDefaultServiceData();
+    // Initialize product categories
+    this.initializeDefaultProductCategories();
   }
 
   // User methods
@@ -6747,6 +6749,139 @@ export class MemStorage implements IStorage {
     }
   }
 
+  // تهيئة فئات المنتجات الافتراضية
+  private initializeDefaultProductCategories(): void {
+    const defaultCategories = [
+      {
+        id: 'electronics',
+        name: 'Electronics & Technology',
+        nameAr: 'الإلكترونيات والتكنولوجيا',
+        description: 'Mobile phones, computers, gadgets, and electronic devices',
+        icon: 'Smartphone',
+        isActive: true,
+        sortOrder: 1,
+        createdAt: new Date(),
+      },
+      {
+        id: 'fashion',
+        name: 'Fashion & Clothing',
+        nameAr: 'الأزياء والملابس',
+        description: 'Clothing, shoes, accessories, and fashion items',
+        icon: 'Shirt',
+        isActive: true,
+        sortOrder: 2,
+        createdAt: new Date(),
+      },
+      {
+        id: 'home-garden',
+        name: 'Home & Garden',
+        nameAr: 'المنزل والحديقة',
+        description: 'Furniture, home decor, appliances, and garden supplies',
+        icon: 'Home',
+        isActive: true,
+        sortOrder: 3,
+        createdAt: new Date(),
+      },
+      {
+        id: 'beauty-health',
+        name: 'Beauty & Health',
+        nameAr: 'الجمال والصحة',
+        description: 'Cosmetics, skincare, health products, and wellness items',
+        icon: 'Heart',
+        isActive: true,
+        sortOrder: 4,
+        createdAt: new Date(),
+      },
+      {
+        id: 'sports-outdoors',
+        name: 'Sports & Outdoors',
+        nameAr: 'الرياضة والأنشطة الخارجية',
+        description: 'Sports equipment, outdoor gear, and fitness accessories',
+        icon: 'Dumbbell',
+        isActive: true,
+        sortOrder: 5,
+        createdAt: new Date(),
+      },
+      {
+        id: 'books-media',
+        name: 'Books & Media',
+        nameAr: 'الكتب والوسائط',
+        description: 'Books, magazines, music, movies, and educational materials',
+        icon: 'Book',
+        isActive: true,
+        sortOrder: 6,
+        createdAt: new Date(),
+      },
+      {
+        id: 'automotive',
+        name: 'Automotive',
+        nameAr: 'السيارات والمركبات',
+        description: 'Car parts, accessories, tools, and automotive supplies',
+        icon: 'Car',
+        isActive: true,
+        sortOrder: 7,
+        createdAt: new Date(),
+      },
+      {
+        id: 'food-beverages',
+        name: 'Food & Beverages',
+        nameAr: 'الطعام والمشروبات',
+        description: 'Groceries, snacks, beverages, and specialty foods',
+        icon: 'UtensilsCrossed',
+        isActive: true,
+        sortOrder: 8,
+        createdAt: new Date(),
+      },
+      {
+        id: 'toys-games',
+        name: 'Toys & Games',
+        nameAr: 'الألعاب والترفيه',
+        description: 'Toys, board games, puzzles, and entertainment items',
+        icon: 'Gamepad2',
+        isActive: true,
+        sortOrder: 9,
+        createdAt: new Date(),
+      },
+      {
+        id: 'office-supplies',
+        name: 'Office & Business',
+        nameAr: 'المكتب والأعمال',
+        description: 'Office supplies, stationery, business equipment',
+        icon: 'Briefcase',
+        isActive: true,
+        sortOrder: 10,
+        createdAt: new Date(),
+      },
+      {
+        id: 'jewelry-accessories',
+        name: 'Jewelry & Accessories',
+        nameAr: 'المجوهرات والإكسسوارات',
+        description: 'Watches, jewelry, bags, and fashion accessories',
+        icon: 'Watch',
+        isActive: true,
+        sortOrder: 11,
+        createdAt: new Date(),
+      },
+      {
+        id: 'crafts-handmade',
+        name: 'Crafts & Handmade',
+        nameAr: 'الحرف اليدوية والمصنوعات',
+        description: 'Handcrafted items, art supplies, and DIY materials',
+        icon: 'Palette',
+        isActive: true,
+        sortOrder: 12,
+        createdAt: new Date(),
+      }
+    ];
+
+    // Add all categories to storage
+    defaultCategories.forEach(category => {
+      this.productCategories.set(category.id, category);
+    });
+
+    console.log(`✅ Initialized ${defaultCategories.length} product categories`);
+  }
+
   // Missing Service Category methods for MemStorage
   async updateServiceCategory(categoryId: string, updates: Partial<InsertServiceCategory>): Promise<ServiceCategory | undefined> {
     const category = this.serviceCategories.get(categoryId);
@@ -6782,31 +6917,6 @@ export class MemStorage implements IStorage {
     return this.services.delete(serviceId);
   }
 
-  // Missing Product Category methods for MemStorage
-  async getProductCategories(): Promise<ProductCategory[]> {
-    return [];
-  }
-
-  async getProductCategory(categoryId: string): Promise<ProductCategory | undefined> {
-    return undefined;
-  }
-
-  async createProductCategory(category: InsertProductCategory): Promise<ProductCategory> {
-    const newCategory: ProductCategory = {
-      id: randomUUID(),
-      ...category,
-      createdAt: new Date(),
-    };
-    return newCategory;
-  }
-
-  async updateProductCategory(categoryId: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory | undefined> {
-    return undefined;
-  }
-
-  async deleteProductCategory(categoryId: string): Promise<boolean> {
-    return false;
-  }
 
   // Additional missing methods for MemStorage
   async createDailyMission(mission: InsertDailyMission): Promise<DailyMission> {
