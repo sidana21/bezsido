@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web"]
+modules = ["nodejs-20", "web", "postgresql-16"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
@@ -17,10 +17,6 @@ externalPort = 3001
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 37821
-externalPort = 5000
 
 [[ports]]
 localPort = 39013
@@ -51,6 +47,10 @@ localPort = 45207
 externalPort = 3003
 
 [[ports]]
+localPort = 45401
+externalPort = 5000
+
+[[ports]]
 localPort = 45435
 externalPort = 4200
 
@@ -75,19 +75,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Start application"
+args = "BizChat Server"
 
 [[workflows.workflow]]
-name = "Start application"
+name = "BizChat Server"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 integrations = ["javascript_database:1.0.0", "javascript_sendgrid:1.0.0"]
