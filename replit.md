@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### September 26, 2025 - Render Deployment Authentication Fix ✅
+- **CRITICAL FIX: Removed OTP dependency for Render deployment**: Eliminated all OTP_DISABLED environment variable checks that were preventing authentication on Render
+- **Password-only authentication system now active**: Users can now register and login with email/password without any OTP verification requirements
+- **Authentication endpoints cleaned**: Removed blocking conditions in `/api/auth/login` and `/api/auth/register` that required OTP_DISABLED=true environment variable
+- **Render deployment compatibility restored**: Application now works on Render without needing special environment variables for authentication
+- **User preference respected**: Completely removed OTP system as requested - no verification codes required for any authentication flow
+
 ### September 26, 2025 - Fresh GitHub Import Setup Complete ✅
 - **Successfully imported and configured fresh GitHub clone**: BizChat application now fully operational in Replit environment (VERIFIED WORKING)
 - **Gmail email service configured**: Secure Gmail SMTP integration working with environment variables (GMAIL_USER, GMAIL_APP_PASSWORD)
