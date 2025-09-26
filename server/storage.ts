@@ -410,6 +410,7 @@ export class DatabaseStorage implements IStorage {
       const newUser = {
         id: randomUUID(),
         email: user.email,
+        password: user.password, // Fix: Include password field in database insertion
         name: user.name,
         avatar: user.avatar || null,
         location: user.location,
