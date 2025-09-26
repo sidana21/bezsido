@@ -37,18 +37,22 @@ class EmailService {
     if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
       try {
         this.gmailTransporter = nodemailer.createTransport({
-          service: 'gmail',
+          host: 'smtp.gmail.com',  // Explicit host instead of service for Render compatibility
+          port: 587,              // Port 587 (STARTTLS) - better compatibility with cloud platforms
+          secure: false,          // false for port 587 (STARTTLS)
+          requireTLS: true,       // Force TLS upgrade
           auth: {
             user: process.env.GMAIL_USER,
             pass: process.env.GMAIL_APP_PASSWORD,
           },
-          // Enhanced SSL/TLS configuration for production environments (Render, etc.)
-          secure: true, // Use TLS
-          port: 465, // Gmail SMTP port for SSL
           tls: {
-            rejectUnauthorized: true,
+            rejectUnauthorized: false,  // More lenient for cloud platforms like Render
             servername: 'smtp.gmail.com'
           },
+          // Enhanced timeout settings for Render deployment
+          connectionTimeout: 60000, // 60 seconds connection timeout
+          greetingTimeout: 30000,   // 30 seconds greeting timeout  
+          socketTimeout: 60000,     // 60 seconds socket timeout
           // Enable debug only in development for security
           debug: process.env.NODE_ENV === 'development',
           logger: process.env.NODE_ENV === 'development'
@@ -60,11 +64,13 @@ class EmailService {
         
         // Add production-specific logging for troubleshooting
         if (process.env.NODE_ENV === 'production') {
-          console.log('🔧 Production Gmail SMTP Configuration:');
+          console.log('🔧 Production Gmail SMTP Configuration (Render Compatible):');
           console.log('   - Host: smtp.gmail.com');
-          console.log('   - Port: 465 (SSL)');
-          console.log('   - Secure: true');
-          console.log('   - TLS rejectUnauthorized: true');
+          console.log('   - Port: 587 (STARTTLS)');
+          console.log('   - Secure: false (STARTTLS)');
+          console.log('   - RequireTLS: true');
+          console.log('   - TLS rejectUnauthorized: false (Cloud Platform Compatible)');
+          console.log('   - Enhanced timeouts: 60s connection, 30s greeting, 60s socket');
         }
         
         serviceInitialized = true;
@@ -95,18 +101,22 @@ class EmailService {
           serviceInitialized = true;
         } else if (savedCredentials.service === 'gmail' && savedCredentials.user && savedCredentials.password) {
           this.gmailTransporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',  // Explicit host for Render compatibility  
+            port: 587,              // Port 587 (STARTTLS) for cloud platforms
+            secure: false,          // false for port 587 (STARTTLS)
+            requireTLS: true,       // Force TLS upgrade
             auth: {
               user: savedCredentials.user,
               pass: savedCredentials.password,
             },
-            // Enhanced SSL/TLS configuration for production environments
-            secure: true,
-            port: 465,
             tls: {
-              rejectUnauthorized: true,
+              rejectUnauthorized: false,  // More lenient for cloud platforms
               servername: 'smtp.gmail.com'
             },
+            // Enhanced timeout settings for Render deployment
+            connectionTimeout: 60000, // 60 seconds connection timeout
+            greetingTimeout: 30000,   // 30 seconds greeting timeout  
+            socketTimeout: 60000,     // 60 seconds socket timeout
             debug: process.env.NODE_ENV === 'development',
             logger: process.env.NODE_ENV === 'development'
           });
