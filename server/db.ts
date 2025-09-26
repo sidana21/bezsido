@@ -237,17 +237,21 @@ async function ensureTablesExist() {
         chat_id VARCHAR NOT NULL REFERENCES chats(id),
         sender_id VARCHAR NOT NULL REFERENCES users(id),
         content TEXT,
-        type VARCHAR DEFAULT 'text',
-        file_url TEXT,
-        file_name TEXT,
-        file_size INTEGER,
-        file_type VARCHAR,
-        read_by JSONB DEFAULT '[]'::jsonb,
-        delivered_to JSONB DEFAULT '[]'::jsonb,
-        replied_to VARCHAR,
-        is_forwarded BOOLEAN DEFAULT false,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
+        message_type TEXT NOT NULL DEFAULT 'text',
+        image_url TEXT,
+        audio_url TEXT,
+        sticker_url TEXT,
+        sticker_id VARCHAR,
+        location_lat DECIMAL,
+        location_lon DECIMAL,
+        location_name TEXT,
+        reply_to_message_id VARCHAR,
+        timestamp TIMESTAMP DEFAULT NOW(),
+        is_read BOOLEAN DEFAULT false,
+        is_delivered BOOLEAN DEFAULT false,
+        is_edited BOOLEAN DEFAULT false,
+        edited_at TIMESTAMP,
+        deleted_at TIMESTAMP
       )
     `);
 
@@ -506,6 +510,78 @@ async function ensureTablesExist() {
       console.log('✅ Password column added/verified for users table');
     } catch (error) {
       console.log('ℹ️ Password column already exists or could not be added:', error instanceof Error ? error.message : error);
+    }
+
+    // Fix messages table schema for existing Render deployments
+    try {
+      // Check if old 'type' column exists and rename it to 'message_type'
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'messages' AND column_name = 'type') THEN
+            ALTER TABLE messages RENAME COLUMN type TO message_type;
+          END IF;
+        END $$;
+      `);
+      
+      // Add missing columns to messages table if they don't exist
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS image_url TEXT;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS audio_url TEXT;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS sticker_url TEXT;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS sticker_id VARCHAR;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS location_lat DECIMAL;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS location_lon DECIMAL;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS location_name TEXT;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_message_id VARCHAR;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_delivered BOOLEAN DEFAULT false;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT false;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMP;
+      `);
+      await db.execute(sql`
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+      `);
+      
+      // Rename timestamp column if it's called created_at
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'messages' AND column_name = 'created_at') 
+             AND NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                             WHERE table_name = 'messages' AND column_name = 'timestamp') THEN
+            ALTER TABLE messages RENAME COLUMN created_at TO timestamp;
+          END IF;
+        END $$;
+      `);
+      
+      console.log('✅ Messages table schema updated/verified for Render compatibility');
+    } catch (error) {
+      console.log('ℹ️ Messages table schema update error (may be expected):', error instanceof Error ? error.message : error);
     }
 
     console.log('📋 All database tables created/verified successfully (users, sessions, chats, messages, vendors, services, products, app_features, admin_credentials, stickers, stories)!');
