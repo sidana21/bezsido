@@ -38,6 +38,24 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// إضافة headers لمنع الـ caching على Render - يحل مشكلة الشاشة السوداء
+app.use((req, res, next) => {
+  // منع caching كلياً لمنع مشكلة الشاشة السوداء على Render
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  // إضافة headers إضافية لضمان عدم caching المحتوى
+  res.setHeader('X-Accel-Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  
+  // إضافة header لإخبار المتصفح أن المحتوى تم تحديثه
+  res.setHeader('Last-Modified', new Date().toUTCString());
+  res.setHeader('ETag', `"${Date.now()}"`);
+  
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

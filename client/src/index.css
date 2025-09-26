@@ -115,6 +115,24 @@
     -moz-osx-font-smoothing: grayscale;
     touch-action: pan-x pan-y;
     -webkit-overflow-scrolling: touch;
+    
+    /* إصلاح مشكلة الشاشة السوداء على Render - التأكد من ظهور النص في جميع الحالات */
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  /* إصلاح إضافي للشاشة السوداء - fallback colors */
+  body.dark {
+    background-color: #1f2937 !important; /* fallback gray-800 instead of pure black */
+    color: #f9fafb !important; /* fallback white text */
+  }
+  
+  /* تأكد من أن المحتوى الرئيسي مرئي حتى في حالة فشل التطبيق */
+  #root {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background-color: inherit;
+    color: inherit;
   }
   
   /* Mobile viewport optimization */
