@@ -2567,9 +2567,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/products", requireAuth, async (req: any, res) => {
     try {
+      // First, get the user's vendor
+      const userVendor = await storage.getUserVendor(req.userId);
+      if (!userVendor) {
+        return res.status(404).json({ 
+          message: "لم يتم العثور على متجر", 
+          details: "يجب إنشاء متجر أولاً قبل إضافة المنتجات"
+        });
+      }
+
       const productData = insertProductSchema.parse({
         ...req.body,
-        userId: req.userId,
+        vendorId: userVendor.id,
       });
       
       const product = await storage.createProduct(productData);
@@ -2610,9 +2619,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { productId } = req.params;
       
-      // Check if user owns this product
+      // Check if user owns this product through their vendor
       const product = await storage.getProduct(productId);
-      if (!product || product.userId !== req.userId) {
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const userVendor = await storage.getUserVendor(req.userId);
+      if (!userVendor || product.vendorId !== userVendor.id) {
         return res.status(403).json({ message: "Unauthorized" });
       }
       
@@ -2631,9 +2645,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { productId } = req.params;
       
-      // Check if user owns this product
+      // Check if user owns this product through their vendor
       const product = await storage.getProduct(productId);
-      if (!product || product.userId !== req.userId) {
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      const userVendor = await storage.getUserVendor(req.userId);
+      if (!userVendor || product.vendorId !== userVendor.id) {
         return res.status(403).json({ message: "Unauthorized" });
       }
       
