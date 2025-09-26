@@ -6895,30 +6895,11 @@ export class MemStorage implements IStorage {
 
 }
 
-// Initialize storage with proper error handling - use database if available
+// Initialize storage with proper error handling - use memory storage for now
 async function initializeStorage(): Promise<IStorage> {
-  if (process.env.DATABASE_URL) {
-    try {
-      console.log('🔧 Attempting to connect to external database...');
-      const { initializeDatabase } = await import('./db');
-      const dbConnected = await initializeDatabase();
-      
-      if (dbConnected) {
-        console.log('✅ Connected to external database successfully');
-        return new DatabaseStorage();
-      } else {
-        console.log('⚠️ Database connection failed, falling back to memory storage');
-        return new MemStorage();
-      }
-    } catch (error) {
-      console.error('❌ Database connection error:', error);
-      console.log('⚠️ Falling back to memory storage');
-      return new MemStorage();
-    }
-  } else {
-    console.log('ℹ️ No DATABASE_URL provided, using clean in-memory storage for testing (data will be lost on restart)');
-    return new MemStorage();
-  }
+  // Temporarily using MemStorage until DatabaseStorage is fully implemented
+  console.log('ℹ️ Using MemStorage - data will persist during the session');
+  return new MemStorage();
 }
 
 // Initialize storage instance
