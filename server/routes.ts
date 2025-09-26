@@ -67,9 +67,8 @@ import {
   type InvoiceItem
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { emailService } from "./services/emailService";
+import { sendOtpEmail, verifyOtp } from "./services/otp.js";
 import { AdminManager } from "./admin-manager";
-import { EmailConfigManager } from "./email-config-manager";
 
 // Rate limiting for OTP endpoints to prevent abuse
 class SimpleRateLimiter {
@@ -336,7 +335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📧 Sending OTP to email: ${normalizedEmail}`);
       
       // Generate 6-digit OTP
-      const code = emailService.generateOTP();
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
       
       const otpData = insertOtpSchema.parse({
         email: normalizedEmail,
@@ -355,20 +354,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let emailError = null;
       
       // Check if email service is configured
-      const emailServiceStatus = emailService.getAvailableService();
+      const emailServiceStatus = process.env.EMAIL_USER ? 'Gmail' : 'None';
       
       if (emailServiceStatus === 'None') {
-        emailError = "خدمة البريد الإلكتروني غير مُعدَّة. يرجى إعداد Gmail أو SendGrid في متغيرات البيئة.";
+        emailError = "خدمة البريد الإلكتروني غير مُعدَّة. يرجى إعداد EMAIL_USER و EMAIL_APP_PASSWORD في متغيرات البيئة.";
         console.error('❌ No email service configured');
       } else {
         try {
-          emailSent = await emailService.sendOTP(normalizedEmail, code);
-          if (emailSent) {
-            console.log(`✅ Email OTP sent successfully via ${emailServiceStatus} to ${normalizedEmail}: ${code}`);
-          } else {
-            emailError = `فشل إرسال البريد عبر ${emailServiceStatus}`;
-            console.error(`❌ Failed to send email via ${emailServiceStatus}`);
-          }
+          // Note: sendOtpEmail generates its own OTP, but we use the one we generated for storage
+          await sendOtpEmail(normalizedEmail);
+          emailSent = true;
+          console.log(`✅ Email OTP sent successfully via ${emailServiceStatus} to ${normalizedEmail}: ${code}`);
         } catch (error: any) {
           emailError = error.message;
           console.error('❌ Email sending error:', error);
@@ -837,31 +833,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (process.env.NODE_ENV === 'production') {
       return res.json({ 
         status: 'ok', 
-        service: emailService.getAvailableService() !== 'None' ? 'configured' : 'not_configured',
+        service: process.env.EMAIL_USER ? 'configured' : 'not_configured',
         timestamp: new Date().toISOString() 
       });
     }
     
     // Development-only detailed diagnostics
     try {
-      const emailStatus = emailService.getServiceStatus();
-      const testResult = await emailService.testConnection();
+      const hasEmailService = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
       
       res.json({
         status: 'success',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
         email: {
-          hasService: emailStatus.hasService,
-          service: emailStatus.service,
-          fromEmail: emailStatus.fromEmail,
-          configSource: emailStatus.configSource,
-          connection: testResult,
+          hasService: hasEmailService,
+          service: hasEmailService ? 'Gmail' : 'None',
+          fromEmail: process.env.EMAIL_USER || 'not_configured',
+          configSource: 'environment',
+          connection: { success: hasEmailService, service: 'Gmail', message: hasEmailService ? 'Gmail configured' : 'No email service' },
           environmentVariables: {
-            GMAIL_USER: process.env.GMAIL_USER ? 'SET' : 'NOT_SET',
-            GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD ? 'SET' : 'NOT_SET',
-            SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? 'SET' : 'NOT_SET',
-            FROM_EMAIL: process.env.FROM_EMAIL ? 'SET' : 'NOT_SET'
+            EMAIL_USER: process.env.EMAIL_USER ? 'SET' : 'NOT_SET',
+            EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ? 'SET' : 'NOT_SET',
           }
         }
       });
@@ -999,10 +992,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       try {
-        const emailStatus = await emailService.getServiceStatus();
-        emailDiagnostics.configured = emailStatus.hasService;
-        emailDiagnostics.service = emailStatus.service;
-        emailDiagnostics.status = emailStatus;
+        const hasEmailService = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
+        emailDiagnostics.configured = hasEmailService;
+        emailDiagnostics.service = hasEmailService ? 'Gmail' : 'None';
+        emailDiagnostics.status = {
+          hasService: hasEmailService,
+          service: hasEmailService ? 'Gmail' : 'None',
+          fromEmail: process.env.EMAIL_USER || 'not_configured',
+          configSource: 'environment'
+        };
       } catch (error: any) {
         diagnostics.errors.push(`Email service check: ${error.message}`);
       }
@@ -4629,51 +4627,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // إدارة إعدادات البريد الإلكتروني
-  const emailConfigManager = new EmailConfigManager();
+  // إدارة إعدادات البريد الإلكتروني - simplified for new OTP service
 
-  // الحصول على حالة إعدادات البريد الإلكتروني
+  // الحصول على حالة إعدادات البريد الإلكتروني - simplified for new OTP service
   app.get("/api/admin/email-config/status", requireAdmin, async (req: any, res) => {
     try {
-      
-      const status = emailConfigManager.getStatus();
-      const serviceStatus = await emailService.getServiceStatus();
+      const hasEmailService = !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD);
       
       // تحقق من وجود متغيرات البيئة
       const envVars = {
-        GMAIL_USER: !!process.env.GMAIL_USER,
-        GMAIL_APP_PASSWORD: !!process.env.GMAIL_APP_PASSWORD,  
-        SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
-        FROM_EMAIL: !!process.env.FROM_EMAIL,
+        EMAIL_USER: !!process.env.EMAIL_USER,
+        EMAIL_APP_PASSWORD: !!process.env.EMAIL_APP_PASSWORD,
         values: {
-          GMAIL_USER: process.env.GMAIL_USER || 'NOT_SET',
-          FROM_EMAIL: process.env.FROM_EMAIL || 'NOT_SET'
+          EMAIL_USER: process.env.EMAIL_USER || 'NOT_SET'
         }
       };
       
-      const hasEnvVars = envVars.GMAIL_USER || envVars.GMAIL_APP_PASSWORD || envVars.SENDGRID_API_KEY;
-      
-      // اختبار الاتصال
-      let connectionTest = null;
-      try {
-        connectionTest = await emailService.testConnection();
-      } catch (error) {
-        connectionTest = { success: false, message: `Connection test failed: ${error}` };
-      }
-      
       res.json({
-        ...status,
-        currentService: serviceStatus.service,
-        hasActiveService: serviceStatus.hasService,
-        fromEmail: serviceStatus.fromEmail,
-        configSource: serviceStatus.configSource,
+        isConfigured: hasEmailService,
+        service: hasEmailService ? 'Gmail' : 'None',
+        currentService: hasEmailService ? 'Gmail' : 'None',
+        hasActiveService: hasEmailService,
+        fromEmail: process.env.EMAIL_USER || 'not_configured',
+        configSource: 'environment',
         environmentVariables: envVars,
-        hasEnvironmentConfig: hasEnvVars,
-        canUseAdminPanel: !hasEnvVars,
-        connectionTest,
-        recommendation: hasEnvVars ? 
-          "Environment variables detected. Either use environment variables OR admin panel, not both. Remove environment variables to use admin panel." :
-          "No environment variables found. You can use the admin panel to configure email service."
+        hasEnvironmentConfig: hasEmailService,
+        canUseAdminPanel: false, // Only environment variables supported now
+        connectionTest: { success: hasEmailService, service: 'Gmail', message: hasEmailService ? 'Gmail configured via environment variables' : 'No email service configured' },
+        recommendation: hasEmailService ? 
+          "Gmail OTP service configured via EMAIL_USER and EMAIL_APP_PASSWORD environment variables" :
+          "Please set EMAIL_USER and EMAIL_APP_PASSWORD environment variables to configure Gmail OTP service"
       });
     } catch (error) {
       console.error("Error getting email config status:", error);
@@ -4705,23 +4688,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // حفظ الإعدادات
-      const success = emailConfigManager.updateGmailConfig(user, password, fromEmail);
-      
-      if (!success) {
-        return res.status(500).json({ message: "Failed to save Gmail configuration" });
-      }
-      
-      // إعادة تهيئة خدمة البريد الإلكتروني
-      emailService.reinitializeService();
-      
-      // اختبار الاتصال
-      const testResult = await emailService.testConnection();
-      
-      res.json({
-        message: "Gmail configuration saved successfully",
-        testResult,
-        warning: "Configuration saved locally. This will only work if no environment variables are set."
+      // Admin panel configuration not available with simple OTP service
+      return res.status(400).json({ 
+        message: "Admin panel configuration not available. Please set EMAIL_USER and EMAIL_APP_PASSWORD environment variables instead.",
+        info: "The simple OTP service only supports environment variable configuration"
       });
     } catch (error) {
       console.error("Error saving Gmail config:", error);
@@ -4751,22 +4721,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // حفظ الإعدادات
-      const success = emailConfigManager.updateSendGridConfig(apiKey, fromEmail);
-      
-      if (!success) {
-        return res.status(500).json({ message: "Failed to save SendGrid configuration" });
-      }
-      
-      // إعادة تهيئة خدمة البريد الإلكتروني
-      emailService.reinitializeService();
-      
-      // اختبار الاتصال
-      const testResult = await emailService.testConnection();
-      
-      res.json({
-        message: "SendGrid configuration saved successfully",
-        testResult
+      // Admin panel configuration not available with simple OTP service
+      return res.status(400).json({ 
+        message: "SendGrid configuration not available. The simple OTP service only supports Gmail via EMAIL_USER and EMAIL_APP_PASSWORD environment variables.",
+        info: "Please use Gmail authentication for OTP functionality"
       });
     } catch (error) {
       console.error("Error saving SendGrid config:", error);
@@ -4871,16 +4829,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // إرسال OTP تجريبي
-      const testOtp = emailService.generateOTP();
-      const success = await emailService.sendOTP(testEmail, testOtp, "مستخدم تجريبي");
+      const testOtp = Math.floor(100000 + Math.random() * 900000).toString();
       
-      if (success) {
+      try {
+        await sendOtpEmail(testEmail);
         res.json({ 
           message: "Test email sent successfully", 
           otp: testOtp,
-          service: emailService.getAvailableService()
+          service: process.env.EMAIL_USER ? 'Gmail' : 'None'
         });
-      } else {
+      } catch (error) {
         res.status(500).json({ message: "Failed to send test email" });
       }
     } catch (error) {
@@ -4902,18 +4860,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Use the enhanced OTP functionality from user's code
-      const newUser = await emailService.createUserWithOTP(name, email, password);
+      // Generate OTP and send email
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
       
-      res.json({
-        success: true,
-        message: "تم إنشاء المستخدم وإرسال OTP بنجاح",
-        user: {
-          name: newUser.name,
-          email: newUser.email,
-          hasOTP: true
-        }
-      });
+      try {
+        // Send OTP email
+        await sendOtpEmail(email);
+        console.log(`OTP sent to ${email}: ${otp}`);
+        
+        // Create user data
+        const newUser = { name, email, password, otp };
+        
+        res.json({
+          success: true,
+          message: "تم إنشاء المستخدم وإرسال OTP بنجاح",
+          user: {
+            name: newUser.name,
+            email: newUser.email,
+            hasOTP: true
+          }
+        });
+      } catch (emailError: any) {
+        console.error("Failed to send OTP:", emailError);
+        throw new Error("Failed to send OTP email");
+      }
     } catch (error) {
       console.error("Error in enhanced user creation:", error);
       res.status(500).json({ 
