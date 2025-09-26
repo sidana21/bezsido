@@ -299,7 +299,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  
+  // Email + Password Authentication System
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const validation = loginUserSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          success: false,
+          message: "البيانات المدخلة غير صحيحة",
+          errors: validation.error.errors.map(e => e.message)
+        });
+      }
+
+      const { email, password } = validation.data;
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Check if user exists
+      const user = await storage.getUserByEmail(normalizedEmail);
+      if (!user) {
+        return res.status(401).json({ 
+          success: false,
+          message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" 
+        });
+      }
+
+      // Check if user has a password (for backwards compatibility)
+      if (!user.password) {
+        return res.status(400).json({ 
+          success: false,
+          message: "هذا الحساب لم يتم إعداد كلمة مرور له بعد. يرجى استخدام استعادة كلمة المرور." 
+        });
+      }
+
+      // Verify password
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+        return res.status(401).json({ 
+          success: false,
+          message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" 
+        });
+      }
+
+      // Update online status and create session
+      await storage.updateUserOnlineStatus(user.id, true);
+      
+      const token = randomUUID();
+      const sessionData = insertSessionSchema.parse({
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      });
+      
+      await storage.createSession(sessionData);
+      console.log(`🔑 User logged in: ${user.name} (${user.email})`);
+      
+      res.json({ 
+        success: true, 
+        user, 
+        token,
+        message: "تم تسجيل الدخول بنجاح" 
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "حدث خطأ أثناء تسجيل الدخول" 
+      });
+    }
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const validation = registerUserSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          success: false,
+          message: "البيانات المدخلة غير صحيحة",
+          errors: validation.error.errors.map(e => e.message)
+        });
+      }
+
+      const { email, password, name, location } = validation.data;
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Smart feature: Check if user already exists
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      if (existingUser) {
+        return res.status(409).json({ 
+          success: false,
+          userExists: true,
+          message: "يوجد حساب مسجل بهذا البريد الإلكتروني مسبقاً. يرجى تسجيل الدخول أو استعادة كلمة المرور.",
+          suggestAction: "login" // Suggest user to login instead
+        });
+      }
+
+      // Hash password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // Create new user
+      const newUser = insertUserSchema.parse({
+        email: normalizedEmail,
+        password: hashedPassword,
+        name: name.trim(),
+        location: location.trim(),
+        isOnline: true,
+        isVerified: false,
+        isAdmin: false,
+      });
+
+      const createdUser = await storage.createUser(newUser);
+      
+      // Create session for immediate login
+      const token = randomUUID();
+      const sessionData = insertSessionSchema.parse({
+        userId: createdUser.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      });
+      
+      await storage.createSession(sessionData);
+      console.log(`📝 New user registered: ${createdUser.name} (${createdUser.email})`);
+      
+      res.status(201).json({ 
+        success: true,
+        user: createdUser,
+        token,
+        message: "تم إنشاء الحساب وتسجيل الدخول بنجاح" 
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "حدث خطأ أثناء إنشاء الحساب" 
+      });
+    }
+  });
 
   // 🚫 DISABLED: Direct login endpoint - SECURITY VULNERABILITY
   // This endpoint bypasses OTP verification and is a critical security risk
