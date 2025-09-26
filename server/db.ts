@@ -177,6 +177,7 @@ async function ensureTablesExist() {
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
         email VARCHAR NOT NULL UNIQUE,
+        password TEXT,
         name TEXT NOT NULL,
         avatar TEXT,
         location TEXT NOT NULL,
@@ -497,6 +498,16 @@ async function ensureTablesExist() {
       )
     `);
     
+    // Add password column to existing users table if it doesn't exist
+    try {
+      await db.execute(sql`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT
+      `);
+      console.log('✅ Password column added/verified for users table');
+    } catch (error) {
+      console.log('ℹ️ Password column already exists or could not be added:', error instanceof Error ? error.message : error);
+    }
+
     console.log('📋 All database tables created/verified successfully (users, sessions, chats, messages, vendors, services, products, app_features, admin_credentials, stickers, stories)!');
   } catch (error) {
     console.warn('⚠️ Warning: Failed to create some tables:', error);
