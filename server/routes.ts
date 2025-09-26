@@ -812,20 +812,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const normalizedEmail = email.trim().toLowerCase();
       
-      // Check if OTP is disabled - debug logging
-      const isOtpDisabled = process.env.OTP_DISABLED === 'true';
-      console.log(`🔍 LOGIN OTP_DISABLED environment variable: ${process.env.OTP_DISABLED}, isOtpDisabled: ${isOtpDisabled}`);
-      if (!isOtpDisabled) {
-        return res.status(400).json({
-          success: false,
-          message: "نظام كلمة المرور غير مفعل حالياً. يرجى استخدام نظام OTP",
-          useOtp: true,
-          debug: {
-            OTP_DISABLED: process.env.OTP_DISABLED,
-            isOtpDisabled: isOtpDisabled
-          }
-        });
-      }
       
       // Get user
       const user = await storage.getUserByEmail(normalizedEmail);
@@ -902,20 +888,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const normalizedEmail = email.trim().toLowerCase();
       
-      // Check if OTP is disabled - debug logging
-      const isOtpDisabled = process.env.OTP_DISABLED === 'true';
-      console.log(`🔍 REGISTER OTP_DISABLED environment variable: ${process.env.OTP_DISABLED}, isOtpDisabled: ${isOtpDisabled}`);
-      if (!isOtpDisabled) {
-        return res.status(400).json({
-          success: false,
-          message: "نظام كلمة المرور غير مفعل حالياً. يرجى استخدام نظام OTP",
-          useOtp: true,
-          debug: {
-            OTP_DISABLED: process.env.OTP_DISABLED,
-            isOtpDisabled: isOtpDisabled
-          }
-        });
-      }
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(normalizedEmail);
