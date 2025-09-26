@@ -2875,7 +2875,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const services = await storage.getServices(location, categoryId, serviceType, availability);
       res.json(services);
     } catch (error) {
-      res.status(500).json({ message: "فشل في جلب الخدمات" });
+      console.error("Error in /api/services:", error);
+      res.status(500).json({ message: "فشل في جلب الخدمات", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -4978,23 +4979,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TAXI SERVICE API ROUTES
   // =================================
 
-  // Get available taxi services
-  app.get("/api/services", async (req, res) => {
-    try {
-      const { serviceType } = req.query;
-      const services = await storage.getServices();
-      
-      // Filter by service type if provided
-      const filteredServices = serviceType 
-        ? services.filter(service => service.serviceType === serviceType)
-        : services;
-        
-      res.json(filteredServices);
-    } catch (error) {
-      console.error("Error getting services:", error);
-      res.status(500).json({ message: "Failed to get services" });
-    }
-  });
+  // Get available taxi services - moved to existing /api/services endpoint above
 
   // Book a taxi
   app.post("/api/taxi/book", requireAuth, async (req: any, res) => {
