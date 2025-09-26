@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcrypt";
 import { ZodError } from "zod";
 import { 
   insertMessageSchema, 
@@ -12,6 +13,8 @@ import {
   insertOtpSchema, 
   insertUserSchema, 
   insertSessionSchema,
+  loginUserSchema,
+  registerUserSchema,
   insertChatSchema,
   insertVendorCategorySchema,
   insertVendorSchema,
@@ -809,6 +812,256 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasDatabase: !!process.env.DATABASE_URL,
           storageType: storage ? storage.constructor.name : 'none'
         } : undefined
+      });
+    }
+  });
+
+  // ============================================
+  // نظام المصادقة الجديد - Smart Authentication
+  // ============================================
+  
+  // فحص حالة المستخدم (موجود أم جديد) - Smart User Detection
+  app.post("/api/auth/check-user", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "البريد الإلكتروني مطلوب" 
+        });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      if (!emailRegex.test(normalizedEmail)) {
+        return res.status(400).json({ 
+          success: false,
+          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
+        });
+      }
+      
+      // Check if user exists
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      
+      if (existingUser) {
+        // User exists - check if they have a password set
+        const hasPassword = existingUser.password && existingUser.password.length > 0;
+        
+        return res.json({
+          success: true,
+          userExists: true,
+          hasPassword,
+          email: normalizedEmail,
+          name: existingUser.name,
+          action: hasPassword ? "login" : "set_password", // إما تسجيل دخول أو تعيين كلمة مرور
+          message: hasPassword ? 
+            `مرحباً ${existingUser.name}! يرجى إدخال كلمة المرور` : 
+            `مرحباً ${existingUser.name}! يرجى تعيين كلمة مرور لحسابك`
+        });
+      } else {
+        // New user - needs registration
+        return res.json({
+          success: true,
+          userExists: false,
+          hasPassword: false,
+          email: normalizedEmail,
+          action: "register",
+          message: "مرحباً! يبدو أنك مستخدم جديد، يرجى إنشاء حساب"
+        });
+      }
+    } catch (error) {
+      console.error('Check user error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "خطأ في فحص بيانات المستخدم" 
+      });
+    }
+  });
+  
+  // تسجيل الدخول بكلمة المرور - Password Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      // Validate input with Zod schema
+      const validatedData = loginUserSchema.parse(req.body);
+      const { email, password } = validatedData;
+      
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      // Check if OTP is disabled
+      const isOtpDisabled = process.env.OTP_DISABLED === 'true';
+      if (!isOtpDisabled) {
+        return res.status(400).json({
+          success: false,
+          message: "نظام كلمة المرور غير مفعل حالياً. يرجى استخدام نظام OTP",
+          useOtp: true
+        });
+      }
+      
+      // Get user
+      const user = await storage.getUserByEmail(normalizedEmail);
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+        });
+      }
+      
+      // Check if user has a password set
+      if (!user.password || user.password.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "لم يتم تعيين كلمة مرور لهذا الحساب. يرجى استخدام نظام OTP أو تعيين كلمة مرور",
+          needsPasswordSetup: true
+        });
+      }
+      
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+        });
+      }
+      
+      // Update user online status
+      await storage.updateUserOnlineStatus(user.id, true);
+      
+      // Create session
+      const token = randomUUID();
+      const sessionData = insertSessionSchema.parse({
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      });
+      
+      await storage.createSession(sessionData);
+      console.log(`🔑 Password login session created for user ${user.id}`);
+      
+      res.json({
+        success: true,
+        user,
+        token,
+        message: `مرحباً بعودتك ${user.name}!`
+      });
+      
+    } catch (error: any) {
+      console.error('Password login error:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({
+          success: false,
+          message: "البيانات المدخلة غير صحيحة",
+          errors: error.errors
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: "خطأ في تسجيل الدخول"
+      });
+    }
+  });
+  
+  // إنشاء حساب جديد بكلمة المرور - Password Registration
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      // Validate input with Zod schema
+      const validatedData = registerUserSchema.parse(req.body);
+      const { email, password, name, location } = validatedData;
+      
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      // Check if OTP is disabled
+      const isOtpDisabled = process.env.OTP_DISABLED === 'true';
+      if (!isOtpDisabled) {
+        return res.status(400).json({
+          success: false,
+          message: "نظام كلمة المرور غير مفعل حالياً. يرجى استخدام نظام OTP",
+          useOtp: true
+        });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: "هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول",
+          userExists: true
+        });
+      }
+      
+      // Hash password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      
+      // Create user data
+      const userData = {
+        email: normalizedEmail,
+        password: hashedPassword,
+        name: name.trim(),
+        location: location.trim(),
+        avatar: null,
+        isOnline: true,
+        isAdmin: false
+      };
+      
+      // Validate with schema (excluding password from insertUserSchema validation)
+      const userForValidation = { ...userData };
+      delete (userForValidation as any).password;
+      const validatedUserData = insertUserSchema.parse(userForValidation);
+      
+      // Add password back for storage
+      const finalUserData = { ...validatedUserData, password: hashedPassword };
+      
+      // Create user
+      const newUser = await storage.createUser(finalUserData);
+      console.log("✅ New user created with password:", newUser.id);
+      
+      // Create session
+      const token = randomUUID();
+      const sessionData = insertSessionSchema.parse({
+        userId: newUser.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      });
+      
+      await storage.createSession(sessionData);
+      console.log("🔑 Registration session created for new user:", newUser.id);
+      
+      res.json({
+        success: true,
+        user: newUser,
+        token,
+        message: `مرحباً ${newUser.name}! تم إنشاء حسابك بنجاح`
+      });
+      
+    } catch (error: any) {
+      console.error('Password registration error:', error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({
+          success: false,
+          message: "البيانات المدخلة غير صحيحة",
+          errors: error.errors
+        });
+      }
+      
+      // Handle unique constraint violations
+      if (error.code === '23505') {
+        return res.status(409).json({
+          success: false,
+          message: "هذا البريد الإلكتروني مسجل بالفعل"
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: "خطأ في إنشاء الحساب"
       });
     }
   });
