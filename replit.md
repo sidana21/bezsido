@@ -10,6 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### September 26, 2025 - CRITICAL DATABASE SCHEMA FIX ✅
+- **FIXED: Missing password column in users table**: Resolved the database schema mismatch that was preventing user registration on Render deployment
+- **Schema synchronization fix**: Added missing `password TEXT` column to users table creation SQL in `server/db.ts`
+- **Backward compatibility**: Added `ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT` to handle existing databases
+- **Drizzle schema push**: Successfully synchronized schema using `npm run db:push` command
+- **Error resolved**: Fixed "عمود كلمة المرور الخاص بالعلاقة المستخدمين غير موجود" (password column does not exist) error
+- **Production compatibility**: This fix ensures user registration works on all deployment platforms (Render, Vercel, Netlify)
+- **Root cause**: Schema definition in `shared/schema.ts` included password field but table creation SQL in `server/db.ts` was missing it
+
 ### September 26, 2025 - Render Deployment Authentication Fix ✅
 - **CRITICAL FIX: Removed OTP dependency for Render deployment**: Eliminated all OTP_DISABLED environment variable checks that were preventing authentication on Render
 - **Password-only authentication system now active**: Users can now register and login with email/password without any OTP verification requirements
