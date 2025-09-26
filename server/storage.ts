@@ -9,8 +9,6 @@ import {
   type InsertStory, 
   type Session, 
   type InsertSession, 
-  type OtpCode, 
-  type InsertOtp,
   type Vendor,
   type InsertVendor,
   type VendorCategory,
@@ -89,7 +87,7 @@ import {
   type InsertStoryView
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, otpCodes, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, storyViews } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, storyViews } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 
@@ -115,8 +113,6 @@ export interface IStorage {
   deleteUser(id: string): Promise<boolean>;
   
   // Authentication
-  createOtpCode(otp: InsertOtp): Promise<OtpCode>;
-  verifyOtpCode(email: string, code: string): Promise<boolean>;
   createSession(session: InsertSession): Promise<Session>;
   getSessionByToken(token: string): Promise<Session | undefined>;
   deleteSession(token: string): Promise<void>;
@@ -497,60 +493,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Authentication methods
-  async createOtpCode(otp: InsertOtp): Promise<OtpCode> {
-    try {
-      if (!db) {
-        const dbModule = await import('./db');
-        db = dbModule.db;
-      }
-      
-      const newOtp = {
-        id: randomUUID(),
-        ...otp,
-        createdAt: new Date(),
-      };
-
-      const result = await db.insert(otpCodes).values(newOtp).returning();
-      return result[0];
-    } catch (error) {
-      console.error('Error creating OTP code:', error);
-      throw error;
-    }
-  }
-
-  async verifyOtpCode(email: string, code: string): Promise<boolean> {
-    try {
-      if (!db) {
-        const dbModule = await import('./db');
-        db = dbModule.db;
-      }
-      
-      const result = await db.select().from(otpCodes)
-        .where(and(
-          eq(otpCodes.email, email),
-          eq(otpCodes.code, code),
-          eq(otpCodes.isUsed, false)
-        ))
-        .limit(1);
-
-      if (result.length === 0) return false;
-
-      const otpRecord = result[0];
-      if (otpRecord.expiresAt < new Date()) {
-        return false;
-      }
-
-      // Mark as used
-      await db.update(otpCodes)
-        .set({ isUsed: true })
-        .where(eq(otpCodes.id, otpRecord.id));
-
-      return true;
-    } catch (error) {
-      console.error('Error verifying OTP code:', error);
-      return false;
-    }
-  }
 
   async createSession(session: InsertSession): Promise<Session> {
     try {
@@ -4512,7 +4454,6 @@ export class MemStorage implements IStorage {
   private messages = new Map<string, Message>();
   private stories = new Map<string, Story>();
   private sessions = new Map<string, Session>();
-  private otpCodes = new Map<string, OtpCode>();
   private features = new Map<string, AppFeature>();
   private adminCredentials: AdminCredentials | undefined;
   private calls = new Map<string, Call>();
@@ -4608,30 +4549,6 @@ export class MemStorage implements IStorage {
   }
 
   // Authentication methods
-  async createOtpCode(otp: InsertOtp): Promise<OtpCode> {
-    const newOtp: OtpCode = {
-      id: randomUUID(),
-      ...otp,
-      isUsed: otp.isUsed ?? false,
-      createdAt: new Date(),
-    };
-    this.otpCodes.set(newOtp.id, newOtp);
-    return newOtp;
-  }
-
-  async verifyOtpCode(email: string, code: string): Promise<boolean> {
-    const otpRecord = Array.from(this.otpCodes.values()).find(
-      otp => otp.email === email && otp.code === code && !otp.isUsed
-    );
-
-    if (!otpRecord || otpRecord.expiresAt < new Date()) {
-      return false;
-    }
-
-    otpRecord.isUsed = true;
-    this.otpCodes.set(otpRecord.id, otpRecord);
-    return true;
-  }
 
   async createSession(session: InsertSession): Promise<Session> {
     const newSession: Session = {

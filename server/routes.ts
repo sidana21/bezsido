@@ -10,7 +10,7 @@ import { ZodError } from "zod";
 import { 
   insertMessageSchema, 
   insertStorySchema, 
-  insertOtpSchema, 
+ 
   insertUserSchema, 
   insertSessionSchema,
   loginUserSchema,
@@ -70,10 +70,9 @@ import {
   type InvoiceItem
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { sendOtpEmail, verifyOtp } from "./services/otp.js";
 import { AdminManager } from "./admin-manager";
 
-// Rate limiting for OTP endpoints to prevent abuse
+// Rate limiting to prevent abuse
 class SimpleRateLimiter {
   private requests: Map<string, number[]> = new Map();
   private readonly windowMs: number;
@@ -117,9 +116,6 @@ class SimpleRateLimiter {
   }
 }
 
-// Rate limiters for different endpoints
-const sendOtpLimiter = new SimpleRateLimiter(10 * 60 * 1000, 3); // 3 requests per 10 minutes
-const verifyOtpLimiter = new SimpleRateLimiter(10 * 60 * 1000, 5); // 5 attempts per 10 minutes
 
 // Configure multer for file uploads (images and videos)
 const upload = multer({
@@ -303,216 +299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authentication routes - Email-based OTP
-  app.post("/api/auth/send-otp", async (req, res) => {
-    try {
-      const { email } = req.body;
-      
-      // Rate limiting check
-      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-      const emailKey = email ? email.trim().toLowerCase() : clientIP;
-      
-      if (sendOtpLimiter.isRateLimited(clientIP) || sendOtpLimiter.isRateLimited(emailKey)) {
-        console.warn(`🚫 Rate limit exceeded for send-otp: IP=${clientIP}, email=${emailKey}`);
-        return res.status(429).json({ 
-          success: false,
-          message: "لقد تجاوزت الحد المسموح به من الطلبات. يرجى المحاولة مرة أخرى بعد 10 دقائق" 
-        });
-      }
-      
-      if (!email) {
-        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
-      }
-      
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        return res.status(400).json({ 
-          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
-        });
-      }
-      
-      // Clean and normalize email
-      const normalizedEmail = email.trim().toLowerCase();
-      
-      console.log(`📧 Sending OTP to email: ${normalizedEmail}`);
-      
-      // Generate 6-digit OTP
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      const otpData = insertOtpSchema.parse({
-        email: normalizedEmail,
-        code,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes for email
-        isUsed: false,
-      });
-      
-      await storage.createOtpCode(otpData);
-      
-      // Store last OTP for development
-      (global as any).lastOtp = { email: normalizedEmail, code, timestamp: Date.now() };
-      
-      // Send OTP via email
-      let emailSent = false;
-      let emailError = null;
-      
-      // Check if email service is configured
-      const emailServiceStatus = process.env.EMAIL_USER ? 'Gmail' : 'None';
-      
-      if (emailServiceStatus === 'None') {
-        emailError = "خدمة البريد الإلكتروني غير مُعدَّة. يرجى إعداد EMAIL_USER و EMAIL_APP_PASSWORD في متغيرات البيئة.";
-        console.error('❌ No email service configured');
-      } else {
-        try {
-          // Note: sendOtpEmail generates its own OTP, but we use the one we generated for storage
-          await sendOtpEmail(normalizedEmail);
-          emailSent = true;
-          console.log(`✅ Email OTP sent successfully via ${emailServiceStatus} to ${normalizedEmail}: ${code}`);
-        } catch (error: any) {
-          emailError = error.message;
-          console.error('❌ Email sending error:', error);
-        }
-      }
-      
-      // Only show OTP directly in development mode for security
-      const shouldShowOTP = process.env.NODE_ENV === 'development';
-      
-      // In production, if email fails, return error instead of success
-      if (!shouldShowOTP && !emailSent) {
-        return res.status(500).json({ 
-          success: false,
-          message: "فشل في إرسال رمز التحقق. يرجى التأكد من إعدادات البريد الإلكتروني أو الاتصال بالدعم الفني.",
-          error: "EMAIL_SERVICE_ERROR"
-        });
-      }
-      
-      let message = "";
-      if (shouldShowOTP) {
-        message = emailSent ? 
-          `تم إرسال الرمز عبر البريد الإلكتروني وهو: ${code}` : 
-          `رمز التحقق: ${code} (خدمة الإيميل غير متاحة)`;
-      } else {
-        if (emailSent) {
-          message = "تم إرسال رمز التحقق عبر البريد الإلكتروني";
-        } else {
-          message = "حدث خطأ في إرسال البريد الإلكتروني، يرجى التأكد من إعدادات البريد الإلكتروني والمحاولة مرة أخرى";
-        }
-      }
-      
-      // Log for debugging (be careful with OTP in production logs)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`OTP for ${normalizedEmail}: ${code} (Email delivered: ${emailSent}, Service: ${emailServiceStatus})`);
-      } else {
-        console.log(`OTP sent to ${normalizedEmail} (Email delivered: ${emailSent}, Service: ${emailServiceStatus})`);
-      }
-      
-      res.json({ 
-        success: true, 
-        message,
-        // Only include OTP in development mode
-        code: shouldShowOTP ? code : undefined,
-        showDirectly: shouldShowOTP,
-        emailDelivered: emailSent,
-        emailService: emailServiceStatus,
-        // Don't expose email errors in production
-        emailError: process.env.NODE_ENV === 'development' ? emailError : undefined
-      });
-    } catch (error) {
-      console.error('OTP sending error:', error);
-      res.status(500).json({ message: "Failed to send OTP" });
-    }
-  });
   
-  app.post("/api/auth/verify-otp", async (req, res) => {
-    try {
-      const { email, code } = req.body;
-      
-      // Rate limiting check
-      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-      const emailKey = email ? email.trim().toLowerCase() : clientIP;
-      
-      if (verifyOtpLimiter.isRateLimited(clientIP) || verifyOtpLimiter.isRateLimited(emailKey)) {
-        console.warn(`🚫 Rate limit exceeded for verify-otp: IP=${clientIP}, email=${emailKey}`);
-        return res.status(429).json({ 
-          success: false,
-          message: "لقد تجاوزت الحد المسموح به من محاولات التحقق. يرجى المحاولة مرة أخرى بعد 10 دقائق" 
-        });
-      }
-      
-      if (!email || !code) {
-        return res.status(400).json({ message: "البريد الإلكتروني ورمز التحقق مطلوبان" });
-      }
-      
-      // Clean and normalize email
-      const normalizedEmail = email.trim().toLowerCase();
-      
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(normalizedEmail)) {
-        return res.status(400).json({ 
-          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
-        });
-      }
-      
-      // Log verification attempt (without exposing OTP code in production)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🔍 Verifying OTP for email: ${normalizedEmail}, code: ${code}`);
-      } else {
-        console.log(`🔍 Verifying OTP for email: ${normalizedEmail}`);
-      }
-      
-      const isValidOtp = await storage.verifyOtpCode(normalizedEmail, code);
-      
-      if (!isValidOtp) {
-        console.log(`❌ Invalid OTP for ${normalizedEmail}`);
-        return res.status(400).json({ message: "رمز التحقق غير صحيح أو منتهي الصلاحية" });
-      }
-      
-      console.log(`✅ OTP verified for ${normalizedEmail}`);
-      
-      // Check if user exists
-      let user = await storage.getUserByEmail(normalizedEmail);
-      console.log(`🔍 User search result for ${email}:`, user ? `Found: ${user.name} (${user.id})` : 'Not found');
-      
-      if (!user) {
-        // OTP is valid but user doesn't exist - issue signupToken for secure user creation
-        console.log(`📝 User ${email} needs profile setup - issuing signupToken`);
-        const signupToken = await storage.createSignupToken(normalizedEmail);
-        return res.json({ 
-          success: true, 
-          needsProfile: true,
-          email: normalizedEmail,
-          signupToken, // Secure token required for user creation
-          message: "تم التحقق بنجاح. يرجى إكمال بياناتك الشخصية." 
-        });
-      } else {
-        // Existing user - update online status and create session
-        console.log(`👤 Logging in existing user: ${user.name} (${user.id})`);
-        await storage.updateUserOnlineStatus(user.id, true);
-        
-        // Create session
-        const token = randomUUID();
-        const sessionData = insertSessionSchema.parse({
-          userId: user.id,
-          token,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        });
-        
-        await storage.createSession(sessionData);
-        console.log(`🔑 Session created for user ${user.id}`);
-        
-        res.json({ 
-          success: true, 
-          user, 
-          token,
-          message: "تم تسجيل الدخول بنجاح" 
-        });
-      }
-    } catch (error) {
-      console.error('OTP verification error:', error);
-      res.status(500).json({ message: "Failed to verify OTP" });
-    }
-  });
 
   // 🚫 DISABLED: Direct login endpoint - SECURITY VULNERABILITY
   // This endpoint bypasses OTP verification and is a critical security risk

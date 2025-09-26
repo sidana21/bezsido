@@ -31,15 +31,6 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// OTP verification table
-export const otpCodes = pgTable("otp_codes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").notNull(),
-  code: varchar("code").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  isUsed: boolean("is_used").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
 export const chats = pgTable("chats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -125,10 +116,6 @@ export const insertSessionSchema = createInsertSchema(sessions).omit({
   createdAt: true,
 });
 
-export const insertOtpSchema = createInsertSchema(otpCodes).omit({
-  id: true,
-  createdAt: true,
-});
 
 export const insertChatSchema = createInsertSchema(chats).omit({
   id: true,
@@ -793,8 +780,6 @@ export type InsertStory = z.infer<typeof insertStorySchema>;
 export type Story = typeof stories.$inferSelect;
 export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessions.$inferSelect;
-export type InsertOtp = z.infer<typeof insertOtpSchema>;
-export type OtpCode = typeof otpCodes.$inferSelect;
 export type InsertVendorCategory = z.infer<typeof insertVendorCategorySchema>;
 export type VendorCategory = typeof vendorCategories.$inferSelect;
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
