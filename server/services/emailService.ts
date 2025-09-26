@@ -19,61 +19,127 @@ class EmailService {
   constructor() {
     this.emailConfigManager = new EmailConfigManager();
     this.fromEmail = process.env.FROM_EMAIL || 'noreply@example.com';
-    this.initializeServices();
+    this.initializeServices().catch(error => {
+      console.error('❌ Email service initialization failed:', error);
+    });
   }
 
-  private initializeServices() {
+  private async initializeServices() {
     let serviceInitialized = false;
 
-    // أولاً: التحقق من متغيرات البيئة (الأولوية للأمان)
-    if (process.env.SENDGRID_API_KEY) {
-      this.sendGridService = new MailService();
-      this.sendGridService.setApiKey(process.env.SENDGRID_API_KEY);
-      this.fromEmail = process.env.FROM_EMAIL || this.fromEmail;
-      console.log('✅ SendGrid initialized from environment variables');
-      serviceInitialized = true;
-    }
-
+    // Gmail SMTP أولاً حسب طلب المستخدم
     if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
       try {
-        this.gmailTransporter = nodemailer.createTransport({
-          host: 'smtp.gmail.com',  // Explicit host instead of service for Render compatibility
-          port: 587,              // Port 587 (STARTTLS) - better compatibility with cloud platforms
-          secure: false,          // false for port 587 (STARTTLS)
-          requireTLS: true,       // Force TLS upgrade
-          auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_APP_PASSWORD,
+        // تجربة منافذ متعددة لـ Gmail على Render
+        const gmailConfigs = [
+          {
+            name: 'Gmail TLS (587)',
+            config: {
+              host: 'smtp.gmail.com',
+              port: 587,
+              secure: false,
+              requireTLS: true,
+              auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_APP_PASSWORD,
+              },
+              tls: {
+                rejectUnauthorized: false,
+                servername: 'smtp.gmail.com'
+              },
+              connectionTimeout: 60000,
+              greetingTimeout: 30000,
+              socketTimeout: 60000,
+              debug: process.env.NODE_ENV === 'development',
+              logger: process.env.NODE_ENV === 'development'
+            }
           },
-          tls: {
-            rejectUnauthorized: false,  // More lenient for cloud platforms like Render
-            servername: 'smtp.gmail.com'
+          {
+            name: 'Gmail SSL (465)',
+            config: {
+              host: 'smtp.gmail.com',
+              port: 465,
+              secure: true,
+              auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_APP_PASSWORD,
+              },
+              tls: {
+                rejectUnauthorized: false,
+                servername: 'smtp.gmail.com'
+              },
+              connectionTimeout: 60000,
+              greetingTimeout: 30000,
+              socketTimeout: 60000,
+              debug: process.env.NODE_ENV === 'development',
+              logger: process.env.NODE_ENV === 'development'
+            }
           },
-          // Enhanced timeout settings for Render deployment
-          connectionTimeout: 60000, // 60 seconds connection timeout
-          greetingTimeout: 30000,   // 30 seconds greeting timeout  
-          socketTimeout: 60000,     // 60 seconds socket timeout
-          // Enable debug only in development for security
-          debug: process.env.NODE_ENV === 'development',
-          logger: process.env.NODE_ENV === 'development'
-        });
-        this.fromEmail = process.env.GMAIL_USER;
-        console.log('✅ Gmail initialized from environment variables');
-        console.log(`📧 Gmail User: ${process.env.GMAIL_USER}`);
-        console.log(`📧 From Email: ${this.fromEmail}`);
-        
-        // Add production-specific logging for troubleshooting
-        if (process.env.NODE_ENV === 'production') {
-          console.log('🔧 Production Gmail SMTP Configuration (Render Compatible):');
-          console.log('   - Host: smtp.gmail.com');
-          console.log('   - Port: 587 (STARTTLS)');
-          console.log('   - Secure: false (STARTTLS)');
-          console.log('   - RequireTLS: true');
-          console.log('   - TLS rejectUnauthorized: false (Cloud Platform Compatible)');
-          console.log('   - Enhanced timeouts: 60s connection, 30s greeting, 60s socket');
+          {
+            name: 'Gmail Standard (25)',
+            config: {
+              host: 'smtp.gmail.com',
+              port: 25,
+              secure: false,
+              requireTLS: true,
+              auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_APP_PASSWORD,
+              },
+              tls: {
+                rejectUnauthorized: false,
+                servername: 'smtp.gmail.com'
+              },
+              connectionTimeout: 60000,
+              greetingTimeout: 30000,
+              socketTimeout: 60000,
+              debug: process.env.NODE_ENV === 'development',
+              logger: process.env.NODE_ENV === 'development'
+            }
+          }
+        ];
+
+        // جرب كل إعداد حتى يعمل واحد منها
+        let gmailWorking = false;
+        for (const { name, config } of gmailConfigs) {
+          try {
+            const testTransporter = nodemailer.createTransport(config);
+            
+            // اختبار سريع للاتصال في الإنتاج
+            if (process.env.NODE_ENV === 'production') {
+              try {
+                await testTransporter.verify();
+                this.gmailTransporter = testTransporter;
+                console.log(`✅ ${name} working successfully on Render!`);
+                gmailWorking = true;
+                break;
+              } catch (testError: any) {
+                console.log(`❌ ${name} failed: ${testError.code || testError.message}`);
+                continue;
+              }
+            } else {
+              // في التطوير، استخدم الإعداد الافتراضي
+              this.gmailTransporter = testTransporter;
+              console.log(`✅ ${name} initialized for development`);
+              gmailWorking = true;
+              break;
+            }
+          } catch (configError) {
+            console.log(`❌ ${name} configuration failed:`, configError);
+            continue;
+          }
         }
-        
-        serviceInitialized = true;
+
+        if (gmailWorking) {
+          this.fromEmail = process.env.GMAIL_USER;
+          console.log('✅ Gmail initialized from environment variables');
+          console.log(`📧 Gmail User: ${process.env.GMAIL_USER}`);
+          console.log(`📧 From Email: ${this.fromEmail}`);
+          serviceInitialized = true;
+        } else {
+          console.error('🚨 All Gmail configurations failed - SMTP ports might be blocked on this platform');
+          console.warn('🔄 Will try saved credentials as fallback...');
+        }
       } catch (error) {
         console.error('❌ Gmail initialization failed:', error);
         
@@ -134,7 +200,12 @@ class EmailService {
     }
 
     if (!serviceInitialized) {
-      console.warn('⚠️ No email service configured. Please set up email credentials in admin panel or environment variables.');
+      console.error('🚨 لم يتم تكوين أي خدمة بريد إلكتروني!');
+      console.error('📧 لن يعمل إرسال OTP حتى تقوم بأحد الآتي:');
+      console.error('   1. إعداد Gmail: GMAIL_USER + GMAIL_APP_PASSWORD');
+      console.error('   2. ترقية خطة Render لاستخدام Gmail SMTP');
+      console.error('   3. استخدام SendGrid API كبديل');
+      console.error('💡 راجع سجلات التطبيق أعلاه لتفاصيل أسباب فشل Gmail');
     }
   }
 
@@ -143,39 +214,54 @@ class EmailService {
     return Math.floor(100000 + Math.random() * 900000).toString().substring(0, length);
   }
 
-  // Send email using available service (prioritizes SendGrid)
+  // Send email using Gmail SMTP only (as requested by user)
   async sendEmail(params: EmailParams): Promise<boolean> {
     try {
-      // Try SendGrid first (more reliable for production)
-      if (this.sendGridService) {
-        await this.sendGridService.send({
-          to: params.to,
-          from: this.fromEmail,
-          subject: params.subject,
-          text: params.text || '',
-          html: params.html,
-        });
-        console.log('✅ Email sent via SendGrid to:', params.to);
-        return true;
-      }
-
-      // Fallback to Gmail
+      // استخدام Gmail SMTP فقط حسب طلب المستخدم
       if (this.gmailTransporter) {
-        await this.gmailTransporter.sendMail({
-          from: this.fromEmail,
-          to: params.to,
-          subject: params.subject,
-          text: params.text,
-          html: params.html,
-        });
-        console.log('✅ Email sent via Gmail to:', params.to);
-        return true;
+        try {
+          await this.gmailTransporter.sendMail({
+            from: this.fromEmail,
+            to: params.to,
+            subject: params.subject,
+            text: params.text,
+            html: params.html,
+          });
+          console.log('✅ Email sent via Gmail to:', params.to);
+          return true;
+        } catch (gmailError: any) {
+          console.error('❌ فشل إرسال البريد الإلكتروني عبر Gmail:', gmailError.message);
+          
+          // تحديد نوع الخطأ للمساعدة في التشخيص
+          if (gmailError.code === 'ETIMEDOUT') {
+            console.error('🚨 RENDER SMTP BLOCK: منافذ SMTP محجوبة على Render المجاني');
+            console.error('💡 الحل: استخدم SendGrid API أو ارقى إلى خطة Render مدفوعة');
+          } else if (gmailError.code === 'ECONNREFUSED') {
+            console.error('🚨 اتصال مرفوض - تحقق من إعدادات الشبكة');
+          } else if (gmailError.code === 'EAUTH') {
+            console.error('🚨 خطأ في المصادقة - تحقق من GMAIL_APP_PASSWORD');
+          }
+          
+          throw gmailError; // إعادة إرسال الخطأ للمعالجة في المستوى الأعلى
+        }
       }
 
-      console.error('❌ No email service available');
+      const errorMessage = 'لا توجد خدمة بريد إلكتروني متاحة - يرجى إعداد SendGrid أو Gmail';
+      console.error('❌', errorMessage);
       return false;
-    } catch (error) {
-      console.error('❌ Email sending failed:', error);
+    } catch (error: any) {
+      console.error('❌ فشل إرسال البريد الإلكتروني:', error.message || error);
+      
+      // رسائل خطأ مفصلة لمساعدة المطور
+      if (process.env.NODE_ENV === 'production') {
+        console.error('🔧 تشخيص مشكلة البريد الإلكتروني:');
+        console.error('   - SendGrid متاح:', !!this.sendGridService);
+        console.error('   - Gmail متاح:', !!this.gmailTransporter);
+        console.error('   - من البريد:', this.fromEmail);
+        console.error('   - إلى البريد:', params.to);
+        console.error('   - البيئة:', process.env.NODE_ENV);
+      }
+      
       return false;
     }
   }
@@ -286,10 +372,10 @@ class EmailService {
   }
 
   // إعادة تهيئة الخدمة بعد تحديث الإعدادات
-  public reinitializeService(): void {
+  public async reinitializeService(): Promise<void> {
     this.sendGridService = undefined;
     this.gmailTransporter = undefined;
-    this.initializeServices();
+    await this.initializeServices();
   }
 
   // الحصول على حالة الخدمة مع التفاصيل
