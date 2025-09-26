@@ -42,16 +42,44 @@ class EmailService {
             user: process.env.GMAIL_USER,
             pass: process.env.GMAIL_APP_PASSWORD,
           },
-          debug: process.env.NODE_ENV === 'development', // Enable debug in development
-          logger: process.env.NODE_ENV === 'development' // Enable logging in development
+          // Enhanced SSL/TLS configuration for production environments (Render, etc.)
+          secure: true, // Use TLS
+          port: 465, // Gmail SMTP port for SSL
+          tls: {
+            rejectUnauthorized: true,
+            servername: 'smtp.gmail.com'
+          },
+          // Enable debug only in development for security
+          debug: process.env.NODE_ENV === 'development',
+          logger: process.env.NODE_ENV === 'development'
         });
         this.fromEmail = process.env.GMAIL_USER;
         console.log('✅ Gmail initialized from environment variables');
         console.log(`📧 Gmail User: ${process.env.GMAIL_USER}`);
         console.log(`📧 From Email: ${this.fromEmail}`);
+        
+        // Add production-specific logging for troubleshooting
+        if (process.env.NODE_ENV === 'production') {
+          console.log('🔧 Production Gmail SMTP Configuration:');
+          console.log('   - Host: smtp.gmail.com');
+          console.log('   - Port: 465 (SSL)');
+          console.log('   - Secure: true');
+          console.log('   - TLS rejectUnauthorized: true');
+        }
+        
         serviceInitialized = true;
       } catch (error) {
         console.error('❌ Gmail initialization failed:', error);
+        
+        // Enhanced error logging for production troubleshooting
+        if (process.env.NODE_ENV === 'production') {
+          console.error('🚨 Production Gmail Error Details:');
+          console.error('   - Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+          console.error('   - Error Message:', error instanceof Error ? error.message : String(error));
+          console.error('   - Gmail User Set:', !!process.env.GMAIL_USER);
+          console.error('   - Gmail Password Set:', !!process.env.GMAIL_APP_PASSWORD);
+          console.error('   - Environment:', process.env.NODE_ENV);
+        }
       }
     }
 
@@ -72,9 +100,24 @@ class EmailService {
               user: savedCredentials.user,
               pass: savedCredentials.password,
             },
+            // Enhanced SSL/TLS configuration for production environments
+            secure: true,
+            port: 465,
+            tls: {
+              rejectUnauthorized: true,
+              servername: 'smtp.gmail.com'
+            },
+            debug: process.env.NODE_ENV === 'development',
+            logger: process.env.NODE_ENV === 'development'
           });
           this.fromEmail = savedCredentials.fromEmail;
           console.log('✅ Gmail initialized from saved configuration');
+          
+          // Add production logging for saved config
+          if (process.env.NODE_ENV === 'production') {
+            console.log('🔧 Using saved Gmail configuration in production');
+          }
+          
           serviceInitialized = true;
         }
       }

@@ -831,6 +831,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Secure email health check endpoint - Admin access only in production
+  app.get("/api/email/health", async (req, res) => {
+    // 🔒 SECURITY: Restrict detailed health check in production
+    if (process.env.NODE_ENV === 'production') {
+      return res.json({ 
+        status: 'ok', 
+        service: emailService.getAvailableService() !== 'None' ? 'configured' : 'not_configured',
+        timestamp: new Date().toISOString() 
+      });
+    }
+    
+    // Development-only detailed diagnostics
+    try {
+      const emailStatus = emailService.getServiceStatus();
+      const testResult = await emailService.testConnection();
+      
+      res.json({
+        status: 'success',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        email: {
+          hasService: emailStatus.hasService,
+          service: emailStatus.service,
+          fromEmail: emailStatus.fromEmail,
+          configSource: emailStatus.configSource,
+          connection: testResult,
+          environmentVariables: {
+            GMAIL_USER: process.env.GMAIL_USER ? 'SET' : 'NOT_SET',
+            GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD ? 'SET' : 'NOT_SET',
+            SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? 'SET' : 'NOT_SET',
+            FROM_EMAIL: process.env.FROM_EMAIL ? 'SET' : 'NOT_SET'
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Email health check failed:', error);
+      res.status(500).json({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : 'Service error'
+      });
+    }
+  });
+
   // Diagnostic endpoint to check system health - SECURE
   app.get("/api/health", async (req, res) => {
     // 🔒 SECURITY: Restrict health endpoint in production
