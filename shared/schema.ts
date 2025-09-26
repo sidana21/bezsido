@@ -6,6 +6,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull().unique(),
+  password: text("password"), // كلمة المرور المشفرة (اختيارية للمستخدمين القدامى)
   name: text("name").notNull(),
   avatar: text("avatar"),
   location: text("location").notNull(), // المنطقة الجغرافية
@@ -103,6 +104,20 @@ export const insertUserSchema = createInsertSchema(users).omit({
   lastStreakDate: true,
   createdAt: true,
   updatedAt: true,
+});
+
+// Schema for login validation
+export const loginUserSchema = z.object({
+  email: z.string().email("تأكد من صحة تنسيق البريد الإلكتروني"),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+});
+
+// Schema for registration validation
+export const registerUserSchema = z.object({
+  email: z.string().email("تأكد من صحة تنسيق البريد الإلكتروني"),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+  name: z.string().min(2, "الاسم يجب أن يكون حرفان على الأقل"),
+  location: z.string().min(2, "الموقع مطلوب"),
 });
 
 export const insertSessionSchema = createInsertSchema(sessions).omit({
