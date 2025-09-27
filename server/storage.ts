@@ -357,6 +357,11 @@ export interface IStorage {
   updateInvoice(invoiceId: string, userId: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined>;
   updateInvoiceStatus(invoiceId: string, status: string, userId: string, paidAt?: Date): Promise<Invoice | undefined>;
   deleteInvoice(invoiceId: string, userId: string): Promise<boolean>;
+  
+  // Additional missing methods referenced in routes.ts
+  searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+  searchUserByEmail(email: string): Promise<User | undefined>;
+  getOrders(userId?: string, status?: string): Promise<Order[]>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
@@ -393,6 +398,26 @@ export class DatabaseStorage implements IStorage {
       return result[0] || undefined;
     } catch (error) {
       console.error('Error getting user by email:', error);
+      return undefined;
+    }
+  }
+
+  async searchUserByEmail(email: string): Promise<User | undefined> {
+    return this.getUserByEmail(email);
+  }
+
+  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // For now, since we don't have phone number in schema, return undefined
+      // This method exists to satisfy the interface
+      return undefined;
+    } catch (error) {
+      console.error('Error searching user by phone number:', error);
       return undefined;
     }
   }
@@ -824,7 +849,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(stories.userId, users.id))
       .where(sql`${stories.expiresAt} > NOW()`);
       
-      return result.map(row => ({
+      return result.map((row: any) => ({
         id: row.id,
         userId: row.userId,
         location: row.location,
@@ -838,7 +863,7 @@ export class DatabaseStorage implements IStorage {
         viewCount: row.viewCount,
         viewers: row.viewers,
         user: row.user,
-      })).filter(story => story.user);
+      })).filter((story: any) => story.user);
     } catch (error) {
       console.error('Error getting active stories:', error);
       return [];
@@ -943,7 +968,7 @@ export class DatabaseStorage implements IStorage {
         storyId,
         userId,
         reactionType,
-        timestamp: new Date(),
+        createdAt: new Date(),
       };
 
       const result = await db.insert(storyLikes).values(newLike).returning();
@@ -983,19 +1008,19 @@ export class DatabaseStorage implements IStorage {
         storyId: storyLikes.storyId,
         userId: storyLikes.userId,
         reactionType: storyLikes.reactionType,
-        timestamp: storyLikes.timestamp,
+        createdAt: storyLikes.createdAt,
         user: users,
       })
       .from(storyLikes)
       .leftJoin(users, eq(storyLikes.userId, users.id))
       .where(eq(storyLikes.storyId, storyId));
       
-      return result.map(row => ({
+      return result.map((row: any) => ({
         id: row.id,
         storyId: row.storyId,
         userId: row.userId,
         reactionType: row.reactionType,
-        timestamp: row.timestamp,
+        createdAt: row.createdAt,
         user: row.user!,
       }));
     } catch (error) {
@@ -1056,7 +1081,8 @@ export class DatabaseStorage implements IStorage {
         storyId,
         userId,
         content,
-        timestamp: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       const result = await db.insert(storyComments).values(newComment).returning();
@@ -1079,20 +1105,22 @@ export class DatabaseStorage implements IStorage {
         storyId: storyComments.storyId,
         userId: storyComments.userId,
         content: storyComments.content,
-        timestamp: storyComments.timestamp,
+        createdAt: storyComments.createdAt,
+        updatedAt: storyComments.updatedAt,
         user: users,
       })
       .from(storyComments)
       .leftJoin(users, eq(storyComments.userId, users.id))
       .where(eq(storyComments.storyId, storyId))
-      .orderBy(storyComments.timestamp);
+      .orderBy(storyComments.createdAt);
       
-      return result.map(row => ({
+      return result.map((row: any) => ({
         id: row.id,
         storyId: row.storyId,
         userId: row.userId,
         content: row.content,
-        timestamp: row.timestamp,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
         user: row.user!,
       }));
     } catch (error) {
@@ -1961,7 +1989,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllOrders(): Promise<Order[]> {
-    return [];
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(orders);
+      return result;
+    } catch (error) {
+      console.error('Error getting all orders:', error);
+      return [];
+    }
+  }
+
+  async getOrders(userId?: string, status?: string): Promise<Order[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      let query = db.select().from(orders);
+      
+      if (userId) {
+        query = query.where(eq(orders.buyerId, userId));
+      }
+      
+      if (status) {
+        query = query.where(eq(orders.status, status));
+      }
+      
+      const result = await query;
+      return result;
+    } catch (error) {
+      console.error('Error getting orders:', error);
+      return [];
+    }
   }
 
   async clearCart(userId: string): Promise<void> {
@@ -4637,6 +4701,41 @@ export class MemStorage implements IStorage {
     return this.users.delete(id);
   }
 
+  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+    // For now, since we don't have phone number in schema, return undefined
+    // This method exists to satisfy the interface
+    return undefined;
+  }
+
+  // Invoice methods - stub implementations for interface compatibility
+  async getInvoiceStats(): Promise<any> {
+    return {
+      totalInvoices: 0,
+      totalAmount: '0',
+      paidAmount: '0',
+      pendingAmount: '0'
+    };
+  }
+
+  async getInvoiceWithItems(invoiceId: string): Promise<any> {
+    return undefined;
+  }
+
+  async updateInvoiceStatus(invoiceId: string, status: string): Promise<any> {
+    return undefined;
+  }
+
+  async getOrders(userId?: string, status?: string): Promise<Order[]> {
+    let orders = Array.from(this.orders.values());
+    if (userId) {
+      orders = orders.filter(order => order.buyerId === userId);
+    }
+    if (status) {
+      orders = orders.filter(order => order.status === status);
+    }
+    return orders;
+  }
+
   // Authentication methods
 
   async createSession(session: InsertSession): Promise<Session> {
@@ -7021,6 +7120,39 @@ export class MemStorage implements IStorage {
 
   async deleteService(serviceId: string): Promise<boolean> {
     return this.services.delete(serviceId);
+  }
+
+  // Missing methods for interface compatibility
+  async getServices(location?: string, category?: string): Promise<Service[]> {
+    let services = Array.from(this.services.values());
+    if (location) {
+      services = services.filter(service => service.location === location);
+    }
+    if (category) {
+      services = services.filter(service => service.categoryId === category);
+    }
+    return services;
+  }
+
+  async getService(serviceId: string): Promise<Service | undefined> {
+    return this.services.get(serviceId);
+  }
+
+  async getServicesByCategory(categoryId: string): Promise<Service[]> {
+    return Array.from(this.services.values()).filter(service => service.categoryId === categoryId);
+  }
+
+  async createService(service: InsertService): Promise<Service> {
+    const newService: Service = {
+      id: randomUUID(),
+      ...service,
+      isActive: service.isActive ?? true,
+      status: service.status ?? 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.services.set(newService.id, newService);
+    return newService;
   }
 
 
