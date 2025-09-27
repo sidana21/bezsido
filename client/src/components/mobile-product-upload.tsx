@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -22,7 +23,10 @@ import {
   Tag,
   CheckCircle,
   Upload,
-  Smartphone
+  Smartphone,
+  Store,
+  AlertTriangle,
+  ArrowLeft
 } from "lucide-react";
 import type { ProductCategory } from "@shared/schema";
 
@@ -53,6 +57,11 @@ export default function MobileProductUpload({ onSuccess, onCancel }: MobileProdu
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check if user has a vendor/store
+  const { data: userVendor, isLoading: isLoadingVendor } = useQuery({
+    queryKey: ['/api/user/vendor'],
+  });
 
   // Get product categories
   const { data: categories = [] } = useQuery<ProductCategory[]>({
@@ -118,11 +127,28 @@ export default function MobileProductUpload({ onSuccess, onCancel }: MobileProdu
   // Add product mutation
   const addProductMutation = useMutation({
     mutationFn: async (data: MobileProductForm) => {
+      // Validate numeric fields before sending
+      const originalPriceNum = parseFloat(data.originalPrice);
+      const salePriceNum = data.salePrice ? parseFloat(data.salePrice) : null;
+      const stockQuantityNum = parseInt(data.stockQuantity);
+      
+      if (isNaN(originalPriceNum) || originalPriceNum <= 0) {
+        throw new Error("السعر يجب أن يكون رقماً صحيحاً أكبر من الصفر");
+      }
+      
+      if (data.salePrice && (isNaN(salePriceNum!) || salePriceNum! <= 0)) {
+        throw new Error("سعر التخفيض يجب أن يكون رقماً صحيحاً أكبر من الصفر");
+      }
+      
+      if (isNaN(stockQuantityNum) || stockQuantityNum < 0) {
+        throw new Error("الكمية يجب أن تكون رقماً صحيحاً أكبر من أو يساوي الصفر");
+      }
+
       const productData = {
         ...data,
-        originalPrice: parseFloat(data.originalPrice),
-        salePrice: data.salePrice ? parseFloat(data.salePrice) : null,
-        stockQuantity: parseInt(data.stockQuantity),
+        originalPrice: data.originalPrice, // Keep as string for decimal field
+        salePrice: data.salePrice || null, // Keep as string or null
+        stockQuantity: stockQuantityNum,
         images: productImages,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()) : [],
         isActive: true,
@@ -147,11 +173,20 @@ export default function MobileProductUpload({ onSuccess, onCancel }: MobileProdu
       onSuccess?.();
     },
     onError: (error: any) => {
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل في إضافة المنتج",
-        variant: "destructive",
-      });
+      // Handle specific error for missing vendor store
+      if (error.message && error.message.includes("لم يتم العثور على متجر")) {
+        toast({
+          title: "يجب إنشاء متجر أولاً",
+          description: "لا يمكنك إضافة منتجات بدون إنشاء متجر. انقر على 'إنشاء متجر' أدناه للبدء.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "خطأ في إضافة المنتج",
+          description: error.message || "حدث خطأ أثناء إضافة المنتج. يرجى المحاولة مرة أخرى.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -235,6 +270,96 @@ export default function MobileProductUpload({ onSuccess, onCancel }: MobileProdu
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
+
+  // Show loading state
+  if (isLoadingVendor) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600">جاري التحقق من متجرك...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if user doesn't have a store
+  if (!userVendor) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* Mobile Header */}
+        <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-orange-500" />
+              <h1 className="text-lg font-semibold">متجر مطلوب</h1>
+            </div>
+            {onCancel && (
+              <Button variant="ghost" size="sm" onClick={onCancel}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="px-4 py-8">
+          <Card>
+            <CardHeader className="text-center">
+              <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                <Store className="h-8 w-8 text-orange-600" />
+              </div>
+              <CardTitle className="text-xl">يجب إنشاء متجر أولاً</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <Alert className="border-orange-200 bg-orange-50">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800">
+                  لا يمكنك إضافة منتجات بدون إنشاء متجر. يرجى إنشاء متجرك أولاً ثم العودة لإضافة المنتجات.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="space-y-4 pt-4">
+                <p className="text-gray-600 leading-relaxed">
+                  إنشاء متجر سهل وسريع! ستحتاج فقط إلى:
+                </p>
+                <div className="text-right space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span>اسم المتجر والوصف</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span>اختيار فئة النشاط التجاري</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span>معلومات الاتصال والموقع</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-6">
+                <Button 
+                  onClick={() => window.location.href = '/my-vendor'}
+                  className="flex-1"
+                  data-testid="button-create-store"
+                >
+                  <Store className="w-4 h-4 ml-2" />
+                  إنشاء متجر جديد
+                </Button>
+                {onCancel && (
+                  <Button variant="outline" onClick={onCancel} className="flex-1">
+                    <ArrowLeft className="w-4 h-4 ml-2" />
+                    العودة
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
