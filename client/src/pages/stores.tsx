@@ -32,6 +32,13 @@ export default function Stores() {
     enabled: !!currentUser,
   });
 
+  // Fetch all products from all vendors for product marketplace display
+  const { data: allProducts = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: ["/api/products", currentUser?.location],
+    queryFn: () => apiRequest(`/api/products?location=${encodeURIComponent(currentUser?.location || '')}`),
+    enabled: !!currentUser,
+  });
+
   const { data: serviceCategories = [], isLoading: isLoadingCategories } = useQuery<ServiceCategory[]>({
     queryKey: ["/api/service-categories"],
     enabled: !!currentUser,
@@ -107,6 +114,14 @@ export default function Stores() {
     service?.location?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Filter products for product marketplace search
+  const filteredProducts = allProducts.filter(product =>
+    product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product?.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product?.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product?.location?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 pb-20 relative overflow-hidden">
@@ -171,7 +186,7 @@ export default function Stores() {
           </div>
           <Input
             type="text"
-            placeholder="ابحث عن خدمة، مقدم خدمة أو نوع خدمة..."
+            placeholder="ابحث عن خدمة، منتج، مقدم خدمة أو متجر..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pr-16 text-lg h-16 rounded-2xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl focus:shadow-2xl transition-all duration-300 focus:scale-[1.02]"
@@ -405,18 +420,129 @@ export default function Stores() {
           </div>
         )}
 
+        {/* Products Section Header */}
+        <div className="mt-16 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">المنتجات المتاحة في {currentUser?.location}</h2>
+              <p className="text-gray-600 dark:text-gray-300 text-lg">تسوق من مجموعة واسعة من المنتجات المحلية</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading State - Premium Products Grid */}
+        {isLoadingProducts && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mb-10">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden animate-pulse">
+                <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600"></div>
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Products Grid - Professional Style */}
+        {!isLoadingProducts && filteredProducts.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mb-10">
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer transform"
+                data-testid={`product-card-${product.id}`}
+                onClick={() => setLocation(`/product/${product.id}`)}
+              >
+                {/* Product Image */}
+                <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
+                  {product.images && product.images.length > 0 ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSIxMDAiIGZpbGw9IiNGM0Y0RjYiLz48L3N2Zz4=';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                      <Package className="w-12 h-12 text-gray-400" />
+                    </div>
+                  )}
+
+                  {/* Discount Badge */}
+                  {product.salePrice && parseInt(product.salePrice) < parseInt(product.originalPrice || product.salePrice) && (
+                    <div className="absolute top-2 left-2">
+                      <Badge className="bg-red-500 text-white text-xs px-2 py-1 shadow-lg">
+                        خصم
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Product Details */}
+                <div className="p-3 space-y-2">
+                  {/* Rating */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-yellow-400 fill-current" />
+                      <span className="text-xs text-gray-500">4.5</span>
+                    </div>
+                  </div>
+                  
+                  {/* Product Name */}
+                  <h3 className="font-medium text-sm text-gray-800 dark:text-white line-clamp-2 leading-4 group-hover:text-blue-600 transition-colors">
+                    {product?.name || 'اسم المنتج'}
+                  </h3>
+                  
+                  {/* Price */}
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-lg text-green-600">
+                      {parseInt(product?.salePrice || product?.originalPrice || '0').toLocaleString()} دج
+                    </span>
+                    {product.salePrice && product.originalPrice && parseInt(product.salePrice) < parseInt(product.originalPrice) && (
+                      <span className="text-xs text-gray-400 line-through">
+                        {parseInt(product.originalPrice).toLocaleString()} دج
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Buy Now Button */}
+                  <Button
+                    size="sm"
+                    className="w-full mt-2 h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      buyNowMutation.mutate({ product, sellerId: product.vendorId });
+                    }}
+                    disabled={buyNowMutation.isPending}
+                    data-testid={`button-buy-now-${product.id}`}
+                  >
+                    <ShoppingCart className="w-3 h-3 mr-1" />
+                    اشتري الآن
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Empty State - Premium */}
-        {!isLoadingServices && filteredServices.length === 0 && (
+        {!isLoadingServices && !isLoadingProducts && filteredServices.length === 0 && filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl">
               <Package className="w-16 h-16 text-gray-400" />
             </div>
             <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-              {searchQuery ? "لا توجد خدمات تطابق البحث" : "لا توجد خدمات في هذه المنطقة حالياً"}
+              {searchQuery ? "لا توجد خدمات أو منتجات تطابق البحث" : "لا توجد خدمات أو منتجات في هذه المنطقة حالياً"}
             </h3>
             {!searchQuery && (
               <p className="text-gray-500 text-lg mb-8">
-                كن أول من يقدم خدماته في هذه المنطقة!
+                كن أول من يقدم خدماته ومنتجاته في هذه المنطقة!
               </p>
             )}
             <Link href="/my-vendor">
