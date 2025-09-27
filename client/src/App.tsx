@@ -18,6 +18,9 @@ import MyVendor from "@/pages/my-vendor";
 import VendorProfile from "@/pages/vendor-profile";
 import Affiliate from "@/pages/affiliate";
 import Profile from "@/pages/profile";
+import SocialFeed from "@/pages/social-feed";
+import CreatePost from "@/pages/create-post";
+import UserProfile from "@/pages/user-profile";
 import AffiliateRedirect from "@/pages/affiliate-redirect";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
@@ -172,6 +175,9 @@ function Router() {
             <Route path="/affiliate" component={Affiliate} />
             <Route path="/affiliate/:uniqueCode" component={AffiliateRedirect} />
             <Route path="/profile" component={Profile} />
+            <Route path="/social-feed" component={SocialFeed} />
+            <Route path="/create-post" component={CreatePost} />
+            <Route path="/profile/:userId" component={UserProfile} />
           </>
         )}
         

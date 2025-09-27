@@ -74,9 +74,9 @@ export function BottomNavigation() {
     {
       label: "المنشورات",
       icon: Camera,
-      href: "/neighborhoods",
-      isActive: location === "/neighborhoods",
-      featureId: "neighborhoods",
+      href: "/social-feed",
+      isActive: location === "/social-feed" || location.startsWith("/profile/"),
+      featureId: "social_feed",
       color: "from-purple-500 to-pink-600",
       activeColor: "from-purple-600 to-pink-700"
     },

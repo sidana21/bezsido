@@ -5078,9 +5078,10 @@ export class MemStorage implements IStorage {
       { id: "stories", name: "الحالات", description: "مشاركة الحالات والقصص", isEnabled: true, category: "social", priority: 2, createdAt: new Date(), updatedAt: new Date() },
       { id: "marketplace", name: "السوق", description: "بيع وشراء المنتجات", isEnabled: true, category: "marketplace", priority: 3, createdAt: new Date(), updatedAt: new Date() },
       { id: "vendors", name: "المتاجر", description: "إنشاء وإدارة المتاجر", isEnabled: true, category: "marketplace", priority: 4, createdAt: new Date(), updatedAt: new Date() },
-      { id: "neighborhoods", name: "مجتمع الحي", description: "التواصل مع الجيران وطلب المساعدة", isEnabled: true, category: "social", priority: 5, createdAt: new Date(), updatedAt: new Date() },
-      { id: "affiliate", name: "التسويق بالعمولة", description: "كسب المال من خلال التسويق", isEnabled: true, category: "marketplace", priority: 6, createdAt: new Date(), updatedAt: new Date() },
-      { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 7, createdAt: new Date(), updatedAt: new Date() },
+      { id: "social_feed", name: "المنشورات", description: "مشاركة المحتوى والمنشورات الاجتماعية", isEnabled: true, category: "social", priority: 5, createdAt: new Date(), updatedAt: new Date() },
+      { id: "neighborhoods", name: "مجتمع الحي", description: "التواصل مع الجيران وطلب المساعدة", isEnabled: true, category: "social", priority: 6, createdAt: new Date(), updatedAt: new Date() },
+      { id: "affiliate", name: "التسويق بالعمولة", description: "كسب المال من خلال التسويق", isEnabled: true, category: "marketplace", priority: 7, createdAt: new Date(), updatedAt: new Date() },
+      { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 8, createdAt: new Date(), updatedAt: new Date() },
     ];
 
     defaultFeatures.forEach(feature => {

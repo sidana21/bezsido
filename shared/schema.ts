@@ -1066,11 +1066,284 @@ export const insertQuickReplySchema = createInsertSchema(quickReplies).omit({
 });
 
 // Business Posts and Stories schemas
+// نظام المتابعة المتقدم - Advanced Following System
+export const follows = pgTable("follows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  followerId: varchar("follower_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  followingId: varchar("following_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  isBusinessAccount: boolean("is_business_account").default(false), // متابعة حساب تجاري
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// منشورات البيزنس تشات المتطورة - Advanced BizChat Posts
+export const bizChatPosts = pgTable("bizchat_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // محتوى المنشور
+  content: text("content"),
+  images: jsonb("images").$type<string[]>().default([]), // متعدد الصور
+  videoUrl: text("video_url"),
+  audioUrl: text("audio_url"), // منشورات صوتية
+  
+  // نوع المنشور
+  postType: text("post_type").notNull().default("regular"), // regular, product, service, event, offer, story_highlight
+  
+  // للمنشورات التجارية
+  businessInfo: jsonb("business_info").$type<{
+    businessName?: string;
+    category?: string;
+    location?: string;
+    website?: string;
+    phone?: string;
+  }>().default({}),
+  
+  // المنتجات المرتبطة
+  taggedProducts: jsonb("tagged_products").$type<Array<{
+    productId: string;
+    name: string;
+    price: string;
+    position: { x: number; y: number }; // موقع المنتج في الصورة
+  }>>().default([]),
+  
+  // معلومات الموقع
+  locationInfo: jsonb("location_info").$type<{
+    name?: string;
+    coordinates?: { lat: number; lng: number };
+    address?: string;
+    city?: string;
+  }>().default({}),
+  
+  // إعدادات المنشور
+  isSponsored: boolean("is_sponsored").default(false), // إعلان مدفوع
+  sponsorInfo: jsonb("sponsor_info").$type<{
+    budget?: number;
+    targetAudience?: string[];
+    duration?: number;
+  }>().default({}),
+  
+  // الخصوصية والرؤية
+  visibility: text("visibility").notNull().default("public"), // public, friends, private, local
+  allowComments: boolean("allow_comments").default(true),
+  allowShares: boolean("allow_shares").default(true),
+  showLikesCount: boolean("show_likes_count").default(true),
+  
+  // إحصائيات
+  likesCount: integer("likes_count").default(0),
+  commentsCount: integer("comments_count").default(0),
+  sharesCount: integer("shares_count").default(0),
+  viewsCount: integer("views_count").default(0),
+  
+  // SEO والاكتشاف
+  hashtags: jsonb("hashtags").$type<string[]>().default([]),
+  mentions: jsonb("mentions").$type<string[]>().default([]), // معرفات المستخدمين المذكورين
+  
+  // حالة المنشور
+  status: text("status").notNull().default("published"), // draft, published, archived, deleted
+  isActive: boolean("is_active").default(true),
+  isPinned: boolean("is_pinned").default(false), // تثبيت في الملف الشخصي
+  
+  // معدلات التفاعل
+  engagementRate: decimal("engagement_rate").default("0"), // نسبة التفاعل
+  reachCount: integer("reach_count").default(0), // عدد الوصول
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  scheduledAt: timestamp("scheduled_at"), // للمنشورات المجدولة
+});
+
+// تفاعلات المنشورات المتطورة - Advanced Post Interactions
+export const postInteractions = pgTable("post_interactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => bizChatPosts.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // نوع التفاعل
+  interactionType: text("interaction_type").notNull(), // like, love, care, haha, wow, sad, angry, share, save, view
+  
+  // معلومات إضافية
+  duration: integer("duration"), // مدة المشاهدة للفيديوهات
+  clickedProducts: jsonb("clicked_products").$type<string[]>().default([]), // منتجات تم النقر عليها
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// تعليقات متطورة - Advanced Comments
+export const postCommentsAdvanced = pgTable("post_comments_advanced", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => bizChatPosts.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // محتوى التعليق
+  content: text("content").notNull(),
+  imageUrl: text("image_url"), // صورة في التعليق
+  gifUrl: text("gif_url"), // GIF في التعليق
+  stickerUrl: text("sticker_url"), // ملصق
+  
+  // تعليق على تعليق
+  parentCommentId: varchar("parent_comment_id").references(() => postCommentsAdvanced.id),
+  replyLevel: integer("reply_level").default(0), // مستوى الرد
+  
+  // حالة التعليق
+  isEdited: boolean("is_edited").default(false),
+  isPinned: boolean("is_pinned").default(false), // تثبيت التعليق
+  
+  // إحصائيات
+  likesCount: integer("likes_count").default(0),
+  repliesCount: integer("replies_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// مجموعات المحتوى المحلي - Local Content Communities
+export const localCommunities = pgTable("local_communities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  location: text("location").notNull(), // المنطقة الجغرافية
+  
+  // إعدادات المجموعة
+  isPrivate: boolean("is_private").default(false),
+  requiresApproval: boolean("requires_approval").default(false),
+  allowBusinessPosts: boolean("allow_business_posts").default(true),
+  
+  // إدارة المجموعة
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  moderators: jsonb("moderators").$type<string[]>().default([]),
+  
+  // إحصائيات
+  membersCount: integer("members_count").default(0),
+  postsCount: integer("posts_count").default(0),
+  
+  // صورة الغلاف والرمز
+  coverImage: text("cover_image"),
+  logoImage: text("logo_image"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// عضوية المجموعات المحلية
+export const communityMembers = pgTable("community_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  communityId: varchar("community_id").notNull().references(() => localCommunities.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  role: text("role").notNull().default("member"), // member, moderator, admin
+  joinedAt: timestamp("joined_at").defaultNow(),
+  
+  // إعدادات الإشعارات
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+});
+
+// نظام التسويق بالعمولة المتقدم - Advanced Affiliate Marketing
+export const affiliatePrograms = pgTable("affiliate_programs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: varchar("business_id").notNull().references(() => users.id), // صاحب العمل
+  
+  // إعدادات البرنامج
+  programName: text("program_name").notNull(),
+  description: text("description"),
+  commissionRate: decimal("commission_rate").notNull(), // نسبة العمولة
+  minimumPayout: decimal("minimum_payout").default("100"), // أقل مبلغ للسحب
+  
+  // شروط البرنامج
+  requirements: jsonb("requirements").$type<{
+    minFollowers?: number;
+    categories?: string[];
+    locations?: string[];
+  }>().default({}),
+  
+  // الحالة
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// المؤثرين والشركاء التجاريين
+export const influencerPartnerships = pgTable("influencer_partnerships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  affiliateProgramId: varchar("affiliate_program_id").notNull().references(() => affiliatePrograms.id),
+  influencerId: varchar("influencer_id").notNull().references(() => users.id),
+  
+  // معلومات الشراكة
+  status: text("status").notNull().default("pending"), // pending, approved, active, suspended
+  approvedAt: timestamp("approved_at"),
+  
+  // إحصائيات الأداء
+  totalEarnings: decimal("total_earnings").default("0"),
+  totalViews: integer("total_views").default(0),
+  totalClicks: integer("total_clicks").default(0),
+  totalSales: integer("total_sales").default(0),
+  conversionRate: decimal("conversion_rate").default("0"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertBusinessPostSchema = createInsertSchema(businessPosts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
+
+export const insertBizChatPostSchema = createInsertSchema(bizChatPosts).omit({
+  id: true,
+  likesCount: true,
+  commentsCount: true,
+  sharesCount: true,
+  viewsCount: true,
+  engagementRate: true,
+  reachCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFollowSchema = createInsertSchema(follows).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPostInteractionSchema = createInsertSchema(postInteractions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPostCommentAdvancedSchema = createInsertSchema(postCommentsAdvanced).omit({
+  id: true,
+  isEdited: true,
+  likesCount: true,
+  repliesCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLocalCommunitySchema = createInsertSchema(localCommunities).omit({
+  id: true,
+  membersCount: true,
+  postsCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAffiliateProgramSchema = createInsertSchema(affiliatePrograms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for new advanced features
+export type Follow = typeof follows.$inferSelect;
+export type BizChatPost = typeof bizChatPosts.$inferSelect;
+export type PostInteraction = typeof postInteractions.$inferSelect;
+export type PostCommentAdvanced = typeof postCommentsAdvanced.$inferSelect;
+export type LocalCommunity = typeof localCommunities.$inferSelect;
+export type CommunityMember = typeof communityMembers.$inferSelect;
+export type AffiliateProgram = typeof affiliatePrograms.$inferSelect;
+export type InfluencerPartnership = typeof influencerPartnerships.$inferSelect;
 
 export const insertBusinessStorySchema = createInsertSchema(businessStories).omit({
   id: true,
