@@ -101,6 +101,7 @@ export default function CreatePost() {
       return response;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
       toast({
         title: "تم النشر بنجاح! 🎉",
@@ -267,7 +268,7 @@ export default function CreatePost() {
                       placeholder="ما الذي تفكر فيه؟ شارك أفكارك، تجاربك، أو أي شيء مميز..."
                       value={postData.content}
                       onChange={(e) => setPostData(prev => ({ ...prev, content: e.target.value }))}
-                      className="min-h-[120px] text-lg border-2 focus:border-blue-400"
+                      className="min-h-[120px] text-lg border-2 focus:border-blue-400 dark:focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 border-gray-300 dark:border-gray-600"
                       data-testid="input-content"
                     />
                     <p className="text-sm text-gray-500 mt-2">
