@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export default function Chat() {
   const [, params] = useRoute("/chat/:chatId");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(
-    params?.chatId || "chat-sarah"
+    params?.chatId || null
   );
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [showContacts, setShowContacts] = useState(false);
