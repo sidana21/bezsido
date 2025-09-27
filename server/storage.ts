@@ -1724,7 +1724,11 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      let query = db.select().from(products).where(eq(products.isActive, true));
+      // Filter by both isActive and published status for public products
+      let query = db.select().from(products).where(and(
+        eq(products.isActive, true),
+        eq(products.status, "published")
+      ));
       
       // Note: products table doesn't have location field
       // To filter by location, need to join with vendors table
@@ -1734,7 +1738,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       if (category) {
-        query = query.where(eq(products.categoryId, category));
+        query = query.where(and(
+          eq(products.isActive, true),
+          eq(products.status, "published"),
+          eq(products.categoryId, category)
+        ));
       }
       
       const result = await query;
@@ -1767,14 +1775,28 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
+      // Auto-publish products if they have required data
+      const shouldPublish = product.name && product.description && product.originalPrice && 
+                          (product.images && product.images.length > 0);
+      
       const newProduct = {
         id: randomUUID(),
         ...product,
+        // Auto-publish if all required fields are present
+        status: shouldPublish ? "published" : (product.status || "draft"),
+        isActive: shouldPublish ? true : (product.isActive || false),
+        publishedAt: shouldPublish ? new Date() : (product.publishedAt || null),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       
       const result = await db.insert(products).values(newProduct).returning();
+      
+      // Update vendor's product count if product is published
+      if (newProduct.status === "published" && newProduct.isActive) {
+        await this.updateVendorProductCount(newProduct.vendorId);
+      }
+      
       return result[0];
     } catch (error) {
       console.error('Error creating product:', error);
@@ -1789,10 +1811,31 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
+      // Get the current product to check for status changes
+      const currentProduct = await this.getProduct(productId);
+      if (!currentProduct) {
+        return undefined;
+      }
+      
+      // Check if publishing status changed
+      const wasPublished = currentProduct.status === "published" && currentProduct.isActive;
+      const willBePublished = (updates.status === "published" || currentProduct.status === "published") && 
+                             (updates.isActive !== false && (updates.isActive || currentProduct.isActive));
+      
+      // Set publishedAt if becoming published
+      if (willBePublished && !wasPublished) {
+        updates.publishedAt = new Date();
+      }
+      
       const result = await db.update(products)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(products.id, productId))
         .returning();
+      
+      // Update vendor product count if publishing status changed
+      if (wasPublished !== willBePublished) {
+        await this.updateVendorProductCount(currentProduct.vendorId);
+      }
       
       return result[0] || undefined;
     } catch (error) {
@@ -1808,7 +1851,19 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
+      // Get the product to update vendor count
+      const product = await this.getProduct(productId);
+      if (!product) {
+        return false;
+      }
+      
       const result = await db.delete(products).where(eq(products.id, productId)).returning();
+      
+      // Update vendor product count if product was published
+      if (result.length > 0 && product.status === "published" && product.isActive) {
+        await this.updateVendorProductCount(product.vendorId);
+      }
+      
       return result.length > 0;
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -1823,7 +1878,13 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      const result = await db.select().from(products).where(and(eq(products.userId, userId), eq(products.isActive, true)));
+      // Get user's vendor first, then get products for that vendor
+      const userVendor = await this.getUserVendor(userId);
+      if (!userVendor) {
+        return [];
+      }
+      
+      const result = await db.select().from(products).where(eq(products.vendorId, userVendor.id));
       return result;
     } catch (error) {
       console.error('Error getting user products:', error);
@@ -3916,6 +3977,32 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting vendor products:', error);
       return [];
+    }
+  }
+
+  async updateVendorProductCount(vendorId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Count published and active products for this vendor
+      const publishedProducts = await db.select().from(products).where(and(
+        eq(products.vendorId, vendorId),
+        eq(products.isActive, true),
+        eq(products.status, "published")
+      ));
+      
+      // Update vendor's total products count
+      await db.update(vendors)
+        .set({ 
+          totalProducts: publishedProducts.length,
+          updatedAt: new Date()
+        })
+        .where(eq(vendors.id, vendorId));
+    } catch (error) {
+      console.error('Error updating vendor product count:', error);
     }
   }
 
