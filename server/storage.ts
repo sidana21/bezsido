@@ -6000,7 +6000,12 @@ export class MemStorage implements IStorage {
   }
 
   async getUserProducts(userId: string): Promise<Product[]> {
-    return Array.from(this.products.values()).filter(product => product.userId === userId);
+    // Get user's vendor first, then get products for that vendor
+    const vendor = await this.getUserVendor(userId);
+    if (!vendor) {
+      return [];
+    }
+    return Array.from(this.products.values()).filter(product => product.vendorId === vendor.id);
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,29 @@ interface VendorCategory {
   description?: string;
   icon?: string;
   color?: string;
+}
+
+interface Product {
+  id: string;
+  vendorId: string;
+  categoryId: string;
+  name: string;
+  description: string;
+  originalPrice: string;
+  salePrice?: string;
+  currency: string;
+  images: string[];
+  stockQuantity: number;
+  stockStatus: string;
+  tags: string[];
+  status: string;
+  isActive: boolean;
+  isFeatured: boolean;
+  viewCount: number;
+  averageRating: string;
+  totalReviews: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Vendor {
@@ -101,6 +124,123 @@ const vendorSchema = z.object({
 
 type VendorFormData = z.infer<typeof vendorSchema>;
 
+// Product Card Component
+const ProductCard = ({ product }: { product: Product }) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const toggleProductStatus = useMutation({
+    mutationFn: () => apiRequest(`/api/products/${product.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive: !product.isActive }),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/products'] });
+      toast({
+        title: product.isActive ? 'تم إخفاء المنتج' : 'تم تفعيل المنتج',
+        description: product.isActive ? 'المنتج غير مرئي للعملاء الآن' : 'المنتج متاح للعملاء الآن',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'خطأ',
+        description: 'فشل في تحديث حالة المنتج',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const price = parseFloat(product.originalPrice);
+  const salePrice = product.salePrice ? parseFloat(product.salePrice) : null;
+  const finalPrice = salePrice || price;
+  const hasDiscount = salePrice && salePrice < price;
+
+  return (
+    <Card className={`transition-all hover:shadow-md ${!product.isActive ? 'opacity-60' : ''}`}>
+      <div className="relative">
+        {/* Product Image */}
+        <div className="aspect-square bg-gray-100 rounded-t-lg overflow-hidden">
+          {product.images && product.images.length > 0 ? (
+            <img 
+              src={product.images[0]} 
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <Package className="h-12 w-12 text-gray-400" />
+            </div>
+          )}
+        </div>
+        
+        {/* Status Badge */}
+        <div className="absolute top-2 left-2">
+          <Badge 
+            variant={product.isActive ? "default" : "secondary"}
+            className={product.isActive ? "bg-green-500" : "bg-gray-500"}
+          >
+            {product.isActive ? "نشط" : "معطل"}
+          </Badge>
+        </div>
+
+        {/* Discount Badge */}
+        {hasDiscount && (
+          <div className="absolute top-2 right-2">
+            <Badge variant="destructive">
+              -{Math.round((1 - finalPrice / price) * 100)}%
+            </Badge>
+          </div>
+        )}
+      </div>
+
+      <CardContent className="p-4">
+        {/* Product Name */}
+        <h3 className="font-medium text-sm mb-2 line-clamp-2 min-h-[2.5rem]">{product.name}</h3>
+        
+        {/* Price */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg font-bold text-green-600">
+            {finalPrice.toLocaleString()} {product.currency}
+          </span>
+          {hasDiscount && (
+            <span className="text-sm text-gray-500 line-through">
+              {price.toLocaleString()}
+            </span>
+          )}
+        </div>
+
+        {/* Stock Status */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1 text-xs text-gray-600">
+            <Package className="h-3 w-3" />
+            <span>المخزون: {product.stockQuantity}</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs text-gray-600">
+            <Star className="h-3 w-3" />
+            <span>{parseFloat(product.averageRating || '0').toFixed(1)}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button
+            variant={product.isActive ? "outline" : "default"}
+            size="sm"
+            className="flex-1"
+            onClick={() => toggleProductStatus.mutate()}
+            disabled={toggleProductStatus.isPending}
+          >
+            {toggleProductStatus.isPending ? '...' : product.isActive ? 'إخفاء' : 'تفعيل'}
+          </Button>
+          <Button variant="outline" size="sm" className="flex-1">
+            تعديل
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default function MyVendorPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showMobileUpload, setShowMobileUpload] = useState(false);
@@ -115,6 +255,12 @@ export default function MyVendorPage() {
   // Get user's vendor
   const { data: vendor, isLoading } = useQuery<Vendor | null>({
     queryKey: ['/api/user/vendor'],
+  });
+
+  // Get user's products (only when vendor exists)
+  const { data: products = [], isLoading: isProductsLoading } = useQuery<Product[]>({
+    queryKey: ['/api/user/products'],
+    enabled: !!vendor, // Only fetch products if vendor exists
   });
 
   // Setup form
@@ -144,6 +290,7 @@ export default function MyVendorPage() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/vendor'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/products'] });
       toast({
         title: 'تم إنشاء البائع بنجاح',
         description: 'سيتم مراجعة طلبك وسيصلك إشعار عند الموافقة',
@@ -393,6 +540,58 @@ export default function MyVendorPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Products Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  منتجاتي ({products.length})
+                </CardTitle>
+                <Button 
+                  onClick={() => setShowMobileUpload(true)}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4 ml-1" />
+                  إضافة منتج
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isProductsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-gray-200 aspect-square rounded-lg mb-3"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد منتجات بعد</h3>
+                  <p className="text-gray-500 mb-6">ابدأ بإضافة منتجاتك الأولى لعرضها للعملاء</p>
+                  <Button 
+                    onClick={() => setShowMobileUpload(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="h-4 w-4 ml-2" />
+                    إضافة منتج الآن
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {products.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Vendor Details */}
           <Card>

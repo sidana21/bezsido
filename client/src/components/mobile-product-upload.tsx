@@ -162,6 +162,7 @@ export default function MobileProductUpload({ onSuccess, onCancel }: MobileProdu
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/vendor'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/products'] });
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       toast({
         title: "تم إضافة المنتج",
