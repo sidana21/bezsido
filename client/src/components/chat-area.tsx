@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Search, Phone, Video, MoreVertical, Smile, Paperclip, Send, ArrowRight, Menu, X, Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,87 @@ interface ChatAreaProps {
 
 interface ChatMessage extends Message {
   sender?: User;
+}
+
+// دالة للتحقق من صحة الرسالة
+function validateMessage(message: any): message is ChatMessage {
+  if (!message || typeof message !== 'object') {
+    console.error('رسالة غير صالحة: البيانات فارغة أو ليست كائن', message);
+    return false;
+  }
+  
+  if (!message.id || typeof message.id !== 'string') {
+    console.error('رسالة غير صالحة: لا يوجد معرف فريد', message);
+    return false;
+  }
+  
+  if (!message.senderId || typeof message.senderId !== 'string') {
+    console.error('رسالة غير صالحة: لا يوجد معرف مرسل', message);
+    return false;
+  }
+  
+  // التحقق من وجود المحتوى أو نوع الرسالة
+  if (!message.content && !message.imageUrl && !message.audioUrl && !message.stickerUrl) {
+    console.error('رسالة غير صالحة: لا يوجد محتوى', message);
+    return false;
+  }
+  
+  return true;
+}
+
+// دالة لتنظيف وإصلاح الرسائل
+function sanitizeMessage(message: any): ChatMessage | null {
+  try {
+    if (!validateMessage(message)) {
+      return null;
+    }
+    
+    // إنشاء كائن رسالة آمن مع قيم افتراضية
+    const sanitizedMessage: ChatMessage = {
+      id: message.id,
+      chatId: message.chatId || '',
+      senderId: message.senderId,
+      content: message.content || '',
+      messageType: message.messageType || 'text',
+      imageUrl: message.imageUrl || null,
+      audioUrl: message.audioUrl || null,
+      stickerUrl: message.stickerUrl || null,
+      stickerId: message.stickerId || null,
+      locationLat: message.locationLat || null,
+      locationLon: message.locationLon || null,
+      locationName: message.locationName || null,
+      replyToMessageId: message.replyToMessageId || null,
+      timestamp: message.timestamp || new Date(),
+      isRead: Boolean(message.isRead),
+      isDelivered: Boolean(message.isDelivered),
+      isEdited: Boolean(message.isEdited),
+      editedAt: message.editedAt || null,
+      deletedAt: message.deletedAt || null,
+      sender: message.sender ? {
+        id: message.sender.id || '',
+        name: message.sender.name || 'مستخدم',
+        email: message.sender.email || '',
+        password: null,
+        location: message.sender.location || '',
+        avatar: message.sender.avatar || null,
+        isOnline: Boolean(message.sender.isOnline),
+        isVerified: Boolean(message.sender.isVerified),
+        verifiedAt: message.sender.verifiedAt || null,
+        isAdmin: Boolean(message.sender.isAdmin),
+        lastSeen: message.sender.lastSeen || new Date(),
+        points: message.sender.points || 0,
+        streak: message.sender.streak || 0,
+        lastStreakDate: message.sender.lastStreakDate || null,
+        createdAt: message.sender.createdAt || new Date(),
+        updatedAt: message.sender.updatedAt || new Date()
+      } : undefined
+    };
+    
+    return sanitizedMessage;
+  } catch (error) {
+    console.error('خطأ في تنظيف الرسالة:', error, message);
+    return null;
+  }
 }
 
 export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
@@ -53,9 +134,9 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     queryKey: ['/api/user/current'],
   });
 
-  // إعداد hook المكالمات
+  // إعداد hook المكالمات مع حماية من البيانات الناقصة
   const voiceCalls = useVoiceCalls({
-    currentUserId: currentUser?.id || '',
+    currentUserId: (currentUser && typeof currentUser === 'object' && 'id' in currentUser && currentUser.id) ? String(currentUser.id) : '',
     onIncomingCall: (call) => {
       console.log('📞 مكالمة واردة جديدة في ChatArea:', call);
       toast({
@@ -65,13 +146,50 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     },
   });
 
-  const { data: messages = [], isLoading, isSuccess } = useQuery<ChatMessage[]>({
+  const { data: rawMessages = [], isLoading, isSuccess, error } = useQuery<any[]>({
     queryKey: ['/api/chats', chatId, 'messages'],
     enabled: !!chatId,
     refetchInterval: 3000, // تحديث الرسائل كل 3 ثواني
     refetchIntervalInBackground: false, // لا تحدث في الخلفية لتوفير الموارد
     refetchOnWindowFocus: true, // تحديث عند العودة للنافذة
   });
+
+  // معالجة الأخطاء في تحميل الرسائل
+  useEffect(() => {
+    if (error) {
+      console.error('خطأ في تحميل الرسائل:', error);
+      toast({
+        title: "خطأ في تحميل الرسائل",
+        description: "حدث خطأ أثناء تحميل الرسائل. يرجى إعادة المحاولة",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
+
+  // معالجة وتنظيف الرسائل لضمان سلامتها
+  const messages = useMemo(() => {
+    try {
+      if (!Array.isArray(rawMessages)) {
+        console.error('البيانات الواردة ليست مصفوفة:', rawMessages);
+        return [];
+      }
+
+      return rawMessages
+        .map(message => {
+          try {
+            return sanitizeMessage(message);
+          } catch (error) {
+            console.error('خطأ في معالجة رسالة:', error, message);
+            return null;
+          }
+        })
+        .filter((message): message is ChatMessage => message !== null);
+        
+    } catch (error) {
+      console.error('خطأ عام في معالجة الرسائل:', error);
+      return [];
+    }
+  }, [rawMessages]);
 
   const { data: chats = [] } = useQuery<any[]>({
     queryKey: ['/api/chats'],
@@ -200,8 +318,9 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
   // تمييز الرسائل كمقروءة عند دخول المحادثة
   useEffect(() => {
-    if (chatId && messages.length > 0 && currentUser) {
-      const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== (currentUser as any)?.id);
+    if (chatId && messages.length > 0 && currentUser && typeof currentUser === 'object' && 'id' in currentUser && currentUser.id) {
+      const currentUserId = currentUser.id as string;
+      const unreadMessages = messages.filter(msg => !msg.isRead && msg.senderId !== currentUserId);
       if (unreadMessages.length > 0) {
         unreadMessages.forEach(async (message) => {
           try {
@@ -564,7 +683,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
 
   // دالة بدء المكالمة
   const handleStartCall = () => {
-    if (!currentUser?.id) {
+    if (!currentUser || typeof currentUser !== 'object' || !('id' in currentUser) || !currentUser.id) {
       toast({
         title: "خطأ",
         description: "يجب تسجيل الدخول أولاً",
@@ -585,7 +704,8 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
     }
 
     // العثور على المستخدم الآخر في المحادثة
-    const otherUserId = currentChatForCall.participants?.find((id: string) => id !== currentUser.id);
+    const currentUserId = (currentUser && typeof currentUser === 'object' && 'id' in currentUser && currentUser.id) ? currentUser.id as string : '';
+    const otherUserId = currentChatForCall.participants?.find((id: string) => id !== currentUserId);
     if (!otherUserId) {
       toast({
         title: "خطأ",
@@ -840,7 +960,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <MessageBubble
               key={message.id}
               message={message}
-              isOwn={message.senderId === (currentUser as any)?.id}
+              isOwn={message.senderId === ((currentUser && typeof currentUser === 'object' && 'id' in currentUser && currentUser.id) ? currentUser.id : '')}
               onReply={handleReply}
               onEdit={handleEdit}
               onDelete={handleDelete}

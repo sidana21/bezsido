@@ -1824,22 +1824,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chats/:chatId/messages", requireAuth, async (req: any, res) => {
     try {
       const { chatId } = req.params;
-      const messages = await storage.getChatMessages(chatId);
+      const currentUserId = req.userId;
       
-      // Include sender info with each message
+      console.log(`📨 تحميل رسائل المحادثة ${chatId} للمستخدم ${currentUserId}`);
+      
+      // التحقق من صحة معرف المحادثة
+      if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+        console.error('❌ معرف المحادثة غير صحيح:', chatId);
+        return res.status(400).json({ 
+          success: false,
+          message: "معرف المحادثة مطلوب وصحيح" 
+        });
+      }
+      
+      // التحقق من وجود المحادثة وأن المستخدم جزء منها
+      const chat = await storage.getChat(chatId);
+      if (!chat) {
+        console.error('❌ المحادثة غير موجودة:', chatId);
+        return res.status(404).json({ 
+          success: false,
+          message: "المحادثة غير موجودة" 
+        });
+      }
+      
+      if (!chat.participants.includes(currentUserId)) {
+        console.error('❌ المستخدم ليس جزءاً من المحادثة:', currentUserId, 'المشاركون:', chat.participants);
+        return res.status(403).json({ 
+          success: false,
+          message: "غير مصرح لك بمشاهدة هذه الرسائل" 
+        });
+      }
+      
+      const messages = await storage.getChatMessages(chatId);
+      console.log(`✅ تم تحميل ${messages.length} رسالة للمحادثة ${chatId}`);
+      
+      // Include sender info with each message with error handling
       const messagesWithSenders = await Promise.all(
         messages.map(async (message) => {
-          const sender = await storage.getUserById(message.senderId);
-          return {
-            ...message,
-            sender,
-          };
+          try {
+            // التحقق من صحة بيانات الرسالة
+            if (!message || !message.id || !message.senderId) {
+              console.error('❌ رسالة غير صحيحة:', message);
+              return null;
+            }
+            
+            const sender = await storage.getUserById(message.senderId);
+            
+            // التحقق من وجود المرسل
+            if (!sender) {
+              console.error('❌ المرسل غير موجود للرسالة:', message.id, 'المرسل:', message.senderId);
+              // إرجاع الرسالة مع بيانات مرسل افتراضية
+              return {
+                ...message,
+                sender: {
+                  id: message.senderId,
+                  name: 'مستخدم محذوف',
+                  email: '',
+                  avatar: null,
+                  isOnline: false,
+                  isVerified: false
+                },
+              };
+            }
+            
+            return {
+              ...message,
+              sender,
+            };
+          } catch (senderError) {
+            console.error('❌ خطأ في تحميل بيانات المرسل للرسالة:', message?.id, senderError);
+            // إرجاع الرسالة مع بيانات مرسل افتراضية في حالة الخطأ
+            return {
+              ...message,
+              sender: {
+                id: message?.senderId || 'unknown',
+                name: 'مستخدم غير معروف',
+                email: '',
+                avatar: null,
+                isOnline: false,
+                isVerified: false
+              },
+            };
+          }
         })
       );
       
-      res.json(messagesWithSenders);
+      // تصفية الرسائل null وإرجاع الصحيحة فقط
+      const validMessages = messagesWithSenders.filter(message => message !== null);
+      
+      console.log(`✅ تم إرسال ${validMessages.length} رسالة صحيحة من أصل ${messages.length}`);
+      res.json(validMessages);
+      
     } catch (error) {
-      res.status(500).json({ message: "Failed to get messages" });
+      console.error("❌ فشل في تحميل الرسائل:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "فشل في تحميل الرسائل - خطأ في السيرفر",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
@@ -1847,42 +1929,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chats/:chatId/messages", requireAuth, async (req: any, res) => {
     try {
       const { chatId } = req.params;
-      console.log("💬 Creating permanent message for chat:", chatId);
+      const currentUserId = req.userId;
+      const { content, messageType = 'text', replyToMessageId } = req.body;
+      
+      console.log(`💬 إرسال رسالة للمحادثة ${chatId} من المستخدم ${currentUserId}`);
+      
+      // التحقق من صحة معرف المحادثة
+      if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
+        console.error('❌ معرف المحادثة غير صحيح:', chatId);
+        return res.status(400).json({ 
+          success: false,
+          message: "معرف المحادثة مطلوب وصحيح" 
+        });
+      }
+      
+      // التحقق من محتوى الرسالة
+      if (!content || typeof content !== 'string' || content.trim() === '') {
+        console.error('❌ محتوى الرسالة فارغ أو غير صحيح:', content);
+        return res.status(400).json({ 
+          success: false,
+          message: "محتوى الرسالة مطلوب" 
+        });
+      }
+      
+      // التحقق من طول الرسالة (حد أقصى 5000 حرف)
+      if (content.length > 5000) {
+        console.error('❌ الرسالة طويلة جداً:', content.length);
+        return res.status(400).json({ 
+          success: false,
+          message: "الرسالة طويلة جداً - الحد الأقصى 5000 حرف" 
+        });
+      }
       
       // التحقق من وجود المحادثة أولاً
       const chat = await storage.getChat(chatId);
       if (!chat) {
-        console.log("❌ Chat not found:", chatId);
-        return res.status(404).json({ message: "Chat not found" });
+        console.error("❌ المحادثة غير موجودة:", chatId);
+        return res.status(404).json({ 
+          success: false,
+          message: "المحادثة غير موجودة" 
+        });
       }
       
       // التحقق من أن المستخدم جزء من المحادثة
-      if (!chat.participants.includes(req.userId)) {
-        console.log("❌ User not in chat:", req.userId, "Chat participants:", chat.participants);
-        return res.status(403).json({ message: "Not authorized to send messages in this chat" });
+      if (!chat.participants.includes(currentUserId)) {
+        console.error("❌ المستخدم ليس جزءاً من المحادثة:", currentUserId, "المشاركون:", chat.participants);
+        return res.status(403).json({ 
+          success: false,
+          message: "غير مصرح لك بإرسال رسائل في هذه المحادثة" 
+        });
       }
       
+      // إنشاء بيانات الرسالة مع التحقق من الصحة
       const messageData = insertMessageSchema.parse({
-        ...req.body,
         chatId,
-        senderId: req.userId,
-        timestamp: new Date(), // Ensure timestamp is set
-        isDelivered: true, // Mark as delivered immediately 
-        isRead: false, // Will be updated when read
+        senderId: currentUserId,
+        content: content.trim(),
+        messageType: messageType || 'text',
+        replyToMessageId: replyToMessageId || null,
+        timestamp: new Date(),
+        isDelivered: true,
+        isRead: false,
+      });
+      
+      console.log('📝 إنشاء رسالة جديدة:', {
+        chatId: messageData.chatId,
+        senderId: messageData.senderId,
+        contentPreview: messageData.content?.substring(0, 50) + '...',
+        messageType: messageData.messageType
       });
       
       const message = await storage.createMessage(messageData);
-      const sender = await storage.getUserById(message.senderId);
       
-      console.log("✅ Message permanently saved to database:", message.id);
+      if (!message || !message.id) {
+        console.error('❌ فشل في إنشاء الرسالة - لا يوجد معرف');
+        throw new Error('Failed to create message in storage');
+      }
       
-      res.json({
+      // جلب بيانات المرسل مع معالجة الأخطاء
+      let sender;
+      try {
+        sender = await storage.getUserById(message.senderId);
+        if (!sender) {
+          console.error('❌ المرسل غير موجود:', message.senderId);
+          sender = {
+            id: message.senderId,
+            name: 'مستخدم غير معروف',
+            email: '',
+            avatar: null,
+            isOnline: false,
+            isVerified: false
+          };
+        }
+      } catch (senderError) {
+        console.error('❌ خطأ في جلب بيانات المرسل:', senderError);
+        sender = {
+          id: message.senderId,
+          name: 'مستخدم غير معروف',
+          email: '',
+          avatar: null,
+          isOnline: false,
+          isVerified: false
+        };
+      }
+      
+      console.log("✅ تم حفظ الرسالة بنجاح في قاعدة البيانات:", message.id);
+      
+      const response = {
         ...message,
         sender,
-      });
+      };
+      
+      // التأكد من أن الاستجابة تحتوي على جميع الحقول المطلوبة
+      if (!response.id || !response.senderId) {
+        console.error('❌ استجابة غير كاملة:', response);
+        throw new Error('Incomplete message response');
+      }
+      
+      res.json(response);
+      
     } catch (error) {
-      console.error("❌ Failed to save message:", error);
-      res.status(500).json({ message: "Failed to send message" });
+      console.error("❌ فشل في إرسال الرسالة:", error);
+      
+      // معالجة أنواع مختلفة من الأخطاء
+      if (error.name === 'ZodError') {
+        console.error('❌ خطأ في التحقق من البيانات:', error.errors);
+        return res.status(400).json({ 
+          success: false,
+          message: "بيانات الرسالة غير صحيحة",
+          errors: error.errors
+        });
+      }
+      
+      if (error.message.includes('storage') || error.message.includes('database')) {
+        return res.status(503).json({ 
+          success: false,
+          message: "خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى" 
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false,
+        message: "فشل في إرسال الرسالة - خطأ في السيرفر",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
