@@ -174,18 +174,35 @@ export function useNotifications(options: NotificationOptions = {}) {
 
   // تشغيل الإشعارات عند تغيير عدد الرسائل غير المقروءة
   useEffect(() => {
-    const currentUnreadCount = unreadData?.unreadCount || 0;
-    const latestMessage = recentMessages && recentMessages.length > 0 
-      ? recentMessages[recentMessages.length - 1] 
-      : undefined;
-    
-    // إذا ازداد عدد الرسائل غير المقروءة
-    if (currentUnreadCount > lastUnreadCountRef.current && currentUnreadCount > 0) {
-      playNotificationSound();
-      showBrowserNotification(currentUnreadCount, latestMessage);
+    try {
+      const currentUnreadCount = unreadData?.unreadCount || 0;
+      const latestMessage = recentMessages && Array.isArray(recentMessages) && recentMessages.length > 0 
+        ? recentMessages[recentMessages.length - 1] 
+        : undefined;
+      
+      // إذا ازداد عدد الرسائل غير المقروءة
+      if (currentUnreadCount > lastUnreadCountRef.current && currentUnreadCount > 0) {
+        console.log('🔔 رسالة جديدة غير مقروءة، تشغيل الإشعار...');
+        
+        // تشغيل الصوت بشكل آمن
+        try {
+          playNotificationSound();
+        } catch (soundError) {
+          console.warn('تعذر تشغيل صوت الإشعار:', soundError);
+        }
+        
+        // إظهار إشعار المتصفح بشكل آمن
+        try {
+          showBrowserNotification(currentUnreadCount, latestMessage);
+        } catch (notificationError) {
+          console.warn('تعذر إظهار إشعار المتصفح:', notificationError);
+        }
+      }
+      
+      lastUnreadCountRef.current = currentUnreadCount;
+    } catch (error) {
+      console.error('خطأ في معالجة الإشعارات:', error);
     }
-    
-    lastUnreadCountRef.current = currentUnreadCount;
   }, [unreadData?.unreadCount, recentMessages, playNotificationSound, showBrowserNotification]);
 
   // تنظيف الموارد

@@ -29,28 +29,33 @@ interface ChatMessage extends Message {
 
 // دالة للتحقق من صحة الرسالة
 function validateMessage(message: any): message is ChatMessage {
-  if (!message || typeof message !== 'object') {
-    console.error('رسالة غير صالحة: البيانات فارغة أو ليست كائن', message);
+  try {
+    if (!message || typeof message !== 'object') {
+      console.warn('رسالة غير صالحة: البيانات فارغة أو ليست كائن', message);
+      return false;
+    }
+    
+    if (!message.id || typeof message.id !== 'string') {
+      console.warn('رسالة غير صالحة: لا يوجد معرف فريد', message);
+      return false;
+    }
+    
+    if (!message.senderId || typeof message.senderId !== 'string') {
+      console.warn('رسالة غير صالحة: لا يوجد معرف مرسل', message);
+      return false;
+    }
+    
+    // التحقق من وجود المحتوى أو نوع الرسالة
+    if (!message.content && !message.imageUrl && !message.audioUrl && !message.stickerUrl) {
+      console.warn('رسالة غير صالحة: لا يوجد محتوى', message);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('خطأ في التحقق من صحة الرسالة:', error, message);
     return false;
   }
-  
-  if (!message.id || typeof message.id !== 'string') {
-    console.error('رسالة غير صالحة: لا يوجد معرف فريد', message);
-    return false;
-  }
-  
-  if (!message.senderId || typeof message.senderId !== 'string') {
-    console.error('رسالة غير صالحة: لا يوجد معرف مرسل', message);
-    return false;
-  }
-  
-  // التحقق من وجود المحتوى أو نوع الرسالة
-  if (!message.content && !message.imageUrl && !message.audioUrl && !message.stickerUrl) {
-    console.error('رسالة غير صالحة: لا يوجد محتوى', message);
-    return false;
-  }
-  
-  return true;
 }
 
 // دالة لتنظيف وإصلاح الرسائل
@@ -169,17 +174,30 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
   // معالجة وتنظيف الرسائل لضمان سلامتها
   const messages = useMemo(() => {
     try {
+      if (!rawMessages) {
+        console.warn('لا توجد رسائل للمعالجة');
+        return [];
+      }
+
       if (!Array.isArray(rawMessages)) {
-        console.error('البيانات الواردة ليست مصفوفة:', rawMessages);
+        console.warn('البيانات الواردة ليست مصفوفة، محاولة التحويل...', rawMessages);
+        // محاولة إصلاح البيانات إذا كانت في شكل كائن
+        if (typeof rawMessages === 'object' && rawMessages !== null) {
+          return [];
+        }
         return [];
       }
 
       return rawMessages
-        .map(message => {
+        .map((message, index) => {
           try {
+            if (!message) {
+              console.warn(`رسالة فارغة في الموضع ${index}`);
+              return null;
+            }
             return sanitizeMessage(message);
           } catch (error) {
-            console.error('خطأ في معالجة رسالة:', error, message);
+            console.error(`خطأ في معالجة رسالة في الموضع ${index}:`, error, message);
             return null;
           }
         })
