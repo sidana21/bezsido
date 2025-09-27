@@ -5457,6 +5457,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== Social Feed API Endpoints =====
+  
+  // جلب المنشورات - Social Feed
+  app.get("/api/social-feed", requireAuth, async (req: any, res) => {
+    try {
+      const { filter = "all", location } = req.query;
+      const currentUserId = req.userId;
+      
+      // Get posts from storage with proper filtering
+      const posts = await storage.getFeedPosts(location, filter, currentUserId);
+      
+      // Enhance posts with user data and interaction status
+      const enhancedPosts = await Promise.all(posts.map(async (post) => {
+        const user = await storage.getUserById(post.userId);
+        const isLiked = await storage.hasUserLikedPost(post.id, currentUserId);
+        const isSaved = await storage.hasUserSavedPost(post.id, currentUserId);
+        const isFollowing = await storage.isUserFollowing(currentUserId, post.userId);
+        
+        // Sanitize user data - only include safe public fields
+        const safeUser = user ? {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          location: user.location,
+          isVerified: user.isVerified,
+          isOnline: user.isOnline
+        } : null;
+        
+        return {
+          ...post,
+          user: safeUser,
+          isLiked,
+          isSaved,
+          isFollowing
+        };
+      }));
+      
+      res.json(enhancedPosts);
+    } catch (error) {
+      console.error('Error fetching social feed:', error);
+      res.status(500).json({ message: "خطأ في جلب المنشورات" });
+    }
+  });
+
+  // تفاعل مع المنشور (إعجاب/حفظ)
+  app.post("/api/posts/:postId/interactions", requireAuth, async (req: any, res) => {
+    try {
+      const { postId } = req.params;
+      const { interactionType } = req.body;
+      const userId = req.userId;
+      
+      if (!["like", "unlike", "save", "unsave"].includes(interactionType)) {
+        return res.status(400).json({ message: "نوع التفاعل غير صحيح" });
+      }
+      
+      // Verify post exists
+      const post = await storage.getBusinessPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "المنشور غير موجود" });
+      }
+      
+      let result;
+      switch (interactionType) {
+        case "like":
+          result = await storage.likePost(postId, userId);
+          break;
+        case "unlike":
+          await storage.unlikePost(postId, userId);
+          result = { success: true };
+          break;
+        case "save":
+          result = await storage.savePost(postId, userId);
+          break;
+        case "unsave":
+          await storage.unsavePost(postId, userId);
+          result = { success: true };
+          break;
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error handling post interaction:', error);
+      res.status(500).json({ message: "خطأ في التفاعل مع المنشور" });
+    }
+  });
+
+  // متابعة مستخدم
+  app.post("/api/users/:userId/follow", requireAuth, async (req: any, res) => {
+    try {
+      const { userId: targetUserId } = req.params;
+      const followerId = req.userId;
+      
+      if (followerId === targetUserId) {
+        return res.status(400).json({ message: "لا يمكنك متابعة نفسك" });
+      }
+      
+      await storage.followUser(followerId, targetUserId);
+      res.json({ success: true, message: "تم بدء المتابعة بنجاح" });
+    } catch (error) {
+      console.error('Error following user:', error);
+      res.status(500).json({ message: "خطأ في متابعة المستخدم" });
+    }
+  });
+
+  // إلغاء متابعة مستخدم
+  app.delete("/api/users/:userId/follow", requireAuth, async (req: any, res) => {
+    try {
+      const { userId: targetUserId } = req.params;
+      const followerId = req.userId;
+      
+      await storage.unfollowUser(followerId, targetUserId);
+      res.json({ success: true, message: "تم إلغاء المتابعة بنجاح" });
+    } catch (error) {
+      console.error('Error unfollowing user:', error);
+      res.status(500).json({ message: "خطأ في إلغاء متابعة المستخدم" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

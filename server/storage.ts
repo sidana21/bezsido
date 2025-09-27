@@ -362,6 +362,28 @@ export interface IStorage {
   searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
   searchUserByEmail(email: string): Promise<User | undefined>;
   getOrders(userId?: string, status?: string): Promise<Order[]>;
+  
+  // Business Posts - Social Feed
+  getFeedPosts(location?: string, filter?: string, currentUserId?: string): Promise<BusinessPost[]>;
+  createBusinessPost(post: InsertBusinessPost): Promise<BusinessPost>;
+  getBusinessPost(postId: string): Promise<BusinessPost | undefined>;
+  getUserPosts(userId: string): Promise<BusinessPost[]>;
+  deleteBusinessPost(postId: string): Promise<boolean>;
+  
+  // Post Interactions
+  likePost(postId: string, userId: string): Promise<PostLike>;
+  unlikePost(postId: string, userId: string): Promise<void>;
+  savePost(postId: string, userId: string): Promise<PostSave>;
+  unsavePost(postId: string, userId: string): Promise<void>;
+  hasUserLikedPost(postId: string, userId: string): Promise<boolean>;
+  hasUserSavedPost(postId: string, userId: string): Promise<boolean>;
+  getPostLikesCount(postId: string): Promise<number>;
+  getPostCommentsCount(postId: string): Promise<number>;
+  
+  // User Following
+  followUser(followerId: string, followingId: string): Promise<void>;
+  unfollowUser(followerId: string, followingId: string): Promise<void>;
+  isUserFollowing(followerId: string, followingId: string): Promise<boolean>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
@@ -4610,6 +4632,13 @@ export class MemStorage implements IStorage {
   private calls = new Map<string, Call>();
   private stickers: any[] = [];
   private vendors = new Map<string, Vendor>();
+  
+  // Business Posts
+  private businessPosts = new Map<string, BusinessPost>();
+  private postLikes = new Map<string, PostLike>();
+  private postSaves = new Map<string, PostSave>();
+  private postComments = new Map<string, PostComment>();
+  private follows = new Map<string, {followerId: string, followingId: string, createdAt: Date}>();
   private vendorCategories = new Map<string, VendorCategory>();
   private vendorRatings = new Map<string, VendorRating>();
   private vendorSubscriptions = new Map<string, VendorSubscription>();
@@ -4734,6 +4763,169 @@ export class MemStorage implements IStorage {
       orders = orders.filter(order => order.status === status);
     }
     return orders;
+  }
+
+  // Business Posts - Social Feed Implementation
+  async getFeedPosts(location?: string, filter?: string, currentUserId?: string): Promise<BusinessPost[]> {
+    let posts = Array.from(this.businessPosts.values());
+    
+    // Apply location filter
+    if (location) {
+      posts = posts.filter(post => post.location === location);
+    }
+    
+    // Apply user filter  
+    if (filter && currentUserId) {
+      switch (filter) {
+        case "following":
+          // Get users that current user is following
+          const following = Array.from(this.follows.values())
+            .filter(follow => follow.followerId === currentUserId)
+            .map(follow => follow.followingId);
+          posts = posts.filter(post => following.includes(post.userId));
+          break;
+        case "all":
+        default:
+          // Show all posts (already loaded)
+          break;
+      }
+    }
+    
+    // Sort by creation date (newest first)
+    posts.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+    
+    return posts;
+  }
+
+  async createBusinessPost(post: InsertBusinessPost): Promise<BusinessPost> {
+    const newPost: BusinessPost = {
+      id: randomUUID(),
+      ...post,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    this.businessPosts.set(newPost.id, newPost);
+    return newPost;
+  }
+
+  async getBusinessPost(postId: string): Promise<BusinessPost | undefined> {
+    return this.businessPosts.get(postId);
+  }
+
+  async getUserPosts(userId: string): Promise<BusinessPost[]> {
+    return Array.from(this.businessPosts.values()).filter(post => post.userId === userId);
+  }
+
+  async deleteBusinessPost(postId: string): Promise<boolean> {
+    return this.businessPosts.delete(postId);
+  }
+
+  // Post Interactions Implementation
+  async likePost(postId: string, userId: string): Promise<PostLike> {
+    const newLike: PostLike = {
+      id: randomUUID(),
+      postId,
+      userId,
+      createdAt: new Date(),
+    };
+    
+    // Remove existing like if any (for toggle functionality)
+    const existingLikeKey = Array.from(this.postLikes.keys()).find(key => {
+      const like = this.postLikes.get(key);
+      return like && like.postId === postId && like.userId === userId;
+    });
+    
+    if (existingLikeKey) {
+      this.postLikes.delete(existingLikeKey);
+    }
+    
+    this.postLikes.set(newLike.id, newLike);
+    return newLike;
+  }
+
+  async unlikePost(postId: string, userId: string): Promise<void> {
+    const likeKey = Array.from(this.postLikes.keys()).find(key => {
+      const like = this.postLikes.get(key);
+      return like && like.postId === postId && like.userId === userId;
+    });
+    
+    if (likeKey) {
+      this.postLikes.delete(likeKey);
+    }
+  }
+
+  async savePost(postId: string, userId: string): Promise<PostSave> {
+    const newSave: PostSave = {
+      id: randomUUID(),
+      postId,
+      userId,
+      createdAt: new Date(),
+    };
+    
+    // Remove existing save if any (for toggle functionality)
+    const existingSaveKey = Array.from(this.postSaves.keys()).find(key => {
+      const save = this.postSaves.get(key);
+      return save && save.postId === postId && save.userId === userId;
+    });
+    
+    if (existingSaveKey) {
+      this.postSaves.delete(existingSaveKey);
+    }
+    
+    this.postSaves.set(newSave.id, newSave);
+    return newSave;
+  }
+
+  async unsavePost(postId: string, userId: string): Promise<void> {
+    const saveKey = Array.from(this.postSaves.keys()).find(key => {
+      const save = this.postSaves.get(key);
+      return save && save.postId === postId && save.userId === userId;
+    });
+    
+    if (saveKey) {
+      this.postSaves.delete(saveKey);
+    }
+  }
+
+  async hasUserLikedPost(postId: string, userId: string): Promise<boolean> {
+    return Array.from(this.postLikes.values()).some(like => 
+      like.postId === postId && like.userId === userId
+    );
+  }
+
+  async hasUserSavedPost(postId: string, userId: string): Promise<boolean> {
+    return Array.from(this.postSaves.values()).some(save => 
+      save.postId === postId && save.userId === userId
+    );
+  }
+
+  async getPostLikesCount(postId: string): Promise<number> {
+    return Array.from(this.postLikes.values()).filter(like => like.postId === postId).length;
+  }
+
+  async getPostCommentsCount(postId: string): Promise<number> {
+    return Array.from(this.postComments.values()).filter(comment => comment.postId === postId).length;
+  }
+
+  // User Following Implementation
+  async followUser(followerId: string, followingId: string): Promise<void> {
+    const followId = `${followerId}-${followingId}`;
+    this.follows.set(followId, {
+      followerId,
+      followingId,
+      createdAt: new Date()
+    });
+  }
+
+  async unfollowUser(followerId: string, followingId: string): Promise<void> {
+    const followId = `${followerId}-${followingId}`;
+    this.follows.delete(followId);
+  }
+
+  async isUserFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const followId = `${followerId}-${followingId}`;
+    return this.follows.has(followId);
   }
 
   // Authentication methods
