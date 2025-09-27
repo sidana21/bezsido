@@ -118,8 +118,7 @@ export default function Stores() {
   const filteredProducts = allProducts.filter(product =>
     product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product?.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product?.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product?.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    product?.categoryId?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
 
