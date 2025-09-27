@@ -372,7 +372,12 @@ export default function MyVendorPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button variant="outline" className="h-20 flex-col space-y-2">
+                  <Button 
+                    onClick={() => setShowMobileUpload(true)}
+                    variant="outline" 
+                    className="h-20 flex-col space-y-2"
+                    data-testid="button-add-product"
+                  >
                     <Plus className="w-6 h-6" />
                     <span>إضافة منتج</span>
                   </Button>
