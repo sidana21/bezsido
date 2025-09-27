@@ -1775,14 +1775,13 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      // Auto-publish products if they have required data
-      const shouldPublish = product.name && product.description && product.originalPrice && 
-                          (product.images && product.images.length > 0);
+      // Auto-publish products with basic requirements (name and price)
+      const shouldPublish = product.name && product.originalPrice;
       
       const newProduct = {
         id: randomUUID(),
         ...product,
-        // Auto-publish if all required fields are present
+        // Auto-publish if basic required fields are present
         status: shouldPublish ? "published" : (product.status || "draft"),
         isActive: shouldPublish ? true : (product.isActive || false),
         publishedAt: shouldPublish ? new Date() : (product.publishedAt || null),
@@ -6071,12 +6070,21 @@ export class MemStorage implements IStorage {
   async getProducts(location?: string, category?: string): Promise<Product[]> {
     let productsList = Array.from(this.products.values());
     
+    // Filter to only show active and published products in the main gallery
+    productsList = productsList.filter(product => 
+      product.isActive === true && product.status === "published"
+    );
+    
     if (location) {
-      productsList = productsList.filter(product => product.location === location);
+      // Join with vendors to filter by location since products don't have direct location
+      productsList = productsList.filter(product => {
+        const vendor = this.vendors.get(product.vendorId);
+        return vendor && vendor.location === location;
+      });
     }
     
     if (category) {
-      productsList = productsList.filter(product => product.category === category);
+      productsList = productsList.filter(product => product.categoryId === category);
     }
     
     return productsList;
@@ -6096,10 +6104,16 @@ export class MemStorage implements IStorage {
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
+    // Auto-publish products with basic requirements (name and price)
+    const shouldPublish = product.name && product.originalPrice;
+    
     const newProduct: Product = {
       id: randomUUID(),
       ...product,
-      isActive: product.isActive ?? true,
+      // Auto-publish if basic required fields are present
+      status: shouldPublish ? "published" : (product.status || "draft"),
+      isActive: shouldPublish ? true : (product.isActive || false),
+      publishedAt: shouldPublish ? new Date() : (product.publishedAt || null),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
