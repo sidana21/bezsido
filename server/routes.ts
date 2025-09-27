@@ -5501,6 +5501,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // إنشاء منشور جديد - Create New Post
+  app.post("/api/posts", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const postData = req.body;
+      
+      // التحقق من وجود محتوى المنشور
+      if (!postData.content || !postData.content.trim()) {
+        return res.status(400).json({ message: "محتوى المنشور مطلوب" });
+      }
+      
+      // إنشاء المنشور الجديد
+      const newPost = await storage.createBusinessPost({
+        userId,
+        content: postData.content.trim(),
+        images: postData.images || [],
+        videoUrl: postData.videoUrl || null,
+        postType: postData.isBusinessPost ? 'business' : 'personal',
+        businessInfo: postData.isBusinessPost && postData.productInfo ? {
+          businessName: postData.productInfo.name,
+          category: postData.productInfo.category,
+          description: postData.productInfo.description,
+          price: postData.productInfo.price,
+          inStock: postData.productInfo.inStock
+        } : null,
+        locationInfo: postData.location ? {
+          name: postData.location,
+          coordinates: null
+        } : null,
+        hashtags: postData.tags || [],
+        visibility: postData.visibility || 'public',
+        allowComments: postData.allowComments !== false,
+        allowShares: postData.allowSharing !== false,
+        status: 'published',
+        isActive: true,
+        isPinned: false
+      });
+      
+      console.log(`📝 New post created: ${newPost.id} by user ${userId}`);
+      res.status(201).json(newPost);
+    } catch (error) {
+      console.error('Error creating post:', error);
+      res.status(500).json({ message: "خطأ في إنشاء المنشور" });
+    }
+  });
+
   // تفاعل مع المنشور (إعجاب/حفظ)
   app.post("/api/posts/:postId/interactions", requireAuth, async (req: any, res) => {
     try {

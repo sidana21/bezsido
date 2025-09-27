@@ -127,9 +127,9 @@ export default function CreatePost() {
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('media', file);
         
-        const response = await fetch('/api/upload/image', {
+        const response = await fetch('/api/upload/media', {
           method: 'POST',
           body: formData,
         });
@@ -137,7 +137,7 @@ export default function CreatePost() {
         if (!response.ok) throw new Error('فشل في رفع الصورة');
         
         const data = await response.json();
-        return data.url;
+        return data.mediaUrl;
       });
 
       const urls = await Promise.all(uploadPromises);

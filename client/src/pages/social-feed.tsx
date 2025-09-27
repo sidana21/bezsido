@@ -357,7 +357,7 @@ export default function SocialFeed() {
                           <div
                             key={index}
                             className={`relative overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700 ${
-                              post.images.length === 3 && index === 0 ? 'row-span-2' : 'aspect-square'
+                              post.images && post.images.length === 3 && index === 0 ? 'row-span-2' : 'aspect-square'
                             }`}
                           >
                             <img
