@@ -2769,6 +2769,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const productData = insertProductSchema.parse({
         ...req.body,
         vendorId: userVendor.id,
+        status: "published", // تعيين المنتج كمنشور مباشرة
+        isActive: true, // تفعيل المنتج ليظهر في المعرض
+        publishedAt: new Date(), // تعيين تاريخ النشر
       });
       
       const product = await storage.createProduct(productData);
