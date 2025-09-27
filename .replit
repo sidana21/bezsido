@@ -19,10 +19,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 43493
-externalPort = 3002
-
-[[ports]]
 localPort = 43511
 externalPort = 9000
 
@@ -93,13 +89,13 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "bash -c \"echo 'y' | NODE_ENV=development npx tsx server/index.ts\""
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development npx tsx server/index.ts"
+waitForPort = 5000
 
 [agent]
 integrations = ["javascript_database:1.0.0", "javascript_sendgrid:1.0.0"]
