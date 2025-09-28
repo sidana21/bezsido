@@ -18,6 +18,7 @@ interface VendorWithOwner extends Vendor {
 export default function Stores() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStore, setSelectedStore] = useState<VendorWithOwner | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -70,7 +71,34 @@ export default function Stores() {
     },
   });
 
-  const buyNowMutation = useMutation({
+  // Add to cart mutation
+  const addToCartMutation = useMutation({
+    mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
+      return apiRequest("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      toast({
+        title: "تم الإضافة",
+        description: "تم إضافة المنتج إلى السلة بنجاح",
+      });
+      setSelectedProduct(null);
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في إضافة المنتج إلى السلة",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Contact seller mutation (for chat)
+  const contactSellerMutation = useMutation({
     mutationFn: async ({ product, sellerId }: { product: Product; sellerId: string }) => {
       // Start chat with seller
       const chatResponse = await apiRequest("/api/chats/start", {
@@ -95,6 +123,7 @@ export default function Stores() {
       return chatResponse;
     },
     onSuccess: (data: any) => {
+      setSelectedProduct(null);
       setLocation(`/chat/${data.chatId}`);
     },
     onError: () => {
@@ -516,13 +545,12 @@ export default function Stores() {
                     className="w-full mt-2 h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
-                      buyNowMutation.mutate({ product, sellerId: product.vendorId });
+                      setSelectedProduct(product);
                     }}
-                    disabled={buyNowMutation.isPending}
                     data-testid={`button-buy-now-${product.id}`}
                   >
                     <ShoppingCart className="w-3 h-3 mr-1" />
-                    اشتري الآن
+                    اشتري
                   </Button>
                 </div>
               </div>
@@ -564,6 +592,100 @@ export default function Stores() {
           </Button>
         </Link>
       </div>
+
+      {/* Product Preview Modal */}
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle>معاينة المنتج</DialogTitle>
+          </DialogHeader>
+          
+          {selectedProduct && (
+            <div className="space-y-4">
+              {/* Product Image */}
+              <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-lg">
+                {selectedProduct.images && selectedProduct.images.length > 0 ? (
+                  <img
+                    src={selectedProduct.images[0]}
+                    alt={selectedProduct.name}
+                    className="w-full h-full object-cover"
+                    data-testid="img-product-preview"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                    <Package className="w-16 h-16 text-gray-400" />
+                  </div>
+                )}
+
+                {/* Discount Badge */}
+                {selectedProduct.salePrice && parseInt(selectedProduct.salePrice) < parseInt(selectedProduct.originalPrice || selectedProduct.salePrice) && (
+                  <div className="absolute top-2 left-2">
+                    <Badge className="bg-red-500 text-white text-xs px-2 py-1 shadow-lg">
+                      خصم
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
+              {/* Product Details */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-lg text-gray-800 dark:text-white">
+                  {selectedProduct.name}
+                </h3>
+                
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {selectedProduct.description}
+                </p>
+
+                {/* Price */}
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xl text-green-600">
+                    {parseInt(selectedProduct.salePrice || selectedProduct.originalPrice || '0').toLocaleString()} دج
+                  </span>
+                  {selectedProduct.salePrice && selectedProduct.originalPrice && parseInt(selectedProduct.salePrice) < parseInt(selectedProduct.originalPrice) && (
+                    <span className="text-sm text-gray-400 line-through">
+                      {parseInt(selectedProduct.originalPrice).toLocaleString()} دج
+                    </span>
+                  )}
+                </div>
+
+                {/* Rating */}
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                  <span className="text-sm text-gray-500">4.5 (125 تقييم)</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => addToCartMutation.mutate({ productId: selectedProduct.id })}
+                  disabled={addToCartMutation.isPending}
+                  data-testid="button-add-to-cart"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  إضافة إلى السلة
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+                  onClick={() => contactSellerMutation.mutate({ 
+                    product: selectedProduct, 
+                    sellerId: selectedProduct.vendorId 
+                  })}
+                  disabled={contactSellerMutation.isPending}
+                  data-testid="button-contact-seller"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  تواصل مع البائع
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

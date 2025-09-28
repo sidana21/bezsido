@@ -1,10 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
-import { Store as StoreIcon, MapPin, Phone, Clock, Calendar, Star, Package, Shield } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useParams, useLocation } from "wouter";
+import { Store as StoreIcon, MapPin, Phone, Clock, Calendar, Star, Package, Shield, ShoppingCart, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface Store {
   id: string;
@@ -36,6 +39,9 @@ interface Product {
 
 export default function StoreProfile() {
   const { storeId } = useParams<{ storeId: string }>();
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const { data: store, isLoading: isLoadingStore } = useQuery<Store>({
     queryKey: [`/api/stores/${storeId}`],
@@ -45,6 +51,70 @@ export default function StoreProfile() {
   const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: [`/api/stores/${storeId}/products`],
     enabled: !!storeId,
+  });
+
+  // Add to cart mutation
+  const addToCartMutation = useMutation({
+    mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
+      return apiRequest("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      toast({
+        title: "تم الإضافة",
+        description: "تم إضافة المنتج إلى السلة بنجاح",
+      });
+      setSelectedProduct(null);
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في إضافة المنتج إلى السلة",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Contact seller mutation
+  const contactSellerMutation = useMutation({
+    mutationFn: async ({ product, sellerId }: { product: Product; sellerId: string }) => {
+      // Start chat with seller
+      const chatResponse = await apiRequest("/api/chats/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId: sellerId }),
+      });
+
+      // Send product message
+      const productMessage = `مرحباً، أريد شراء هذا المنتج من متجركم:\n\n📦 ${product?.name || 'منتج'}\n💰 السعر: ${parseInt(product?.price || '0').toLocaleString()} دج\n📝 ${product?.description || 'بدون وصف'}\n\nهل هذا المنتج متوفر؟`;
+      
+      await apiRequest(`/api/chats/${chatResponse.chatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: productMessage,
+          messageType: "text",
+          replyToId: null,
+        }),
+      });
+
+      return chatResponse;
+    },
+    onSuccess: (data: any) => {
+      setSelectedProduct(null);
+      setLocation(`/chat/${data.chatId}`);
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في بدء المحادثة مع المتجر",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoadingStore) {
@@ -233,8 +303,13 @@ export default function StoreProfile() {
                         {product.category}
                       </Badge>
                     </div>
-                    <Button className="w-full bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)]">
-                      تواصل مع المتجر
+                    <Button 
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => setSelectedProduct(product)}
+                      data-testid={`button-buy-${product.id}`}
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      اشتري
                     </Button>
                   </CardContent>
                 </Card>
@@ -243,6 +318,91 @@ export default function StoreProfile() {
           )}
         </CardContent>
       </Card>
+
+      {/* Product Preview Modal */}
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle>معاينة المنتج</DialogTitle>
+          </DialogHeader>
+          
+          {selectedProduct && (
+            <div className="space-y-4">
+              {/* Product Image */}
+              <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-lg">
+                {selectedProduct.imageUrl ? (
+                  <img
+                    src={selectedProduct.imageUrl}
+                    alt={selectedProduct.name}
+                    className="w-full h-full object-cover"
+                    data-testid="img-product-preview"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                    <Package className="w-16 h-16 text-gray-400" />
+                  </div>
+                )}
+              </div>
+
+              {/* Product Details */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-lg text-gray-800 dark:text-white">
+                  {selectedProduct.name}
+                </h3>
+                
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {selectedProduct.description}
+                </p>
+
+                {/* Price */}
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xl text-green-600">
+                    {parseInt(selectedProduct.price || '0').toLocaleString()} دج
+                  </span>
+                </div>
+
+                {/* Category */}
+                <Badge variant="outline" className="text-xs">
+                  {selectedProduct.category}
+                </Badge>
+
+                {/* Rating */}
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                  <span className="text-sm text-gray-500">4.5 (125 تقييم)</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => addToCartMutation.mutate({ productId: selectedProduct.id })}
+                  disabled={addToCartMutation.isPending}
+                  data-testid="button-add-to-cart"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  إضافة إلى السلة
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+                  onClick={() => contactSellerMutation.mutate({ 
+                    product: selectedProduct, 
+                    sellerId: store?.id || '' 
+                  })}
+                  disabled={contactSellerMutation.isPending}
+                  data-testid="button-contact-seller"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  تواصل مع المتجر
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
