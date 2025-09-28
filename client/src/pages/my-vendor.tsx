@@ -35,6 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import MobileProductUpload from '@/components/mobile-product-upload';
 import { useIsMobile } from '@/hooks/use-mobile';
+import ImageModal from '@/components/ui/image-modal';
 
 interface VendorCategory {
   id: string;
@@ -125,7 +126,13 @@ const vendorSchema = z.object({
 type VendorFormData = z.infer<typeof vendorSchema>;
 
 // Product Card Component
-const ProductCard = ({ product }: { product: Product }) => {
+const ProductCard = ({ 
+  product, 
+  onImageClick 
+}: { 
+  product: Product;
+  onImageClick: (images: string[], productName: string) => void;
+}) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -164,7 +171,9 @@ const ProductCard = ({ product }: { product: Product }) => {
             <img 
               src={product.images[0]} 
               alt={product.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-pointer transition-transform hover:scale-105"
+              onClick={() => onImageClick(product.images, product.name)}
+              data-testid={`image-product-${product.id}`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -244,8 +253,18 @@ const ProductCard = ({ product }: { product: Product }) => {
 export default function MyVendorPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showMobileUpload, setShowMobileUpload] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedProductImages, setSelectedProductImages] = useState<string[]>([]);
+  const [selectedProductName, setSelectedProductName] = useState<string>('');
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Handle image modal
+  const handleImageClick = (images: string[], productName: string) => {
+    setSelectedProductImages(images);
+    setSelectedProductName(productName);
+    setImageModalOpen(true);
+  };
 
   // Get vendor categories
   const { data: categories = [] } = useQuery<VendorCategory[]>({
@@ -586,7 +605,11 @@ export default function MyVendorPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {products.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard 
+                      key={product.id} 
+                      product={product} 
+                      onImageClick={handleImageClick}
+                    />
                   ))}
                 </div>
               )}
@@ -994,6 +1017,16 @@ export default function MyVendorPage() {
           />
         </div>
       )}
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        images={selectedProductImages}
+        title={selectedProductName}
+        showNavigation={true}
+        showActions={true}
+      />
     </div>
   );
 }
