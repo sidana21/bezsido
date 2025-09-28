@@ -261,9 +261,19 @@ export default function MyVendorPage() {
 
   // Handle image modal
   const handleImageClick = (images: string[], productName: string) => {
+    console.log('🖱️ Image clicked!', { images, productName });
+    
+    if (!images || images.length === 0) {
+      console.error('❌ No images provided to modal');
+      return;
+    }
+    
+    console.log('✅ Setting image modal state...');
     setSelectedProductImages(images);
     setSelectedProductName(productName);
     setImageModalOpen(true);
+    
+    console.log('✅ Image modal should open now');
   };
 
   // Get vendor categories
