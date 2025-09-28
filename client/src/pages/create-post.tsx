@@ -80,35 +80,48 @@ export default function CreatePost() {
         body: JSON.stringify(postPayload),
       });
 
-      // إذا كان منشور تجاري وفيه معلومات منتج، إنشاء منتج منفصل
-      if (data.isBusinessPost && data.productInfo) {
-        const productPayload = {
-          name: data.productInfo.name,
-          originalPrice: data.productInfo.price.toString(),
-          categoryId: data.productInfo.category,
-          description: data.productInfo.description,
-          images: data.images,
-          inStock: data.productInfo.inStock,
-          relatedPostId: response.id // ربط المنتج بالمنشور
-        };
-
-        await apiRequest("/api/products", {
-          method: "POST",
-          body: JSON.stringify(productPayload),
-        });
-      }
-
-      return response;
+      return { post: response, shouldCreateProduct: data.isBusinessPost && data.productInfo, productData: data.productInfo };
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
-      toast({
-        title: "تم النشر بنجاح! 🎉",
-        description: postData.isBusinessPost 
-          ? "تم نشر منشورك التجاري وإنشاء المنتج"
-          : "تم نشر منشورك بنجاح",
-      });
+      
+      // إنشاء المنتج منفصلاً إذا لزم الأمر
+      if (result.shouldCreateProduct && result.productData) {
+        try {
+          const productPayload = {
+            name: result.productData.name,
+            originalPrice: result.productData.price.toString(),
+            categoryId: result.productData.category,
+            description: result.productData.description,
+            images: postData.images,
+            inStock: result.productData.inStock,
+            relatedPostId: result.post.id
+          };
+
+          await apiRequest("/api/products", {
+            method: "POST",
+            body: JSON.stringify(productPayload),
+          });
+          
+          toast({
+            title: "تم النشر بنجاح! 🎉",
+            description: "تم نشر منشورك التجاري وإنشاء المنتج بنجاح",
+          });
+        } catch (productError: any) {
+          console.error('Product creation failed:', productError);
+          toast({
+            title: "تم النشر بنجاح! ⚠️",
+            description: "تم نشر المنشور ولكن فشل في إنشاء المنتج. يمكنك إنشاؤه لاحقاً",
+          });
+        }
+      } else {
+        toast({
+          title: "تم النشر بنجاح! 🎉",
+          description: "تم نشر منشورك بنجاح",
+        });
+      }
+      
       navigate("/social-feed");
     },
     onError: (error: any) => {
@@ -130,8 +143,16 @@ export default function CreatePost() {
         const formData = new FormData();
         formData.append('media', file);
         
+        // Add authentication header
+        const token = localStorage.getItem('auth_token');
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const response = await fetch('/api/upload/media', {
           method: 'POST',
+          headers,
           body: formData,
         });
         
