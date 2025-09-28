@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImageModal } from '@/components/ui/image-modal';
 import { 
   Store, 
   MapPin, 
@@ -77,6 +79,9 @@ interface Product {
 
 export default function VendorProfilePage() {
   const { vendorId } = useParams<{ vendorId: string }>();
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
 
   // Get vendor details
   const { data: vendor, isLoading: vendorLoading } = useQuery<Vendor>({
@@ -87,6 +92,12 @@ export default function VendorProfilePage() {
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ['/api/vendors', vendorId, 'products'],
   });
+
+  const handleImageClick = (images: string[], title: string) => {
+    setSelectedImages(images);
+    setSelectedImageTitle(title);
+    setImageModalOpen(true);
+  };
 
   if (vendorLoading) {
     return (
@@ -120,13 +131,36 @@ export default function VendorProfilePage() {
 
   const ProductCard = ({ product }: { product: Product }) => (
     <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer">
-      <div className="aspect-square bg-gray-100 rounded-t-lg overflow-hidden">
+      <div 
+        className="aspect-square bg-gray-100 rounded-t-lg overflow-hidden relative"
+        onClick={(e) => {
+          if (product.images && product.images.length > 0) {
+            e.stopPropagation();
+            handleImageClick(product.images, product.name);
+          }
+        }}
+      >
         {product.images && product.images.length > 0 ? (
-          <img 
-            src={product.images[0]} 
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          <>
+            <img 
+              src={product.images[0]} 
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              data-testid={`product-image-${product.id}`}
+            />
+            {/* Image count indicator */}
+            {product.images.length > 1 && (
+              <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                {product.images.length} صور
+              </div>
+            )}
+            {/* Zoom indicator */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <div className="bg-white/90 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
+                اضغط للتكبير
+              </div>
+            </div>
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Package className="h-12 w-12 text-gray-400" />
@@ -426,6 +460,16 @@ export default function VendorProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        images={selectedImages}
+        title={selectedImageTitle}
+        showNavigation={true}
+        showActions={true}
+      />
     </div>
   );
 }

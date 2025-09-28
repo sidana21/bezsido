@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ImageModal } from "@/components/ui/image-modal";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -69,6 +70,7 @@ export default function ProductDetail() {
   const [isLiked, setIsLiked] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
   // Product details query
@@ -307,10 +309,15 @@ export default function ProductDetail() {
       {/* Product Images Carousel */}
       <div 
         ref={imageContainerRef}
-        className="relative aspect-square max-h-[400px] overflow-hidden"
+        className="relative aspect-square max-h-[400px] overflow-hidden cursor-pointer group"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={() => {
+          if (productImages.length > 0) {
+            setImageModalOpen(true);
+          }
+        }}
       >
         {productImages.length > 0 ? (
           <>
@@ -321,13 +328,23 @@ export default function ProductDetail() {
               data-testid="product-main-image"
             />
             
+            {/* Zoom indicator overlay */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <div className="bg-white/90 text-gray-800 px-4 py-2 rounded-full text-sm font-medium">
+                اضغط للتكبير
+              </div>
+            </div>
+            
             {productImages.length > 1 && (
               <>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full"
-                  onClick={prevImage}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevImage();
+                  }}
                   data-testid="button-prev-image"
                 >
                   <ChevronLeft className="w-6 h-6" />
@@ -337,7 +354,10 @@ export default function ProductDetail() {
                   variant="ghost"
                   size="icon"
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full"
-                  onClick={nextImage}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextImage();
+                  }}
                   data-testid="button-next-image"
                 >
                   <ChevronRight className="w-6 h-6" />
@@ -515,6 +535,17 @@ export default function ProductDetail() {
       
       {/* Bottom spacer for fixed actions */}
       <div className="h-20"></div>
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        images={productImages}
+        currentIndex={currentImageIndex}
+        title={product.name}
+        showNavigation={true}
+        showActions={true}
+      />
     </div>
   );
 }
