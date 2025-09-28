@@ -37,7 +37,8 @@ export async function apiRequest(
   }
   
   // If body is present and no Content-Type is set, assume JSON
-  if (options.body && !headers['Content-Type'] && !headers['content-type']) {
+  // But don't set Content-Type for FormData as browser handles it automatically
+  if (options.body && !headers['Content-Type'] && !headers['content-type'] && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
   

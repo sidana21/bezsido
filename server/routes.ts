@@ -2051,49 +2051,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send audio message
-  app.post("/api/chats/:chatId/messages/audio", requireAuth, audioUpload.single('audio'), async (req: any, res) => {
+  app.post("/api/chats/:chatId/messages/audio", requireAuth, (req: any, res, next) => {
+    // Debug logging for request
+    console.log('🎙️ Audio message request received');
+    console.log('Headers:', req.headers);
+    console.log('Content-Type:', req.get('content-type'));
+    
+    audioUpload.single('audio')(req, res, (err: any) => {
+      if (err) {
+        console.error('Multer error:', err);
+        return res.status(400).json({ 
+          message: "خطأ في رفع الملف الصوتي", 
+          error: err.message 
+        });
+      }
+      next();
+    });
+  }, async (req: any, res) => {
     try {
       const { chatId } = req.params;
       const { messageType, replyToId } = req.body;
       
+      console.log('📝 Processing audio message for chat:', chatId);
+      console.log('File info:', req.file ? {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      } : 'No file');
+      
       if (!req.file) {
-        return res.status(400).json({ message: "No audio file provided" });
+        console.warn('❌ No audio file provided in request');
+        return res.status(400).json({ message: "لم يتم توفير ملف صوتي" });
+      }
+
+      if (!req.file.buffer || req.file.buffer.length === 0) {
+        console.warn('❌ Empty audio file buffer');
+        return res.status(400).json({ message: "الملف الصوتي فارغ" });
       }
 
       // Generate a unique filename for the audio
-      const audioFilename = `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.wav`;
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substr(2, 9);
+      let extension = 'wav'; // default
+      
+      if (req.file.mimetype.includes('webm')) {
+        extension = 'webm';
+      } else if (req.file.mimetype.includes('mp4')) {
+        extension = 'mp4';
+      } else if (req.file.mimetype.includes('ogg')) {
+        extension = 'ogg';
+      }
+      
+      const audioFilename = `audio_${timestamp}_${randomId}.${extension}`;
       const audioUrl = `/uploads/${audioFilename}`;
+      
+      console.log('💾 Saving audio file:', audioFilename);
       
       // Move the file to uploads directory
       const uploadDir = path.join(process.cwd(), 'uploads');
       
       // Create uploads directory if it doesn't exist
       if (!fs.existsSync(uploadDir)) {
+        console.log('📁 Creating uploads directory...');
         fs.mkdirSync(uploadDir, { recursive: true });
       }
       
-      // Move the file
-      fs.writeFileSync(path.join(uploadDir, audioFilename), req.file.buffer);
+      // Save the file
+      const filePath = path.join(uploadDir, audioFilename);
+      fs.writeFileSync(filePath, req.file.buffer);
+      
+      console.log('✅ Audio file saved successfully:', filePath);
 
       const messageData = insertMessageSchema.parse({
         chatId,
         senderId: req.userId,
-        content: null,
+        content: `رسالة صوتية`, // Default content for audio messages
         messageType: 'audio',
         audioUrl: audioUrl,
         replyToMessageId: replyToId || null,
       });
       
+      console.log('🚀 Creating message in database...');
       const message = await storage.createMessage(messageData);
       const sender = await storage.getUserById(message.senderId);
       
-      res.json({
-        ...message,
-        sender,
-      });
+      console.log('✅ Audio message created successfully:', message.id);
+      
+      // Ensure we return valid JSON
+      const response = {
+        success: true,
+        message: {
+          ...message,
+          sender,
+        }
+      };
+      
+      res.status(201).json(response);
     } catch (error) {
-      console.error('Error sending audio message:', error);
-      res.status(500).json({ message: "Failed to send audio message" });
+      console.error('❌ Error sending audio message:', error);
+      
+      // Return proper JSON error response
+      res.status(500).json({ 
+        success: false,
+        message: "فشل في إرسال الرسالة الصوتية",
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+      });
     }
   });
 
