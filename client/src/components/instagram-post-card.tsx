@@ -1,0 +1,565 @@
+import { useState, useRef, useEffect } from "react";
+import { Link } from "wouter";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, 
+  Play, Pause, Volume2, VolumeX, MapPin, Verified, Crown,
+  Send, Smile, Camera, Tag, ShoppingBag, Eye, ChevronLeft, ChevronRight
+} from "lucide-react";
+import type { User, BizChatPost } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+
+interface PostWithUser extends BizChatPost {
+  user: User;
+  isLiked?: boolean;
+  isSaved?: boolean;
+  isFollowing?: boolean;
+}
+
+interface InstagramPostCardProps {
+  post: PostWithUser;
+  currentUser?: User;
+}
+
+export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps) {
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const [showFullCaption, setShowFullCaption] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // إعجاب بالمنشور
+  const likeMutation = useMutation({
+    mutationFn: async ({ action }: { action: 'like' | 'unlike' }) => {
+      return apiRequest(`/api/posts/${post.id}/interactions`, {
+        method: "POST",
+        body: JSON.stringify({ 
+          interactionType: action === 'like' ? 'like' : 'unlike'
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+    },
+  });
+
+  // حفظ المنشور
+  const saveMutation = useMutation({
+    mutationFn: async ({ action }: { action: 'save' | 'unsave' }) => {
+      return apiRequest(`/api/posts/${post.id}/interactions`, {
+        method: "POST",
+        body: JSON.stringify({ 
+          interactionType: action === 'save' ? 'save' : 'unsave'
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+    },
+  });
+
+  // متابعة مستخدم
+  const followMutation = useMutation({
+    mutationFn: async ({ action }: { action: 'follow' | 'unfollow' }) => {
+      return apiRequest(`/api/users/${post.user.id}/follow`, {
+        method: action === 'follow' ? "POST" : "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+      toast({
+        title: "تم بنجاح",
+        description: "تم تحديث حالة المتابعة",
+      });
+    },
+  });
+
+  // إضافة تعليق
+  const addCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest(`/api/posts/${post.id}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+      setCommentText("");
+      toast({
+        title: "تم إضافة التعليق",
+        description: "تم نشر تعليقك بنجاح",
+      });
+    },
+  });
+
+  const formatTime = (timestamp: string | Date | null) => {
+    if (!timestamp) return "منذ دقائق";
+    const now = new Date();
+    const postTime = new Date(timestamp);
+    const diffInHours = Math.floor((now.getTime() - postTime.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return "منذ دقائق";
+    if (diffInHours < 24) return `منذ ${diffInHours} ساعة`;
+    if (diffInHours < 168) return `منذ ${Math.floor(diffInHours / 24)} أيام`;
+    return postTime.toLocaleDateString('ar');
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}م`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}ك`;
+    return num.toString();
+  };
+
+  const handleVideoClick = () => {
+    if (videoRef.current) {
+      if (isVideoPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsVideoPlaying(!isVideoPlaying);
+    }
+  };
+
+  const toggleVideoMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !isVideoMuted;
+      setIsVideoMuted(!isVideoMuted);
+    }
+  };
+
+  const navigateImage = (direction: 'prev' | 'next') => {
+    if (!post.images || post.images.length <= 1) return;
+    
+    if (direction === 'next') {
+      setCurrentImageIndex((prev) => 
+        prev === post.images!.length - 1 ? 0 : prev + 1
+      );
+    } else {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? post.images!.length - 1 : prev - 1
+      );
+    }
+  };
+
+  const handleDoubleClick = () => {
+    if (!post.isLiked) {
+      likeMutation.mutate({ action: 'like' });
+    }
+  };
+
+  const isLongCaption = post.content && post.content.length > 100;
+  const displayedCaption = showFullCaption || !isLongCaption 
+    ? post.content 
+    : post.content?.substring(0, 100) + "...";
+
+  return (
+    <>
+      <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 pb-2">
+          <div className="flex items-center gap-3">
+            <Link href={`/user-profile/${post.user.id}`}>
+              <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-gray-100 dark:ring-gray-700 hover:ring-green-500 transition-all duration-300">
+                <AvatarImage src={post.user.avatar || undefined} />
+                <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                  {post.user.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+            
+            <div>
+              <div className="flex items-center gap-2">
+                <Link href={`/user-profile/${post.user.id}`}>
+                  <span className="font-semibold text-sm text-gray-900 dark:text-white hover:text-green-600 cursor-pointer transition-colors">
+                    {post.user.name}
+                  </span>
+                </Link>
+                {post.user.isVerified && (
+                  <Verified className="w-4 h-4 text-blue-500 fill-current" />
+                )}
+                {post.businessInfo?.businessName && (
+                  <Crown className="w-4 h-4 text-yellow-500" />
+                )}
+              </div>
+              
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <span>{formatTime(post.createdAt)}</span>
+                {post.locationInfo?.name && (
+                  <>
+                    <span>•</span>
+                    <MapPin className="w-3 h-3" />
+                    <span>{post.locationInfo.name}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!post.isFollowing && post.user.id !== currentUser?.id && (
+              <Button
+                size="sm"
+                onClick={() => followMutation.mutate({ action: 'follow' })}
+                disabled={followMutation.isPending}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-transparent border-none p-0 h-auto"
+                data-testid={`button-follow-${post.id}`}
+              >
+                متابعة
+              </Button>
+            )}
+            
+            <Button variant="ghost" size="icon" className="w-8 h-8">
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Media Content */}
+        <div className="relative group">
+          {/* صور المنشور */}
+          {post.images && Array.isArray(post.images) && post.images.length > 0 && (
+            <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden">
+              <img
+                src={post.images[currentImageIndex]}
+                alt={`منشور ${post.user.name}`}
+                className="w-full h-full object-cover cursor-pointer"
+                onClick={() => setShowImageViewer(true)}
+                onDoubleClick={handleDoubleClick}
+                data-testid={`image-post-${post.id}`}
+              />
+              
+              {/* Navigation arrows for multiple images */}
+              {post.images.length > 1 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => navigateImage('prev')}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => navigateImage('next')}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                  
+                  {/* Dots indicator */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1">
+                    {post.images.map((_, index) => (
+                      <div
+                        key={index}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          index === currentImageIndex 
+                            ? 'bg-white' 
+                            : 'bg-white/50'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* وسوم المنتجات */}
+              {post.taggedProducts && post.taggedProducts.length > 0 && (
+                <>
+                  {post.taggedProducts.map((product, index) => (
+                    <div
+                      key={index}
+                      className="absolute w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center cursor-pointer hover:scale-110 transition-transform animate-pulse"
+                      style={{
+                        left: `${product.position.x}%`,
+                        top: `${product.position.y}%`,
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                      data-testid={`product-tag-${index}`}
+                    >
+                      <ShoppingBag className="w-3 h-3 text-gray-700" />
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* فيديو المنشور */}
+          {post.videoUrl && (
+            <div className="relative aspect-square bg-black overflow-hidden">
+              <video
+                ref={videoRef}
+                src={post.videoUrl}
+                className="w-full h-full object-cover cursor-pointer"
+                onClick={handleVideoClick}
+                onDoubleClick={handleDoubleClick}
+                loop
+                muted={isVideoMuted}
+                playsInline
+                data-testid={`video-post-${post.id}`}
+              />
+              
+              {/* Video controls */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {!isVideoPlaying && (
+                  <div className="w-16 h-16 bg-black/30 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <Play className="w-8 h-8 text-white ml-1" />
+                  </div>
+                )}
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute bottom-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-full w-8 h-8"
+                onClick={toggleVideoMute}
+              >
+                {isVideoMuted ? (
+                  <VolumeX className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        <div className="px-4 pt-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => likeMutation.mutate({ 
+                  action: post.isLiked ? 'unlike' : 'like' 
+                })}
+                disabled={likeMutation.isPending}
+                className="p-0 h-auto hover:bg-transparent"
+                data-testid={`button-like-${post.id}`}
+              >
+                <Heart className={`w-6 h-6 transition-all duration-300 ${
+                  post.isLiked 
+                    ? 'fill-current text-red-500 scale-110' 
+                    : 'text-gray-700 dark:text-gray-300 hover:text-gray-500 hover:scale-110'
+                }`} />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowComments(true)}
+                className="p-0 h-auto hover:bg-transparent"
+                data-testid={`button-comment-${post.id}`}
+              >
+                <MessageCircle className="w-6 h-6 text-gray-700 dark:text-gray-300 hover:text-gray-500 hover:scale-110 transition-all duration-300" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-0 h-auto hover:bg-transparent"
+                data-testid={`button-share-${post.id}`}
+              >
+                <Share2 className="w-6 h-6 text-gray-700 dark:text-gray-300 hover:text-gray-500 hover:scale-110 transition-all duration-300" />
+              </Button>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => saveMutation.mutate({ 
+                action: post.isSaved ? 'unsave' : 'save' 
+              })}
+              disabled={saveMutation.isPending}
+              className="p-0 h-auto hover:bg-transparent"
+              data-testid={`button-save-${post.id}`}
+            >
+              <Bookmark className={`w-6 h-6 transition-all duration-300 ${
+                post.isSaved 
+                  ? 'fill-current text-yellow-500 scale-110' 
+                  : 'text-gray-700 dark:text-gray-300 hover:text-gray-500 hover:scale-110'
+              }`} />
+            </Button>
+          </div>
+
+          {/* Likes count */}
+          {(post.likesCount || 0) > 0 && (
+            <div className="mt-2">
+              <span className="font-semibold text-sm text-gray-900 dark:text-white">
+                {formatNumber(post.likesCount || 0)} إعجاب
+              </span>
+            </div>
+          )}
+
+          {/* Caption */}
+          {post.content && (
+            <div className="mt-2 text-sm">
+              <span className="font-semibold text-gray-900 dark:text-white ml-2">
+                {post.user.name}
+              </span>
+              <span className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                {displayedCaption}
+              </span>
+              {isLongCaption && (
+                <button
+                  onClick={() => setShowFullCaption(!showFullCaption)}
+                  className="text-gray-500 hover:text-gray-700 ml-1"
+                >
+                  {showFullCaption ? 'إخفاء' : 'المزيد'}
+                </button>
+              )}
+              
+              {/* الهاشتاغات */}
+              {post.hashtags && post.hashtags.length > 0 && (
+                <div className="mt-1">
+                  {post.hashtags.map((hashtag, index) => (
+                    <span key={index} className="text-blue-600 hover:text-blue-700 cursor-pointer font-medium ml-1">
+                      #{hashtag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Comments preview */}
+          {(post.commentsCount || 0) > 0 && (
+            <button
+              onClick={() => setShowComments(true)}
+              className="mt-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              عرض جميع التعليقات البالغة {formatNumber(post.commentsCount || 0)}
+            </button>
+          )}
+
+          {/* Add comment */}
+          <div className="flex items-center gap-3 mt-3 pb-3">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={currentUser?.avatar || undefined} />
+              <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
+                {currentUser?.name?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <Input
+              placeholder="أضف تعليقاً..."
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && commentText.trim()) {
+                  addCommentMutation.mutate(commentText.trim());
+                }
+              }}
+              className="border-none bg-transparent text-sm placeholder:text-gray-400 focus-visible:ring-0 p-0"
+              data-testid={`input-comment-${post.id}`}
+            />
+            {commentText.trim() && (
+              <Button
+                size="sm"
+                onClick={() => addCommentMutation.mutate(commentText.trim())}
+                disabled={addCommentMutation.isPending}
+                className="text-blue-600 hover:text-blue-700 bg-transparent border-none p-0 h-auto font-semibold text-sm"
+              >
+                نشر
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Image Viewer Modal */}
+      <Dialog open={showImageViewer} onOpenChange={setShowImageViewer}>
+        <DialogContent className="max-w-4xl h-[90vh] p-0 bg-black border-none">
+          {post.images && post.images.length > 0 && (
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img
+                src={post.images[currentImageIndex]}
+                alt={`صورة ${currentImageIndex + 1}`}
+                className="max-w-full max-h-full object-contain"
+              />
+              
+              {post.images.length > 1 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                    onClick={() => navigateImage('prev')}
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                    onClick={() => navigateImage('next')}
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Comments Modal */}
+      <Dialog open={showComments} onOpenChange={setShowComments}>
+        <DialogContent className="max-w-lg max-h-[80vh] p-0">
+          <div className="border-b p-4">
+            <h3 className="font-semibold text-center">التعليقات</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="text-center py-8 text-gray-500">
+              لا توجد تعليقات بعد. كن أول من يعلق!
+            </div>
+          </div>
+          <div className="border-t p-4">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={currentUser?.avatar || undefined} />
+                <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
+                  {currentUser?.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <Input
+                placeholder="أضف تعليقاً..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && commentText.trim()) {
+                    addCommentMutation.mutate(commentText.trim());
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                size="sm"
+                onClick={() => addCommentMutation.mutate(commentText.trim())}
+                disabled={!commentText.trim() || addCommentMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
