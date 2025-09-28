@@ -1738,9 +1738,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot start chat with yourself" });
       }
       
-      // Check if other user exists
-      const otherUser = await storage.getUserById(otherUserId);
+      // Check if other user exists - first try as user ID, then as vendor ID
+      let actualUserId = otherUserId;
+      let otherUser = await storage.getUserById(otherUserId);
+      console.log('First lookup - trying as user ID:', otherUserId, 'Found:', !!otherUser);
+      
       if (!otherUser) {
+        // If not found as user, try to find as vendor and get the vendor's userId
+        try {
+          console.log('Trying to find vendor with ID:', otherUserId);
+          const vendor = await storage.getVendor(otherUserId);
+          console.log('Vendor lookup result:', vendor);
+          if (vendor && vendor.userId) {
+            actualUserId = vendor.userId;
+            console.log('Using vendor userId:', actualUserId);
+            otherUser = await storage.getUserById(vendor.userId);
+            console.log('Found user for vendor:', !!otherUser);
+          } else {
+            console.log('No vendor found or vendor has no userId');
+          }
+        } catch (error) {
+          console.error('Error looking up vendor:', error);
+        }
+      }
+      
+      if (!otherUser) {
+        console.log('Final result: No user found for ID:', otherUserId);
         return res.status(404).json({ message: "User not found" });
       }
       
@@ -1749,7 +1772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingChat = allChats.find(chat => 
         !chat.isGroup && 
         chat.participants.length === 2 && 
-        chat.participants.includes(otherUserId)
+        chat.participants.includes(actualUserId)
       );
       
       if (existingChat) {
@@ -1761,7 +1784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: null,
         isGroup: false,
         avatar: null,
-        participants: [req.userId, otherUserId],
+        participants: [req.userId, actualUserId],
       });
       
       const newChat = await storage.createChat(chatData);
@@ -2961,14 +2984,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cart", requireAuth, async (req: any, res) => {
     try {
+      console.log('Cart request body:', req.body);
       const cartItemData = insertCartItemSchema.parse({
         ...req.body,
         userId: req.userId,
       });
+      console.log('Parsed cart item data:', cartItemData);
       
-      const cartItem = await storage.addToCart(cartItemData.userId, cartItemData.productId, Number(cartItemData.quantity));
+      const cartItem = await storage.addToCart(cartItemData.userId, cartItemData.productId, parseInt(cartItemData.quantity));
+      console.log('Cart item added successfully:', cartItem);
       res.json(cartItem);
     } catch (error) {
+      console.error('Cart error details:', error);
       res.status(500).json({ message: "Failed to add item to cart" });
     }
   });
