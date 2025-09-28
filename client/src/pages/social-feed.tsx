@@ -95,7 +95,10 @@ export default function SocialFeed() {
   // إنشاء منشور جديد
   const createPostMutation = useMutation({
     mutationFn: async (content: string) => {
-      return apiRequest("/api/posts", {
+      console.log("Creating post with content:", content);
+      console.log("Auth token:", localStorage.getItem("auth_token"));
+      
+      const response = await apiRequest("/api/posts", {
         method: "POST",
         body: JSON.stringify({
           content: content.trim(),
@@ -106,8 +109,12 @@ export default function SocialFeed() {
           allowSharing: true
         }),
       });
+      
+      console.log("Post created successfully:", response);
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Post creation successful:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
       setShowCreatePost(false);
       setPostContent("");
@@ -117,6 +124,7 @@ export default function SocialFeed() {
       });
     },
     onError: (error: any) => {
+      console.error("Post creation failed:", error);
       toast({
         title: "خطأ في النشر",
         description: error.message || "حدث خطأ أثناء نشر المحتوى",
