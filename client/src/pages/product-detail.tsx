@@ -32,6 +32,7 @@ interface Product {
   description: string;
   price: string;
   imageUrl: string | null;
+  images?: string[];
   category: string;
   location: string;
   isActive: boolean;
@@ -195,13 +196,10 @@ export default function ProductDetail() {
     }
   };
 
-  // Sample additional images for demo
-  const productImages = [
-    product?.imageUrl,
-    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
-    "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500&h=500&fit=crop",
-    "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=500&h=500&fit=crop"
-  ].filter((url): url is string => Boolean(url));
+  // Use only actual product images
+  const productImages = (product?.images && product.images.length > 0) 
+    ? product.images 
+    : (product?.imageUrl ? [product.imageUrl] : []);
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % productImages.length);
