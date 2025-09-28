@@ -384,6 +384,10 @@ export interface IStorage {
   followUser(followerId: string, followingId: string): Promise<void>;
   unfollowUser(followerId: string, followingId: string): Promise<void>;
   isUserFollowing(followerId: string, followingId: string): Promise<boolean>;
+  getFollowerCount(userId: string): Promise<number>;
+  getFollowingCount(userId: string): Promise<number>;
+  getFollowers(userId: string): Promise<User[]>;
+  getFollowing(userId: string): Promise<User[]>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
@@ -4939,6 +4943,36 @@ export class MemStorage implements IStorage {
   async isUserFollowing(followerId: string, followingId: string): Promise<boolean> {
     const followId = `${followerId}-${followingId}`;
     return this.follows.has(followId);
+  }
+
+  async getFollowerCount(userId: string): Promise<number> {
+    return Array.from(this.follows.values())
+      .filter(follow => follow.followingId === userId).length;
+  }
+
+  async getFollowingCount(userId: string): Promise<number> {
+    return Array.from(this.follows.values())
+      .filter(follow => follow.followerId === userId).length;
+  }
+
+  async getFollowers(userId: string): Promise<User[]> {
+    const followerIds = Array.from(this.follows.values())
+      .filter(follow => follow.followingId === userId)
+      .map(follow => follow.followerId);
+    
+    return followerIds
+      .map(id => this.users.get(id))
+      .filter(user => user !== undefined) as User[];
+  }
+
+  async getFollowing(userId: string): Promise<User[]> {
+    const followingIds = Array.from(this.follows.values())
+      .filter(follow => follow.followerId === userId)
+      .map(follow => follow.followingId);
+    
+    return followingIds
+      .map(id => this.users.get(id))
+      .filter(user => user !== undefined) as User[];
   }
 
   // Authentication methods

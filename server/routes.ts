@@ -5714,6 +5714,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // الحصول على عدد المتابعين والمتابعة
+  app.get("/api/users/:userId/stats", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const followerCount = await storage.getFollowerCount(userId);
+      const followingCount = await storage.getFollowingCount(userId);
+      const postsCount = await storage.getUserBusinessPosts(userId).then(posts => posts.length);
+      
+      res.json({
+        followers: followerCount,
+        following: followingCount,
+        posts: postsCount
+      });
+    } catch (error) {
+      console.error('Error getting user stats:', error);
+      res.status(500).json({ message: "خطأ في جلب إحصائيات المستخدم" });
+    }
+  });
+
+  // الحصول على قائمة المتابعين
+  app.get("/api/users/:userId/followers", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const followers = await storage.getFollowers(userId);
+      res.json(followers);
+    } catch (error) {
+      console.error('Error getting followers:', error);
+      res.status(500).json({ message: "خطأ في جلب قائمة المتابعين" });
+    }
+  });
+
+  // الحصول على قائمة المتابعة
+  app.get("/api/users/:userId/following", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const following = await storage.getFollowing(userId);
+      res.json(following);
+    } catch (error) {
+      console.error('Error getting following:', error);
+      res.status(500).json({ message: "خطأ في جلب قائمة المتابعة" });
+    }
+  });
+
+  // التحقق من حالة المتابعة
+  app.get("/api/users/:userId/follow-status", requireAuth, async (req: any, res) => {
+    try {
+      const { userId: targetUserId } = req.params;
+      const followerId = req.userId;
+      
+      const isFollowing = await storage.isUserFollowing(followerId, targetUserId);
+      res.json({ isFollowing });
+    } catch (error) {
+      console.error('Error checking follow status:', error);
+      res.status(500).json({ message: "خطأ في التحقق من حالة المتابعة" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
