@@ -1041,14 +1041,30 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
           
           <div className="flex-1 relative">
             {isRecording && (
-              <div className={`absolute -top-12 left-0 right-0 p-2 rounded-lg text-center transition-colors duration-200 ${
-                isDraggedForCancel ? 'bg-gray-500' : 'bg-red-500'
-              } text-white`}>
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  <span className="text-sm">
-                    {isDraggedForCancel ? 'اسحب لليمين للإلغاء' : `تسجيل... ${formatRecordingTime(recordingTime)}`}
+              <div className={`absolute -top-14 left-0 right-0 p-3 rounded-xl text-center transition-all duration-300 transform ${
+                isDraggedForCancel 
+                  ? 'bg-gray-500 shadow-lg scale-105' 
+                  : 'bg-red-500 shadow-xl scale-105'
+              } text-white animate-in slide-in-from-bottom-2`}>
+                <div className="flex items-center justify-center space-x-2 space-x-reverse">
+                  <div className={`w-3 h-3 rounded-full animate-pulse ${
+                    isDraggedForCancel ? 'bg-gray-200' : 'bg-white'
+                  }`}></div>
+                  <span className="text-sm font-medium">
+                    {isDraggedForCancel 
+                      ? '← اسحب لليسار للإلغاء' 
+                      : `🎙️ تسجيل... ${formatRecordingTime(recordingTime)}`
+                    }
                   </span>
+                  {!isDraggedForCancel && (
+                    <div className="flex space-x-1 items-end">
+                      <div className="w-1 bg-white rounded-full animate-wave animation-delay-0"></div>
+                      <div className="w-1 bg-white rounded-full animate-wave animation-delay-75"></div>
+                      <div className="w-1 bg-white rounded-full animate-wave animation-delay-150"></div>
+                      <div className="w-1 bg-white rounded-full animate-wave animation-delay-300"></div>
+                      <div className="w-1 bg-white rounded-full animate-wave animation-delay-150"></div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1073,7 +1089,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
             <Button
               onClick={handleSendMessage}
               disabled={sendMessageMutation.isPending}
-              className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-2 sm:p-3 rounded-full shadow-lg mobile-touch-target transition-all duration-200"
+              className="bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white p-2 sm:p-3 rounded-full shadow-lg mobile-touch-target transition-all duration-200 transform hover:scale-105 active:scale-95"
               size="icon"
               data-testid="button-send"
             >
@@ -1089,21 +1105,25 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
                   startRecording(e);
                 }, 50); // Small debounce for better UX
               }}
+              onMouseUp={stopRecording}
+              onMouseLeave={stopRecording}
               onTouchStart={(e) => {
                 e.preventDefault();
                 debounceTimerRef.current = setTimeout(() => {
                   startRecording(e);
                 }, 50);
               }}
+              onTouchEnd={stopRecording}
+              onTouchMove={handleDragMove}
               disabled={isRequestingMic}
-              className={`mobile-touch-target rounded-full transition-all duration-150 ${
+              className={`mobile-touch-target p-2 sm:p-3 rounded-full shadow-lg transition-all duration-200 transform ${
                 isRecording
                   ? isDraggedForCancel
-                    ? "bg-gray-500 text-white hover:bg-gray-600"
-                    : "bg-red-500 text-white hover:bg-red-600 animate-pulse"
+                    ? "bg-gray-500 text-white hover:bg-gray-600 scale-110 shadow-xl animate-bounce"
+                    : "bg-red-500 text-white hover:bg-red-600 scale-110 shadow-xl animate-pulse"
                   : isRequestingMic
-                    ? "bg-blue-500 text-white opacity-75"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-600 hover:scale-105"
+                    ? "bg-blue-500 text-white opacity-75 scale-105"
+                    : "bg-[var(--whatsapp-primary)] hover:bg-[var(--whatsapp-secondary)] text-white hover:scale-110 active:scale-95 shadow-md hover:shadow-lg"
               }`}
               data-testid="button-voice"
             >
@@ -1113,7 +1133,7 @@ export function ChatArea({ chatId, onToggleSidebar }: ChatAreaProps) {
                 isDraggedForCancel ? (
                   <X className="h-5 w-5" />
                 ) : (
-                  <Square className="h-5 w-5" />
+                  <Square className="h-4 w-4" />
                 )
               ) : (
                 <Mic className="h-5 w-5" />
