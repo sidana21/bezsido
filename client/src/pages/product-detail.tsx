@@ -445,7 +445,7 @@ export default function ProductDetail() {
               
               <div className="flex items-start gap-3 mb-4">
                 <Avatar className="w-12 h-12">
-                  <AvatarImage src={product.owner.avatar || undefined} />
+                  <AvatarImage src={product.owner?.avatar || undefined} />
                   <AvatarFallback>
                     <User className="w-6 h-6" />
                   </AvatarFallback>
@@ -453,13 +453,13 @@ export default function ProductDetail() {
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-gray-900 dark:text-white">{product.owner.name}</h4>
-                    {product.owner.isVerified && (
+                    <h4 className="font-semibold text-gray-900 dark:text-white">{product.owner?.name}</h4>
+                    {product.owner?.isVerified && (
                       <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                         <span className="text-white text-xs">✓</span>
                       </div>
                     )}
-                    {product.owner.isOnline && (
+                    {product.owner?.isOnline && (
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     )}
                   </div>
@@ -467,11 +467,11 @@ export default function ProductDetail() {
                   <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
-                      <span>{product.owner.location}</span>
+                      <span>{product.owner?.location}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Phone className="w-3 h-3" />
-                      <span>{product.owner.phoneNumber}</span>
+                      <span>{product.owner?.phoneNumber}</span>
                     </div>
                   </div>
                   
