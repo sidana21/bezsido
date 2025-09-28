@@ -24,6 +24,14 @@ interface ProfileData extends User {
   postsCount: number;
   isFollowing?: boolean;
   isOwnProfile?: boolean;
+  bio?: string;
+  businessInfo?: {
+    businessName?: string;
+    category?: string;
+    location?: string;
+    website?: string;
+    phone?: string;
+  };
   businessStats?: {
     totalViews: number;
     totalLikes: number;

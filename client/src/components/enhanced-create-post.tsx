@@ -193,10 +193,10 @@ export function EnhancedCreatePost({ isOpen, onClose, currentUser }: EnhancedCre
         
         // فصل الصور عن الفيديوهات
         mediaFiles.forEach((file, index) => {
-          if (file.type === 'image') {
-            imageUrls.push(uploadedUrls[index]);
-          } else if (file.type === 'video' && !videoUrl) {
-            videoUrl = uploadedUrls[index];
+          if (file.type === 'image' && uploadedUrls.urls[index]) {
+            imageUrls.push(uploadedUrls.urls[index]);
+          } else if (file.type === 'video' && !videoUrl && uploadedUrls.urls[index]) {
+            videoUrl = uploadedUrls.urls[index];
           }
         });
       }
