@@ -5465,8 +5465,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { filter = "all", location } = req.query;
       const currentUserId = req.userId;
       
+      console.log(`🌟 Social Feed API called: location="${location}", filter="${filter}", userId=${currentUserId}`);
+      
       // Get posts from storage with proper filtering
       const posts = await storage.getFeedPosts(location, filter, currentUserId);
+      
+      console.log(`📊 getFeedPosts returned ${posts.length} posts:`, posts.map(p => ({ id: p.id, content: p.content.substring(0, 30), locationInfo: p.locationInfo })));
       
       // Enhance posts with user data and interaction status
       const enhancedPosts = await Promise.all(posts.map(async (post) => {
