@@ -167,12 +167,12 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02] hover:-translate-y-1 backdrop-blur-xl border-white/20">
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-2">
           <div className="flex items-center gap-3">
             <Link href={`/user-profile/${post.user.id}`}>
-              <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-gray-100 dark:ring-gray-700 hover:ring-green-500 transition-all duration-300">
+              <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-gradient-to-r from-pink-400 via-purple-500 to-indigo-500 hover:ring-4 hover:ring-green-500 transition-all duration-300 hover:scale-110 shadow-lg">
                 <AvatarImage src={post.user.avatar || undefined} />
                 <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
                   {post.user.name?.charAt(0)}
@@ -350,33 +350,33 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
                   action: post.isLiked ? 'unlike' : 'like' 
                 })}
                 disabled={likeMutation.isPending}
-                className="p-0 h-auto hover:bg-transparent"
+                className="p-0 h-auto hover:bg-transparent group"
                 data-testid={`button-like-${post.id}`}
               >
-                <Heart className={`w-6 h-6 transition-all duration-300 ${
+                <Heart className={`w-6 h-6 transition-all duration-500 transform ${
                   post.isLiked 
-                    ? 'fill-current text-red-500 scale-110' 
-                    : 'text-gray-700 dark:text-gray-300 hover:text-gray-500 hover:scale-110'
-                }`} />
+                    ? 'fill-current text-red-500 scale-125 animate-pulse' 
+                    : 'text-gray-700 dark:text-gray-300 hover:text-red-400 group-hover:scale-125 hover:drop-shadow-lg'
+                } hover:filter hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]`} />
               </Button>
 
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowComments(true)}
-                className="p-0 h-auto hover:bg-transparent"
+                className="p-0 h-auto hover:bg-transparent group"
                 data-testid={`button-comment-${post.id}`}
               >
-                <MessageCircle className="w-6 h-6 text-gray-700 dark:text-gray-300 hover:text-gray-500 hover:scale-110 transition-all duration-300" />
+                <MessageCircle className="w-6 h-6 text-gray-700 dark:text-gray-300 hover:text-blue-500 group-hover:scale-125 transition-all duration-500 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.6)] hover:rotate-12" />
               </Button>
 
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-0 h-auto hover:bg-transparent"
+                className="p-0 h-auto hover:bg-transparent group"
                 data-testid={`button-share-${post.id}`}
               >
-                <Share2 className="w-6 h-6 text-gray-700 dark:text-gray-300 hover:text-gray-500 hover:scale-110 transition-all duration-300" />
+                <Share2 className="w-6 h-6 text-gray-700 dark:text-gray-300 hover:text-green-500 group-hover:scale-125 transition-all duration-500 hover:drop-shadow-[0_0_8px_rgba(34,197,94,0.6)] hover:-rotate-12" />
               </Button>
             </div>
 
@@ -387,14 +387,14 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
                 action: post.isSaved ? 'unsave' : 'save' 
               })}
               disabled={saveMutation.isPending}
-              className="p-0 h-auto hover:bg-transparent"
+              className="p-0 h-auto hover:bg-transparent group"
               data-testid={`button-save-${post.id}`}
             >
-              <Bookmark className={`w-6 h-6 transition-all duration-300 ${
+              <Bookmark className={`w-6 h-6 transition-all duration-500 transform ${
                 post.isSaved 
-                  ? 'fill-current text-yellow-500 scale-110' 
-                  : 'text-gray-700 dark:text-gray-300 hover:text-gray-500 hover:scale-110'
-              }`} />
+                  ? 'fill-current text-yellow-500 scale-125 animate-bounce' 
+                  : 'text-gray-700 dark:text-gray-300 hover:text-yellow-500 group-hover:scale-125 hover:drop-shadow-lg'
+              } hover:filter hover:drop-shadow-[0_0_8px_rgba(234,179,8,0.6)]`} />
             </Button>
           </div>
 
