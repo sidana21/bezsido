@@ -5772,6 +5772,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Social Notifications API Routes - إشعارات التفاعلات الاجتماعية
+  app.get("/api/notifications/social", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
+      const notifications = await storage.getUserSocialNotifications(userId, limit, offset);
+      const unreadCount = await storage.getUnreadSocialNotificationsCount(userId);
+      
+      res.json({ 
+        notifications,
+        unreadCount,
+        hasMore: notifications.length === limit
+      });
+    } catch (error) {
+      console.error('Error getting social notifications:', error);
+      res.status(500).json({ message: "خطأ في جلب الإشعارات" });
+    }
+  });
+
+  app.get("/api/notifications/social/unread-count", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const unreadCount = await storage.getUnreadSocialNotificationsCount(userId);
+      res.json({ unreadCount });
+    } catch (error) {
+      console.error('Error getting unread notifications count:', error);
+      res.status(500).json({ message: "خطأ في جلب عدد الإشعارات" });
+    }
+  });
+
+  app.post("/api/notifications/social/:notificationId/read", requireAuth, async (req: any, res) => {
+    try {
+      const { notificationId } = req.params;
+      await storage.markSocialNotificationAsRead(notificationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ message: "خطأ في تحديث الإشعار" });
+    }
+  });
+
+  app.post("/api/notifications/social/mark-all-read", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      await storage.markAllSocialNotificationsAsRead(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ message: "خطأ في تحديث الإشعارات" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

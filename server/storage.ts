@@ -363,6 +363,14 @@ export interface IStorage {
   searchUserByEmail(email: string): Promise<User | undefined>;
   getOrders(userId?: string, status?: string): Promise<Order[]>;
   
+  // Social Notifications - إشعارات التفاعلات الاجتماعية
+  createSocialNotification(notification: InsertSocialNotification): Promise<SocialNotification>;
+  getUserSocialNotifications(userId: string, limit?: number, offset?: number): Promise<SocialNotification[]>;
+  getUnreadSocialNotificationsCount(userId: string): Promise<number>;
+  markSocialNotificationAsRead(notificationId: string): Promise<void>;
+  markAllSocialNotificationsAsRead(userId: string): Promise<void>;
+  deleteSocialNotification(notificationId: string): Promise<void>;
+  
   // Business Posts - Social Feed
   getFeedPosts(location?: string, filter?: string, currentUserId?: string): Promise<BusinessPost[]>;
   createBusinessPost(post: InsertBusinessPost): Promise<BusinessPost>;
@@ -4659,6 +4667,7 @@ export class MemStorage implements IStorage {
   private signupTokens = new Map<string, { email: string; token: string; expiresAt: Date }>();
   private serviceCategories = new Map<string, ServiceCategory>();
   private services = new Map<string, Service>();
+  private socialNotifications = new Map<string, SocialNotification>();
 
   constructor() {
     // Initialize only default features - NO MOCK DATA
@@ -4858,6 +4867,23 @@ export class MemStorage implements IStorage {
     }
     
     this.postLikes.set(newLike.id, newLike);
+
+    // إنشاء إشعار اجتماعي للإعجاب بالمنشور
+    const post = this.businessPosts.get(postId);
+    const liker = this.users.get(userId);
+    
+    if (post && liker && post.userId !== userId) { // لا نرسل إشعار إذا كان الشخص يحب منشوره
+      this.createSocialNotification({
+        userId: post.userId,
+        fromUserId: userId,
+        type: 'like',
+        postId: postId,
+        title: 'إعجاب جديد',
+        message: `${liker.name} أعجب بمنشورك`,
+        isRead: false
+      });
+    }
+    
     return newLike;
   }
 
@@ -4933,6 +4959,20 @@ export class MemStorage implements IStorage {
       followingId,
       createdAt: new Date()
     });
+
+    // إنشاء إشعار اجتماعي للمتابعة
+    const follower = this.users.get(followerId);
+    
+    if (follower && followerId !== followingId) { // لا نرسل إشعار للنفس
+      this.createSocialNotification({
+        userId: followingId,
+        fromUserId: followerId,
+        type: 'follow',
+        title: 'متابع جديد',
+        message: `${follower.name} بدأ بمتابعتك`,
+        isRead: false
+      });
+    }
   }
 
   async unfollowUser(followerId: string, followingId: string): Promise<void> {
@@ -7479,6 +7519,54 @@ export class MemStorage implements IStorage {
     };
     this.serviceCategories.set(newCategory.id, newCategory);
     return newCategory;
+  }
+
+  // Social Notifications Methods - وظائف الإشعارات الاجتماعية
+  async createSocialNotification(notification: InsertSocialNotification): Promise<SocialNotification> {
+    const newNotification: SocialNotification = {
+      id: randomUUID(),
+      ...notification,
+      createdAt: new Date(),
+    };
+    this.socialNotifications.set(newNotification.id, newNotification);
+    console.log(`🔔 إشعار اجتماعي جديد: ${notification.type} من ${notification.fromUserId} إلى ${notification.userId}`);
+    return newNotification;
+  }
+
+  async getUserSocialNotifications(userId: string, limit: number = 20, offset: number = 0): Promise<SocialNotification[]> {
+    const userNotifications = Array.from(this.socialNotifications.values())
+      .filter(notification => notification.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(offset, offset + limit);
+    return userNotifications;
+  }
+
+  async getUnreadSocialNotificationsCount(userId: string): Promise<number> {
+    const unreadCount = Array.from(this.socialNotifications.values())
+      .filter(notification => notification.userId === userId && !notification.isRead)
+      .length;
+    return unreadCount;
+  }
+
+  async markSocialNotificationAsRead(notificationId: string): Promise<void> {
+    const notification = this.socialNotifications.get(notificationId);
+    if (notification) {
+      notification.isRead = true;
+      this.socialNotifications.set(notificationId, notification);
+    }
+  }
+
+  async markAllSocialNotificationsAsRead(userId: string): Promise<void> {
+    for (const [id, notification] of this.socialNotifications.entries()) {
+      if (notification.userId === userId && !notification.isRead) {
+        notification.isRead = true;
+        this.socialNotifications.set(id, notification);
+      }
+    }
+  }
+
+  async deleteSocialNotification(notificationId: string): Promise<void> {
+    this.socialNotifications.delete(notificationId);
   }
 
 }

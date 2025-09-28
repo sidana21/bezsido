@@ -1426,11 +1426,37 @@ export const insertServiceSchema = createInsertSchema(services).omit({
   updatedAt: true,
 });
 
+// Social Notifications for likes, comments, follows
+export const socialNotifications = pgTable("social_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }), // المستقبل للإشعار
+  fromUserId: varchar("from_user_id").notNull().references(() => users.id, { onDelete: 'cascade' }), // مرسل الإشعار
+  type: text("type").notNull(), // 'like', 'comment', 'follow', 'story_like', 'story_comment'
+  postId: varchar("post_id").references(() => businessPosts.id, { onDelete: 'cascade' }), // اختياري للمنشورات
+  commentId: varchar("comment_id").references(() => postComments.id, { onDelete: 'cascade' }), // اختياري للتعليقات
+  storyId: varchar("story_id"), // اختياري للقصص
+  title: text("title").notNull(), // عنوان الإشعار
+  message: text("message").notNull(), // محتوى الإشعار
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSocialNotificationSchema = createInsertSchema(socialNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+// استخدام جدول follows الموجود بالفعل
+
 // Types for Multi-Service tables
 export type InsertServiceCategory = z.infer<typeof insertServiceCategorySchema>;
 export type ServiceCategory = typeof serviceCategories.$inferSelect;
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Service = typeof services.$inferSelect;
+
+// Social Notifications types
+export type InsertSocialNotification = z.infer<typeof insertSocialNotificationSchema>;
+export type SocialNotification = typeof socialNotifications.$inferSelect;
 
 // Business Posts and Stories types
 export type InsertBusinessPost = z.infer<typeof insertBusinessPostSchema>;
