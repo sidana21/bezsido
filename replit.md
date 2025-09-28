@@ -95,10 +95,13 @@ Preferred communication style: Simple, everyday language.
 - ✅ All dependencies installed and working correctly (React, Express, TypeScript, Tailwind, etc.)
 
 ## Project Status
-- **Development**: ✅ Fully functional in Replit environment with live preview
+- **Development**: ✅ Fully functional in Replit environment with live preview at port 5000
 - **Deployment**: ✅ Configured for autoscale deployment (npm run build → npm start)
 - **Database**: Using MemStorage for development (PostgreSQL ready for production)
 - **Admin Access**: Available via admin.json configuration (admin@bizchat.com)
 - **Features**: Business chat, commerce integration, Arabic language support
 - **UI/UX**: Mobile-responsive with WhatsApp-inspired interface and green theme
 - **Import Status**: ✅ **COMPLETE** - Ready for development and deployment
+- **Frontend**: React + TypeScript + Tailwind CSS with Arabic RTL support
+- **Backend**: Express.js + Drizzle ORM with CORS configured for all origins
+- **Host Configuration**: Frontend and backend properly configured for Replit proxy (0.0.0.0:5000)
