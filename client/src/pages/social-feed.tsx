@@ -31,6 +31,7 @@ export default function SocialFeed() {
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreatePost, setShowCreatePost] = useState(false);
+  const [postContent, setPostContent] = useState("");
 
   // جلب المستخدم الحالي
   const { data: currentUser } = useQuery<User>({
@@ -87,6 +88,39 @@ export default function SocialFeed() {
       toast({
         title: "تم بنجاح",
         description: "تم تحديث حالة المتابعة",
+      });
+    },
+  });
+
+  // إنشاء منشور جديد
+  const createPostMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest("/api/posts", {
+        method: "POST",
+        body: JSON.stringify({
+          content: content.trim(),
+          images: [],
+          isBusinessPost: false,
+          visibility: 'public',
+          allowComments: true,
+          allowSharing: true
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+      setShowCreatePost(false);
+      setPostContent("");
+      toast({
+        title: "تم النشر بنجاح! 🎉",
+        description: "تم نشر منشورك بنجاح",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ في النشر",
+        description: error.message || "حدث خطأ أثناء نشر المحتوى",
+        variant: "destructive",
       });
     },
   });
@@ -522,6 +556,8 @@ export default function SocialFeed() {
             
             <textarea
               placeholder="ماذا تريد أن تشارك؟"
+              value={postContent}
+              onChange={(e) => setPostContent(e.target.value)}
               className="w-full h-32 p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
               data-testid="textarea-post-content"
             />
@@ -543,11 +579,22 @@ export default function SocialFeed() {
               </div>
               
               <Button 
+                onClick={() => createPostMutation.mutate(postContent)}
+                disabled={!postContent.trim() || createPostMutation.isPending}
                 className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
                 data-testid="button-publish-post"
               >
-                <Send className="w-4 h-4 ml-2" />
-                نشر
+                {createPostMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2" />
+                    جارِ النشر...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 ml-2" />
+                    نشر
+                  </>
+                )}
               </Button>
             </div>
           </div>
