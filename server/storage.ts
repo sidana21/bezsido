@@ -4769,9 +4769,22 @@ export class MemStorage implements IStorage {
   async getFeedPosts(location?: string, filter?: string, currentUserId?: string): Promise<BusinessPost[]> {
     let posts = Array.from(this.businessPosts.values());
     
-    // Apply location filter
-    if (location) {
-      posts = posts.filter(post => post.location === location);
+    console.log(`📄 getFeedPosts called with location: "${location}", filter: "${filter}", total posts: ${posts.length}`);
+    
+    // Apply location filter - fix: use locationInfo.name instead of location
+    // Only filter by location if a specific location is provided and it's not empty
+    if (location && location.trim() && location !== 'undefined' && location !== 'null') {
+      const beforeFilter = posts.length;
+      posts = posts.filter(post => {
+        // Check if post has locationInfo and matches the location
+        if (post.locationInfo && typeof post.locationInfo === 'object') {
+          const locationData = post.locationInfo as any;
+          return locationData.name === location;
+        }
+        // If no locationInfo, include the post when filter is "all" or "local"
+        return filter === 'all' || filter === 'local';
+      });
+      console.log(`📍 Location filter applied: ${beforeFilter} -> ${posts.length} posts`);
     }
     
     // Apply user filter  
