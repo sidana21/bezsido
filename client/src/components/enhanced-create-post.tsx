@@ -67,31 +67,52 @@ export function EnhancedCreatePost({ isOpen, onClose, currentUser }: EnhancedCre
   });
 
   // رفع الملفات
-  const uploadFiles = async (files: MediaFile[]): Promise<string[]> => {
+  const uploadFiles = async (files: MediaFile[]): Promise<{ urls: string[], failed: string[] }> => {
     const uploadedUrls: string[] = [];
+    const failedFiles: string[] = [];
     setIsUploading(true);
+    
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      toast({
+        title: "خطأ في المصادقة",
+        description: "يرجى تسجيل الدخول أولاً",
+        variant: "destructive",
+      });
+      setIsUploading(false);
+      return { urls: [], failed: files.map(f => f.file.name) };
+    }
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const formData = new FormData();
-      formData.append('file', file.file);
+      formData.append('media', file.file);
       
       try {
         setUploadProgress(((i + 1) / files.length) * 100);
         
-        const response = await fetch('/api/upload', {
+        const response = await fetch('/api/upload/media', {
           method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formData,
         });
         
         if (!response.ok) {
-          throw new Error('فشل في رفع الملف');
+          const errorData = await response.json().catch(() => ({ message: 'فشل في رفع الملف' }));
+          throw new Error(errorData.message || 'فشل في رفع الملف');
         }
         
         const result = await response.json();
-        uploadedUrls.push(result.url);
+        if (result.mediaUrl) {
+          uploadedUrls.push(result.mediaUrl);
+        } else {
+          throw new Error('لم يتم إرجاع رابط الملف من الخادم');
+        }
       } catch (error) {
         console.error('Error uploading file:', error);
+        failedFiles.push(file.file.name);
         toast({
           title: "خطأ في رفع الملف",
           description: `فشل في رفع ${file.file.name}`,
@@ -102,7 +123,7 @@ export function EnhancedCreatePost({ isOpen, onClose, currentUser }: EnhancedCre
     
     setIsUploading(false);
     setUploadProgress(0);
-    return uploadedUrls;
+    return { urls: uploadedUrls, failed: failedFiles };
   };
 
   const handleFileSelect = (files: FileList | null, type: 'image' | 'video') => {
