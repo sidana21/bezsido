@@ -74,7 +74,26 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### September 29, 2025 - Notifications System Enhancement
+### September 29, 2025 - Enhanced Notifications and Follow System
+- ✅ Fixed critical navigation issue from notifications to user profiles:
+  - Corrected routing path from `/profile/${userId}` to `/user-profile/${userId}`
+  - Users can now successfully navigate from notifications bell to sender's profile
+  - Resolved "user not found" error when clicking on notification senders
+- ✅ Implemented real-time follower count updates:
+  - Enhanced followMutation with comprehensive cache invalidation
+  - Immediate updates to follower/following counts across all UI components
+  - Added notification system refresh when following/unfollowing users
+  - Optimized query invalidation for better performance (followers, following, stats, notifications)
+- ✅ Improved user experience with instant feedback:
+  - Follow/unfollow actions now reflect immediately in profile statistics
+  - Notification bell updates automatically when new follow notifications arrive
+  - Seamless modal closure and navigation flow between notifications and profiles
+- ✅ Architecture review confirmed all changes follow best practices:
+  - Proper query key segmentation prevents unnecessary API calls
+  - Bounded refetch scope maintains good performance
+  - Authenticated API endpoints ensure security compliance
+
+### September 29, 2025 - Notifications System Enhancement (Earlier)
 - ✅ Fixed critical notifications button functionality issue reported by user
 - ✅ Added comprehensive NotificationsSettingsModal component with Arabic UI:
   - Sound settings with volume control and test functionality

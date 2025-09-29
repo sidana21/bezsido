@@ -89,7 +89,22 @@ export default function UserProfile() {
       });
     },
     onSuccess: (_, action) => {
+      // تحديث فوري لجميع البيانات ذات الصلة
       queryClient.invalidateQueries({ queryKey: ["/api/users/profile", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "followers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "following"] });
+      
+      // تحديث إحصائيات المستخدم الحالي أيضاً إذا كان يتابع أحد
+      if (currentUser?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id, "stats"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id, "following"] });
+      }
+      
+      // تحديث قائمة الإشعارات لإظهار إشعار المتابعة الجديد
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social/unread-count"] });
+      
       toast({
         title: "تم بنجاح",
         description: action === 'follow' ? "تم متابعة المستخدم" : "تم إلغاء المتابعة",

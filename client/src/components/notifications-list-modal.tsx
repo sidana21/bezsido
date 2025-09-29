@@ -76,7 +76,7 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
 
   // دالة للانتقال إلى ملف المستخدم الشخصي
   const handleUserClick = (userId: string) => {
-    setLocation(`/profile/${userId}`);
+    setLocation(`/user-profile/${userId}`);
     onOpenChange(false);
   };
 
