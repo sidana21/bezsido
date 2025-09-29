@@ -621,23 +621,60 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
 
               {/* زر كتم الصوت (للفيديوهات فقط) */}
               {post.videoUrl && (
-                <Button
-                  onClick={toggleVideoMute}
-                  className="w-14 h-14 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 p-0 transition-all duration-300 hover:scale-110"
-                >
-                  {isVideoMuted ? (
-                    <VolumeX className="w-8 h-8 text-white" />
-                  ) : (
-                    <Volume2 className="w-8 h-8 text-white" />
-                  )}
-                </Button>
+                <div className="flex flex-col items-center">
+                  <Button
+                    onClick={toggleVideoMute}
+                    className={`w-14 h-14 rounded-full backdrop-blur-md border-2 p-0 transition-all duration-300 hover:scale-110 ${
+                      isVideoMuted 
+                        ? 'bg-red-500/80 hover:bg-red-600/80 border-red-400' 
+                        : 'bg-green-500/80 hover:bg-green-600/80 border-green-400'
+                    }`}
+                    data-testid={`button-mute-${post.id}`}
+                  >
+                    {isVideoMuted ? (
+                      <VolumeX className="w-8 h-8 text-white" />
+                    ) : (
+                      <Volume2 className="w-8 h-8 text-white" />
+                    )}
+                  </Button>
+                  <span className="text-white text-xs mt-1 font-semibold">
+                    {isVideoMuted ? 'مكتوم' : 'صوت'}
+                  </span>
+                </div>
               )}
             </div>
           </div>
         </div>
 
         {/* أزرار إضافية في الأعلى */}
-        <div className="absolute top-4 right-4 z-20">
+        <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start">
+          {/* زر كتم الصوت في الأعلى (للفيديوهات) */}
+          {post.videoUrl && (
+            <Button
+              onClick={toggleVideoMute}
+              className={`px-4 py-2 rounded-full backdrop-blur-md border-2 transition-all duration-300 hover:scale-105 shadow-lg ${
+                isVideoMuted 
+                  ? 'bg-red-500/90 hover:bg-red-600/90 border-red-300 text-white' 
+                  : 'bg-green-500/90 hover:bg-green-600/90 border-green-300 text-white'
+              }`}
+              data-testid={`button-mute-top-${post.id}`}
+            >
+              <div className="flex items-center gap-2">
+                {isVideoMuted ? (
+                  <>
+                    <VolumeX className="w-5 h-5" />
+                    <span className="font-bold text-sm">مكتوم الصوت</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-5 h-5" />
+                    <span className="font-bold text-sm">تشغيل الصوت</span>
+                  </>
+                )}
+              </div>
+            </Button>
+          )}
+          
           <Button variant="ghost" size="icon" className="w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white">
             <MoreHorizontal className="w-6 h-6" />
           </Button>
