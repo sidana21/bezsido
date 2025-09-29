@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
   Camera, Video, Music, Tag, MapPin, Smile, X, Plus,
@@ -392,15 +393,24 @@ export function EnhancedCreatePost({ isOpen, onClose, currentUser }: EnhancedCre
                 onChange={(e) => handleFileSelect(e.target.files, 'image')}
                 className="hidden"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                data-testid="button-add-images"
-              >
-                <Camera className="w-5 h-5" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                      data-testid="button-add-images"
+                    >
+                      <Camera className="w-5 h-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>إضافة صور 📸</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               <input
                 ref={videoInputRef}
@@ -410,15 +420,24 @@ export function EnhancedCreatePost({ isOpen, onClose, currentUser }: EnhancedCre
                 onChange={(e) => handleFileSelect(e.target.files, 'video')}
                 className="hidden"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => videoInputRef.current?.click()}
-                className="text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                data-testid="button-add-video"
-              >
-                <Video className="w-5 h-5" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => videoInputRef.current?.click()}
+                      className="text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                      data-testid="button-add-video"
+                    >
+                      <Video className="w-5 h-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>إضافة فيديوهات 🎥</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               <Button
                 variant="ghost"
