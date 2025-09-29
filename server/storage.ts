@@ -385,9 +385,11 @@ export interface IStorage {
   unlikePost(postId: string, userId: string): Promise<void>;
   savePost(postId: string, userId: string): Promise<PostSave>;
   unsavePost(postId: string, userId: string): Promise<void>;
+  viewPost(postId: string, userId: string): Promise<void>;
   hasUserLikedPost(postId: string, userId: string): Promise<boolean>;
   hasUserSavedPost(postId: string, userId: string): Promise<boolean>;
   getPostLikesCount(postId: string): Promise<number>;
+  getPostViewsCount(postId: string): Promise<number>;
   getPostCommentsCount(postId: string): Promise<number>;
   getPostComments(postId: string, limit?: number, offset?: number): Promise<any[]>;
   createPostComment(comment: any): Promise<any>;
@@ -4654,6 +4656,7 @@ export class MemStorage implements IStorage {
   private businessPosts = new Map<string, BusinessPost>();
   private postLikes = new Map<string, PostLike>();
   private postSaves = new Map<string, PostSave>();
+  private postViews = new Map<string, {id: string, postId: string, userId: string, createdAt: Date}>();
   private postComments = new Map<string, PostComment>();
   private follows = new Map<string, {followerId: string, followingId: string, createdAt: Date}>();
   private vendorCategories = new Map<string, VendorCategory>();
@@ -4949,6 +4952,37 @@ export class MemStorage implements IStorage {
     if (saveKey) {
       this.postSaves.delete(saveKey);
     }
+  }
+
+  async viewPost(postId: string, userId: string): Promise<void> {
+    // Check if this user has already viewed this post to avoid duplicate views
+    const existingView = Array.from(this.postViews.values()).find(view => 
+      view.postId === postId && view.userId === userId
+    );
+    
+    // Only add view if user hasn't viewed this post before
+    if (!existingView) {
+      const newView = {
+        id: randomUUID(),
+        postId,
+        userId,
+        createdAt: new Date(),
+      };
+      
+      this.postViews.set(newView.id, newView);
+      
+      // تحديث عداد المشاهدات في المنشور
+      const post = this.businessPosts.get(postId);
+      if (post) {
+        const currentViewsCount = await this.getPostViewsCount(postId);
+        const updatedPost = { ...post, viewsCount: currentViewsCount };
+        this.businessPosts.set(postId, updatedPost);
+      }
+    }
+  }
+
+  async getPostViewsCount(postId: string): Promise<number> {
+    return Array.from(this.postViews.values()).filter(view => view.postId === postId).length;
   }
 
   async hasUserLikedPost(postId: string, userId: string): Promise<boolean> {

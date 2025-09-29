@@ -35,7 +35,9 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const [showFullCaption, setShowFullCaption] = useState(false);
+  const [hasBeenViewed, setHasBeenViewed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const postRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -109,6 +111,51 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
     },
   });
 
+  // تتبع مشاهدة المنشور
+  const viewMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/posts/${post.id}/view`, {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+    },
+  });
+
+  // تتبع المشاهدة باستخدام Intersection Observer
+  useEffect(() => {
+    if (!postRef.current || hasBeenViewed || !currentUser) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // إذا كان المنشور مرئي بنسبة 50% أو أكثر لمدة 1 ثانية
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            const timer = setTimeout(() => {
+              if (!hasBeenViewed && entry.isIntersecting) {
+                setHasBeenViewed(true);
+                viewMutation.mutate();
+              }
+            }, 1000); // انتظار ثانية واحدة قبل تسجيل المشاهدة
+            
+            return () => clearTimeout(timer);
+          }
+        });
+      },
+      {
+        threshold: 0.5, // 50% من المنشور يجب أن يكون مرئي
+        rootMargin: '0px' // بدون هامش إضافي
+      }
+    );
+
+    observer.observe(postRef.current);
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasBeenViewed, currentUser, viewMutation]);
+
   const formatTime = (timestamp: string | Date | null) => {
     if (!timestamp) return "منذ دقائق";
     const now = new Date();
@@ -173,7 +220,10 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02] hover:-translate-y-1 backdrop-blur-xl border-white/20">
+      <div 
+        ref={postRef}
+        className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02] hover:-translate-y-1 backdrop-blur-xl border-white/20"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-2">
           <div className="flex items-center gap-3">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,10 @@ import { Link, useLocation } from "wouter";
 import {
   Plus, Search, TrendingUp, MapPin, Tag, 
   ShoppingBag, Users, Camera, 
-  Sparkles, ArrowLeft, Bell, BellDot
+  Sparkles, ArrowLeft, Bell, BellDot, X, Clock
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
 import type { User, BizChatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { InstagramPostCard } from "@/components/instagram-post-card";
@@ -29,6 +31,8 @@ export default function SocialFeed() {
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreatePost, setShowCreatePost] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   // جلب المستخدم الحالي
   const { data: currentUser } = useQuery<User>({
@@ -49,6 +53,53 @@ export default function SocialFeed() {
     enabled: !!currentUser,
     refetchInterval: 10000, // تحديث كل 10 ثوانِ
   });
+
+  // جلب قائمة الإشعارات
+  const { data: notifications = [] } = useQuery<Array<{
+    id: string;
+    type: string;
+    fromUserId: string;
+    fromUserName?: string;
+    fromUserAvatar?: string;
+    message: string;
+    title: string;
+    createdAt: string;
+    isRead: boolean;
+  }>>({
+    queryKey: ["/api/notifications/social"],
+    enabled: !!currentUser && showNotifications,
+    refetchInterval: showNotifications ? 5000 : false,
+  });
+
+  // إغلاق الإشعارات عند الضغط خارج القائمة
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showNotifications]);
+
+  // دالة لتحويل نوع الإشعار إلى أيقونة
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'like':
+        return '❤️';
+      case 'comment':
+        return '💬';
+      case 'follow':
+        return '👥';
+      default:
+        return '🔔';
+    }
+  };
 
 
 
@@ -110,10 +161,11 @@ export default function SocialFeed() {
 
             <div className="flex items-center gap-3">
               {/* أيقونة الإشعارات */}
-              <div className="relative">
+              <div className="relative" ref={notificationRef}>
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => setShowNotifications(!showNotifications)}
                   className="relative w-9 h-9 hover:bg-green-50 dark:hover:bg-green-900/20 border border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-600 transition-all duration-300"
                   data-testid="button-notifications"
                 >
@@ -128,6 +180,80 @@ export default function SocialFeed() {
                     <Bell className="w-5 h-5 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors" />
                   )}
                 </Button>
+                
+                {/* قائمة الإشعارات */}
+                {showNotifications && (
+                  <Card className="absolute left-0 top-12 w-96 max-h-96 overflow-y-auto z-50 shadow-xl border-2 border-green-100 dark:border-green-800 animate-in slide-in-from-top-2 fade-in-0 duration-200">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-green-700 dark:text-green-300">الإشعارات</h3>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-6 h-6 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          onClick={() => setShowNotifications(false)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      {notifications.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                          <p>لا توجد إشعارات جديدة</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {notifications.slice(0, 10).map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                                notification.isRead 
+                                  ? 'bg-gray-50 dark:bg-gray-800/50' 
+                                  : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                              }`}
+                            >
+                              <div className="flex-shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center text-white text-lg">
+                                  {getNotificationIcon(notification.type)}
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                                    {notification.fromUserName || 'مستخدم'}
+                                  </span>
+                                  {!notification.isRead && (
+                                    <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
+                                  {notification.message}
+                                </p>
+                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                  <Clock className="w-3 h-3" />
+                                  {formatDistanceToNow(new Date(notification.createdAt), { 
+                                    addSuffix: true, 
+                                    locale: ar 
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {notifications.length > 10 && (
+                            <div className="text-center pt-2">
+                              <span className="text-sm text-gray-500 dark:text-gray-400">
+                                و {notifications.length - 10} إشعار آخر...
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               <Button

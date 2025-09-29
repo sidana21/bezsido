@@ -5693,6 +5693,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // تتبع مشاهدة المنشور
+  app.post("/api/posts/:postId/view", requireAuth, async (req: any, res) => {
+    try {
+      const { postId } = req.params;
+      const userId = req.userId;
+      
+      // Verify post exists
+      const post = await storage.getBusinessPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "المنشور غير موجود" });
+      }
+      
+      // Don't track views for user's own posts
+      if (post.userId === userId) {
+        return res.json({ success: true, message: "تم تسجيل المشاهدة" });
+      }
+      
+      // Track the view (this should increment the view count)
+      await storage.viewPost(postId, userId);
+      
+      res.json({ success: true, message: "تم تسجيل المشاهدة" });
+    } catch (error) {
+      console.error('Error tracking post view:', error);
+      res.status(500).json({ message: "خطأ في تسجيل مشاهدة المنشور" });
+    }
+  });
+
   // متابعة مستخدم
   app.post("/api/users/:userId/follow", requireAuth, async (req: any, res) => {
     try {
