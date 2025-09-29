@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { FeaturesProvider } from "@/hooks/use-features";
+import { useNotifications } from "@/hooks/use-notifications";
 import { Component, ErrorInfo, ReactNode } from "react";
 import Chat from "@/pages/chat";
 import Status from "@/pages/status";
@@ -96,6 +97,13 @@ class ErrorBoundary extends Component<Props, State> {
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const [location] = useLocation();
+  
+  // إعادة تفعيل نظام الإشعارات العام للتطبيق
+  useNotifications({
+    enableSound: true,
+    enableBrowserNotifications: true,
+    soundVolume: 0.6
+  });
 
   if (isLoading) {
     return (
