@@ -387,6 +387,9 @@ export interface IStorage {
   hasUserSavedPost(postId: string, userId: string): Promise<boolean>;
   getPostLikesCount(postId: string): Promise<number>;
   getPostCommentsCount(postId: string): Promise<number>;
+  getPostComments(postId: string, limit?: number, offset?: number): Promise<any[]>;
+  createPostComment(comment: any): Promise<any>;
+  getPostById(postId: string): Promise<BusinessPost | undefined>;
   
   // User Following
   followUser(followerId: string, followingId: string): Promise<void>;
@@ -4949,6 +4952,36 @@ export class MemStorage implements IStorage {
 
   async getPostCommentsCount(postId: string): Promise<number> {
     return Array.from(this.postComments.values()).filter(comment => comment.postId === postId).length;
+  }
+
+  async getPostComments(postId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    const comments = Array.from(this.postComments.values())
+      .filter(comment => comment.postId === postId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(offset, offset + limit);
+    
+    return comments;
+  }
+
+  async createPostComment(commentData: any): Promise<any> {
+    const comment = {
+      id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      postId: commentData.postId,
+      userId: commentData.userId,
+      content: commentData.content,
+      likesCount: 0,
+      repliesCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.postComments.set(comment.id, comment);
+    console.log(`💬 Comment created: ${comment.id} on post ${commentData.postId}`);
+    return comment;
+  }
+
+  async getPostById(postId: string): Promise<BusinessPost | undefined> {
+    return this.getBusinessPost(postId);
   }
 
   // User Following Implementation

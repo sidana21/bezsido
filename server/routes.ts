@@ -5661,6 +5661,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (interactionType) {
         case "like":
           result = await storage.likePost(postId, userId);
+          // Create notification for post owner (if not liking own post)
+          if (post.userId !== userId) {
+            await storage.createSocialNotification({
+              userId: post.userId,
+              triggeredByUserId: userId,
+              notificationType: 'like',
+              postId: postId,
+              message: 'أعجب بمنشورك',
+              isRead: false
+            });
+          }
           break;
         case "unlike":
           await storage.unlikePost(postId, userId);
@@ -5693,6 +5704,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.followUser(followerId, targetUserId);
+      
+      // Create notification for the followed user
+      await storage.createSocialNotification({
+        userId: targetUserId,
+        triggeredByUserId: followerId,
+        notificationType: 'follow',
+        message: 'بدأ بمتابعتك',
+        isRead: false
+      });
+      
       res.json({ success: true, message: "تم بدء المتابعة بنجاح" });
     } catch (error) {
       console.error('Error following user:', error);
@@ -5823,6 +5844,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       res.status(500).json({ message: "خطأ في تحديث الإشعارات" });
+    }
+  });
+
+  // Post Comments API - نظام التعليقات على المنشورات
+  app.get("/api/posts/:postId/comments", requireAuth, async (req: any, res) => {
+    try {
+      const { postId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
+      const comments = await storage.getPostComments(postId, limit, offset);
+      
+      // Enhance comments with user data
+      const enhancedComments = await Promise.all(comments.map(async (comment) => {
+        const user = await storage.getUserById(comment.userId);
+        return {
+          ...comment,
+          user: user ? {
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar,
+            isVerified: user.isVerified
+          } : null
+        };
+      }));
+      
+      res.json(enhancedComments);
+    } catch (error) {
+      console.error('Error getting post comments:', error);
+      res.status(500).json({ message: "خطأ في جلب التعليقات" });
+    }
+  });
+
+  app.post("/api/posts/:postId/comments", requireAuth, async (req: any, res) => {
+    try {
+      const { postId } = req.params;
+      const { content } = req.body;
+      const userId = req.userId;
+      
+      if (!content || !content.trim()) {
+        return res.status(400).json({ message: "محتوى التعليق مطلوب" });
+      }
+      
+      // Verify post exists
+      const post = await storage.getPostById(postId);
+      if (!post) {
+        return res.status(404).json({ message: "المنشور غير موجود" });
+      }
+      
+      // Create comment
+      const commentData = {
+        postId,
+        userId,
+        content: content.trim()
+      };
+      
+      const comment = await storage.createPostComment(commentData);
+      
+      // Create notification for post owner (if not commenting on own post)
+      if (post.userId !== userId) {
+        await storage.createSocialNotification({
+          userId: post.userId,
+          triggeredByUserId: userId,
+          notificationType: 'comment',
+          postId: postId,
+          message: 'علق على منشورك',
+          isRead: false
+        });
+      }
+      
+      // Get comment with user data
+      const user = await storage.getUserById(userId);
+      const enhancedComment = {
+        ...comment,
+        user: user ? {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          isVerified: user.isVerified
+        } : null
+      };
+      
+      res.json(enhancedComment);
+    } catch (error) {
+      console.error('Error creating comment:', error);
+      res.status(500).json({ message: "خطأ في إضافة التعليق" });
     }
   });
 
