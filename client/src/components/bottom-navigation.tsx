@@ -1,32 +1,19 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
-import { MessageSquare, Users, Phone, TrendingUp, Store, ShoppingCart, Sparkles, MapPin, Camera, Bell, BellDot } from "lucide-react";
+import { MessageSquare, Users, Phone, TrendingUp, Store, ShoppingCart, Sparkles, MapPin, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useFeatures } from "@/hooks/use-features";
-import { useNotifications } from "@/hooks/use-notifications";
-import { NotificationsSettingsModal } from "./notifications-settings-modal";
-import { NotificationsListModal } from "./notifications-list-modal";
 
 export function BottomNavigation() {
   const [location] = useLocation();
   const { isFeatureEnabled } = useFeatures();
-  const [showNotificationsSettings, setShowNotificationsSettings] = useState(false);
-  const [showNotificationsList, setShowNotificationsList] = useState(false);
   
   const { data: cartItems = [] } = useQuery<any[]>({
     queryKey: ["/api/cart"],
   });
 
-  // استخدام نظام الإشعارات الجديد (دردشة + اجتماعية)
-  const { totalUnreadCount, socialUnreadCount } = useNotifications({
-    enableSound: true,
-    enableBrowserNotifications: true,
-    soundVolume: 0.6
-  });
 
   const allNavItems = [
     {
@@ -105,34 +92,6 @@ export function BottomNavigation() {
         {/* خلفية متدرجة جميلة */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5 dark:from-blue-500/10 dark:via-purple-500/10 dark:to-pink-500/10"></div>
         
-        {/* شريط الإشعارات العلوي */}
-        <div className="relative px-4 py-2 border-b border-gray-200/50 dark:border-gray-700/50">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-              بيز شات
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowNotificationsList(true)}
-              className="h-8 px-2 hover:bg-gray-100/80 dark:hover:bg-gray-800/80 relative"
-              data-testid="button-notifications-list"
-            >
-              {totalUnreadCount > 0 ? (
-                <BellDot className="h-4 w-4 text-emerald-600" />
-              ) : (
-                <Bell className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              )}
-              {totalUnreadCount > 0 && (
-                <div className="absolute -top-1 -right-1">
-                  <Badge className="bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center p-0 font-bold">
-                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                  </Badge>
-                </div>
-              )}
-            </Button>
-          </div>
-        </div>
         
         <div className="relative px-1">
         <nav className="flex justify-around items-center h-18 min-h-[72px] py-1">
@@ -230,21 +189,6 @@ export function BottomNavigation() {
         <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-20"></div>
       </div>
       
-      {/* قائمة الإشعارات */}
-      <NotificationsListModal
-        open={showNotificationsList}
-        onOpenChange={setShowNotificationsList}
-        onOpenSettings={() => {
-          setShowNotificationsList(false);
-          setShowNotificationsSettings(true);
-        }}
-      />
-      
-      {/* حوار إعدادات الإشعارات */}
-      <NotificationsSettingsModal
-        open={showNotificationsSettings}
-        onOpenChange={setShowNotificationsSettings}
-      />
     </>
   );
 }
