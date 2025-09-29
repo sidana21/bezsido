@@ -17,6 +17,7 @@ export function useNotifications(options: NotificationOptions = {}) {
 
   const soundRef = useRef<HTMLAudioElement | null>(null);
   const lastUnreadCountRef = useRef<number>(0);
+  const lastSocialUnreadCountRef = useRef<number>(0);
   const queryClient = useQueryClient();
   const hasUserInteractedRef = useRef<boolean>(false);
 
@@ -98,6 +99,23 @@ export function useNotifications(options: NotificationOptions = {}) {
     refetchOnWindowFocus: true,
   });
 
+  // الحصول على عدد الإشعارات الاجتماعية غير المقروءة
+  const { data: socialUnreadCountData } = useQuery<{ unreadCount: number }>({
+    queryKey: ['/api/notifications/social/unread-count'],
+    refetchInterval: 3000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    retry: false, // تجنب إعادة المحاولة عند فشل الطلب
+  });
+
+  // الحصول على آخر الإشعارات الاجتماعية لعرض التفاصيل
+  const { data: recentSocialNotifications } = useQuery<Array<{id: string, type: string, fromUserId: string, message: string, title: string, createdAt: string}>>({
+    queryKey: ['/api/notifications/social'],
+    refetchInterval: 5000, // تحديث كل 5 ثواني للإشعارات الاجتماعية
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+  });
+
   const playNotificationSound = useCallback(() => {
     if (enableSound && soundRef.current && hasUserInteractedRef.current) {
       // إعادة تعيين الصوت إلى البداية
@@ -172,12 +190,64 @@ export function useNotifications(options: NotificationOptions = {}) {
     }
   }, [enableBrowserNotifications]);
 
-  // تشغيل الإشعارات عند تغيير عدد الرسائل غير المقروءة
+  const showSocialBrowserNotification = useCallback((notification: {type: string, message: string, title: string}) => {
+    if (enableBrowserNotifications && 'Notification' in window && Notification.permission === 'granted') {
+      let title = '';
+      let body = notification.message;
+      let icon = '🔔';
+
+      // تحديد نوع الإشعار والأيقونة المناسبة
+      switch (notification.type) {
+        case 'like':
+          title = '👍 إعجاب جديد';
+          icon = '👍';
+          break;
+        case 'comment':
+          title = '💬 تعليق جديد';
+          icon = '💬';
+          break;
+        case 'follow':
+          title = '👥 متابع جديد';
+          icon = '👥';
+          break;
+        default:
+          title = '🔔 إشعار جديد';
+      }
+
+      const browserNotification = new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        tag: 'bizchat-social', // لتجنب تكرار الإشعارات الاجتماعية
+        requireInteraction: false,
+        silent: false,
+      });
+
+      // إغلاق الإشعار تلقائياً بعد 5 ثواني
+      setTimeout(() => {
+        browserNotification.close();
+      }, 5000);
+
+      // التركيز على النافذة عند النقر على الإشعار
+      browserNotification.onclick = () => {
+        window.focus();
+        browserNotification.close();
+      };
+    }
+  }, [enableBrowserNotifications]);
+
+  // تشغيل الإشعارات عند تغيير عدد الرسائل غير المقروءة أو الإشعارات الاجتماعية
   useEffect(() => {
     try {
       const currentUnreadCount = unreadData?.unreadCount || 0;
+      const currentSocialUnreadCount = socialUnreadCountData?.unreadCount || 0;
+      const totalUnreadCount = currentUnreadCount + currentSocialUnreadCount;
+      
       const latestMessage = recentMessages && Array.isArray(recentMessages) && recentMessages.length > 0 
         ? recentMessages[recentMessages.length - 1] 
+        : undefined;
+        
+      const latestSocialNotification = recentSocialNotifications && Array.isArray(recentSocialNotifications) && recentSocialNotifications.length > 0
+        ? recentSocialNotifications[0] // الأحدث أولاً
         : undefined;
       
       // إذا ازداد عدد الرسائل غير المقروءة
@@ -199,11 +269,31 @@ export function useNotifications(options: NotificationOptions = {}) {
         }
       }
       
+      // إذا ازداد عدد الإشعارات الاجتماعية غير المقروءة
+      if (currentSocialUnreadCount > lastSocialUnreadCountRef.current && currentSocialUnreadCount > 0 && latestSocialNotification) {
+        console.log('🔔 إشعار اجتماعي جديد، تشغيل الإشعار...');
+        
+        // تشغيل الصوت بشكل آمن
+        try {
+          playNotificationSound();
+        } catch (soundError) {
+          console.warn('تعذر تشغيل صوت الإشعار:', soundError);
+        }
+        
+        // إظهار إشعار المتصفح للإشعارات الاجتماعية
+        try {
+          showSocialBrowserNotification(latestSocialNotification);
+        } catch (notificationError) {
+          console.warn('تعذر إظهار إشعار المتصفح الاجتماعي:', notificationError);
+        }
+      }
+      
       lastUnreadCountRef.current = currentUnreadCount;
+      lastSocialUnreadCountRef.current = currentSocialUnreadCount;
     } catch (error) {
       console.error('خطأ في معالجة الإشعارات:', error);
     }
-  }, [unreadData?.unreadCount, recentMessages, playNotificationSound, showBrowserNotification]);
+  }, [unreadData?.unreadCount, socialUnreadCountData?.unreadCount, recentMessages, recentSocialNotifications, playNotificationSound, showBrowserNotification, showSocialBrowserNotification]);
 
   // تنظيف الموارد
   useEffect(() => {
@@ -217,10 +307,16 @@ export function useNotifications(options: NotificationOptions = {}) {
 
   return {
     unreadCount: unreadData?.unreadCount || 0,
+    socialUnreadCount: socialUnreadCountData?.unreadCount || 0,
+    totalUnreadCount: (unreadData?.unreadCount || 0) + (socialUnreadCountData?.unreadCount || 0),
+    socialNotifications: recentSocialNotifications || [],
     playNotificationSound,
     showBrowserNotification,
+    showSocialBrowserNotification,
     refreshUnreadCount: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/chats/unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/social/unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/social'] });
     }
   };
 }

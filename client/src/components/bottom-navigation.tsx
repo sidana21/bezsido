@@ -15,8 +15,8 @@ export function BottomNavigation() {
     queryKey: ["/api/cart"],
   });
 
-  // استخدام نظام الإشعارات الجديد
-  const { unreadCount } = useNotifications({
+  // استخدام نظام الإشعارات الجديد (دردشة + اجتماعية)
+  const { totalUnreadCount, socialUnreadCount } = useNotifications({
     enableSound: true,
     enableBrowserNotifications: true,
     soundVolume: 0.6
@@ -29,7 +29,7 @@ export function BottomNavigation() {
       href: "/",
       isActive: location === "/",
       featureId: "messaging",
-      badge: unreadCount > 0 ? unreadCount : undefined,
+      badge: totalUnreadCount > 0 ? totalUnreadCount : undefined,
       color: "from-blue-500 to-cyan-600",
       activeColor: "from-blue-600 to-cyan-700"
     },
@@ -77,6 +77,7 @@ export function BottomNavigation() {
       href: "/social-feed",
       isActive: location === "/social-feed" || location.startsWith("/profile/"),
       featureId: "social_feed",
+      badge: socialUnreadCount > 0 ? socialUnreadCount : undefined,
       color: "from-purple-500 to-pink-600",
       activeColor: "from-purple-600 to-pink-700"
     },

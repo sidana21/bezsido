@@ -1181,8 +1181,8 @@ export const postCommentsAdvanced = pgTable("post_comments_advanced", {
   gifUrl: text("gif_url"), // GIF في التعليق
   stickerUrl: text("sticker_url"), // ملصق
   
-  // تعليق على تعليق
-  parentCommentId: varchar("parent_comment_id").references(() => postCommentsAdvanced.id),
+  // تعليق على تعليق - using string reference instead of self-reference
+  parentCommentId: varchar("parent_comment_id"),
   replyLevel: integer("reply_level").default(0), // مستوى الرد
   
   // حالة التعليق

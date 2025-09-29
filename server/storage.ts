@@ -84,10 +84,12 @@ import {
   type PostComment,
   type InsertPostComment,
   type StoryView,
-  type InsertStoryView
+  type InsertStoryView,
+  type SocialNotification,
+  type InsertSocialNotification
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, storyViews } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, storyViews, socialNotifications } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and } from 'drizzle-orm';
 

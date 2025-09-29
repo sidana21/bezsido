@@ -51,6 +51,8 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social"] });
     },
   });
 
@@ -78,6 +80,8 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social"] });
       toast({
         title: "تم بنجاح",
         description: "تم تحديث حالة المتابعة",
@@ -95,6 +99,8 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social"] });
       setCommentText("");
       toast({
         title: "تم إضافة التعليق",
@@ -398,14 +404,27 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
             </Button>
           </div>
 
-          {/* Likes count */}
-          {(post.likesCount || 0) > 0 && (
-            <div className="mt-2">
-              <span className="font-semibold text-sm text-gray-900 dark:text-white">
-                {formatNumber(post.likesCount || 0)} إعجاب
-              </span>
-            </div>
-          )}
+          {/* Views and Likes count */}
+          <div className="mt-2 space-y-1">
+            {/* Views count */}
+            {(post.viewsCount || 0) > 0 && (
+              <div className="flex items-center gap-1">
+                <Eye className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {formatNumber(post.viewsCount || 0)} مشاهدة
+                </span>
+              </div>
+            )}
+            
+            {/* Likes count */}
+            {(post.likesCount || 0) > 0 && (
+              <div>
+                <span className="font-semibold text-sm text-gray-900 dark:text-white">
+                  {formatNumber(post.likesCount || 0)} إعجاب
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Caption */}
           {post.content && (
