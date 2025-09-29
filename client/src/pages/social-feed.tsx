@@ -172,12 +172,14 @@ export default function SocialFeed() {
             كن أول من يشارك منشور في مجتمع BizChat!
           </p>
           <Button
-            onClick={() => setShowCreatePost(true)}
-            className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 text-lg rounded-full"
+            onClick={() => setLocation('/create-post')}
+            className="relative bg-gradient-to-r from-red-500 via-pink-500 to-red-600 hover:from-red-600 hover:via-pink-600 hover:to-red-700 text-white px-8 py-3 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 overflow-hidden group"
             data-testid="button-create-first-post"
           >
-            <Plus className="w-5 h-5 mr-2" />
-            أنشئ منشورك الأول
+            {/* Animated shine effect */}
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            <Plus className="w-6 h-6 mr-2 relative z-10 group-hover:rotate-90 transition-transform duration-300" />
+            <span className="relative z-10 font-bold">أنشئ منشورك الأول</span>
           </Button>
         </div>
       </div>
@@ -312,11 +314,13 @@ export default function SocialFeed() {
       {/* زر إنشاء منشور جديد */}
       <div className="absolute bottom-20 right-6 z-50">
         <Button
-          onClick={() => setShowCreatePost(true)}
-          className="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full shadow-2xl hover:scale-110 transition-all duration-300"
+          onClick={() => setLocation('/create-post')}
+          className="relative w-16 h-16 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 rounded-full shadow-2xl hover:shadow-red-500/50 hover:scale-110 transition-all duration-300 group overflow-hidden"
           data-testid="button-create-post"
         >
-          <Plus className="w-8 h-8 text-white" />
+          {/* Pulse animation ring */}
+          <div className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-20 group-hover:opacity-40" />
+          <Plus className="w-8 h-8 text-white relative z-10 group-hover:rotate-90 transition-transform duration-300" />
         </Button>
       </div>
 
