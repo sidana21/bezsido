@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Upload, Type, Palette, Camera, ImageIcon } from "lucide-react";
+import { X, Upload, Type, Palette, Camera, ImageIcon, Play, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -342,23 +342,53 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
                   />
                 </div>
 
-                {/* Media Preview */}
+                {/* Media Preview محسّن */}
                 {(imageUrl || videoUrl) && (
                   <div className="space-y-2">
                     <Label>{videoUrl ? 'معاينة الفيديو' : 'معاينة الصورة'}</Label>
-                    <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-                      {videoUrl ? (
+                    {videoUrl ? (
+                      <div className="relative bg-black rounded-2xl overflow-hidden" style={{ aspectRatio: '9/16', maxHeight: '300px' }}>
                         <video
                           src={videoUrl}
-                          className="w-full h-full object-cover"
-                          controls
+                          className="w-full h-full object-cover rounded-2xl"
+                          controls={false}
                           muted
+                          autoPlay
+                          loop
                           playsInline
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                           }}
                         />
-                      ) : (
+                        
+                        {/* طبقة تدرج لونية */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl" />
+                        
+                        {/* أيقونة تشغيل أنيقة */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30">
+                            <Play className="w-8 h-8 text-white ml-1" />
+                          </div>
+                        </div>
+                        
+                        {/* مؤشر الفيديو */}
+                        <div className="absolute top-3 left-3 bg-black/60 rounded-full px-2 py-1 backdrop-blur-sm">
+                          <span className="text-white text-xs font-medium">فيديو</span>
+                        </div>
+                        
+                        {/* أزرار التحكم */}
+                        <div className="absolute top-3 right-3">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 backdrop-blur-sm"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
                         <img 
                           src={imageUrl} 
                           alt="Preview" 
@@ -367,8 +397,8 @@ export function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
                             e.currentTarget.style.display = 'none';
                           }}
                         />
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -38,6 +38,7 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
   const [showFullCaption, setShowFullCaption] = useState(false);
   const [hasBeenViewed, setHasBeenViewed] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const postRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -158,6 +159,36 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
       observer.disconnect();
     };
   }, [hasBeenViewed, currentUser, viewMutation]);
+
+  // مراقبة تقدم الفيديو وحالة التشغيل
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      const progress = (video.currentTime / video.duration) * 100;
+      setVideoProgress(progress || 0);
+    };
+
+    const handlePlay = () => setIsVideoPlaying(true);
+    const handlePause = () => setIsVideoPlaying(false);
+    const handleEnded = () => {
+      setIsVideoPlaying(false);
+      setVideoProgress(0);
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    video.addEventListener('ended', handleEnded);
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, [post.videoUrl]);
 
   const formatTime = (timestamp: string | Date | null) => {
     if (!timestamp) return "منذ دقائق";
@@ -373,13 +404,13 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
             </div>
           )}
 
-          {/* فيديو المنشور */}
+          {/* فيديو المنشور - تصميم محسن شبيه بـ TikTok */}
           {post.videoUrl && (
-            <div className="relative aspect-square bg-black overflow-hidden">
+            <div className="relative bg-black overflow-hidden rounded-2xl mx-4 my-2" style={{ aspectRatio: '9/16', maxHeight: '70vh' }}>
               <video
                 ref={videoRef}
                 src={post.videoUrl}
-                className="w-full h-full object-cover cursor-pointer"
+                className="w-full h-full object-cover cursor-pointer rounded-2xl"
                 onClick={handleVideoClick}
                 onDoubleClick={handleDoubleClick}
                 loop
@@ -388,27 +419,97 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
                 data-testid={`video-post-${post.id}`}
               />
               
-              {/* Video controls */}
+              {/* طبقة التفاعل الشفافة */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent rounded-2xl" />
+              
+              {/* أيقونة التشغيل المحسنة */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 {!isVideoPlaying && (
-                  <div className="w-16 h-16 bg-black/30 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <Play className="w-8 h-8 text-white ml-1" />
+                  <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 animate-pulse">
+                    <Play className="w-10 h-10 text-white ml-1 drop-shadow-lg" />
                   </div>
                 )}
               </div>
               
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute bottom-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-full w-8 h-8"
-                onClick={toggleVideoMute}
-              >
-                {isVideoMuted ? (
-                  <VolumeX className="w-4 h-4" />
-                ) : (
-                  <Volume2 className="w-4 h-4" />
+              {/* شريط التقدم للفيديو */}
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 rounded-b-2xl overflow-hidden">
+                <div 
+                  className="h-full bg-white transition-all duration-300 ease-out"
+                  style={{ width: `${videoProgress}%` }}
+                />
+              </div>
+              
+              {/* أزرار التحكم المحسنة */}
+              <div className="absolute top-4 right-4 flex flex-col gap-3">
+                {/* زر كتم الصوت */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-black/40 hover:bg-black/60 text-white rounded-full w-12 h-12 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-110"
+                  onClick={toggleVideoMute}
+                >
+                  {isVideoMuted ? (
+                    <VolumeX className="w-5 h-5" />
+                  ) : (
+                    <Volume2 className="w-5 h-5" />
+                  )}
+                </Button>
+                
+                {/* مؤشر الصوت */}
+                {!isVideoMuted && (
+                  <div className="flex flex-col gap-1 items-center">
+                    {[...Array(3)].map((_, i) => (
+                      <div 
+                        key={i}
+                        className="w-1 bg-white rounded-full animate-pulse"
+                        style={{ 
+                          height: `${8 + i * 4}px`,
+                          animationDelay: `${i * 0.1}s`,
+                          animationDuration: '1s'
+                        }}
+                      />
+                    ))}
+                  </div>
                 )}
-              </Button>
+              </div>
+              
+              {/* عدد المشاهدات في الزاوية اليسرى */}
+              {(post.viewsCount || 0) > 0 && (
+                <div className="absolute top-4 left-4 bg-black/40 rounded-full px-3 py-1 backdrop-blur-sm border border-white/20">
+                  <div className="flex items-center gap-1">
+                    <Eye className="w-4 h-4 text-white" />
+                    <span className="text-white text-sm font-medium">
+                      {formatNumber(post.viewsCount || 0)}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              {/* وسوم المنتجات مع تحسين البصريات */}
+              {post.taggedProducts && post.taggedProducts.length > 0 && (
+                <>
+                  {post.taggedProducts.map((product, index) => (
+                    <div
+                      key={index}
+                      className="absolute w-8 h-8 bg-white/90 rounded-full shadow-xl flex items-center justify-center cursor-pointer hover:scale-125 transition-all duration-300 animate-bounce border-2 border-white"
+                      style={{
+                        left: `${product.position.x}%`,
+                        top: `${product.position.y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        animationDelay: `${index * 0.2}s`
+                      }}
+                      data-testid={`product-tag-${index}`}
+                    >
+                      <ShoppingBag className="w-4 h-4 text-gray-700" />
+                    </div>
+                  ))}
+                </>
+              )}
+              
+              {/* تأثير الإعجاب المضاعف */}
+              <div className="absolute inset-0 pointer-events-none">
+                {/* سيتم إضافة تأثيرات القلوب هنا عند الإعجاب المضاعف */}
+              </div>
             </div>
           )}
         </div>
