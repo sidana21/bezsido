@@ -2,7 +2,7 @@
 
 ## Overview
 
-BizChat is a full-stack business messaging application built with React, TypeScript, and Express. It integrates messaging with commerce features, offering a responsive UI for business communication and trade. Key capabilities include individual and group chats, product promotion via stories/status updates, message status tracking (sent, delivered, read), and Arabic language support for Middle Eastern markets.
+BizChat is a full-stack business messaging application built with React, TypeScript, and Express. Its core purpose is to integrate messaging with commerce features, providing a responsive UI for business communication and trade. Key capabilities include individual and group chats, product promotion via stories/status updates, message status tracking (sent, delivered, read), and robust Arabic language support for Middle Eastern markets. The project aims to offer a complete TikTok-like social media experience integrated with business functionalities.
 
 ## User Preferences
 
@@ -10,247 +10,60 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
-- **Frameworks**: React with TypeScript, Vite for fast builds.
-- **Routing**: Wouter for client-side navigation.
-- **State Management**: TanStack Query for server state, React hooks for local component state.
-- **Styling**: Tailwind CSS for responsive design, Shadcn/ui for accessible UI components.
-- **Theming**: Dark/light mode support with system preference detection.
+### Frontend
+- **Frameworks**: React with TypeScript, Vite.
+- **Routing**: Wouter.
+- **State Management**: TanStack Query for server state, React hooks for local state.
+- **Styling**: Tailwind CSS for responsive design, Shadcn/ui for accessible components.
+- **Theming**: Dark/light mode support.
+- **UI/UX**: Mobile-first, modular design with reusable components, accessibility features. WhatsApp-inspired chat interface and TikTok-style social feed with snap scrolling, auto-playing videos, and interactive elements (likes, comments, shares).
 
-### Backend Architecture
-- **Framework**: Express.js with TypeScript for RESTful APIs.
-- **Database Interaction**: Drizzle ORM for PostgreSQL schema definitions (users, chats, messages).
-- **Storage**: In-memory storage for development; PostgreSQL for production.
+### Backend
+- **Framework**: Express.js with TypeScript.
+- **Database Interaction**: Drizzle ORM for PostgreSQL.
+- **Storage**: In-memory for development; PostgreSQL for production.
 - **Session Management**: Express session handling with PostgreSQL session store.
 
 ### Database Design
-- **Users Table**: Stores user profiles, online status, and last seen timestamps.
-- **Chats Table**: Manages individual and group chat containers, including participant lists.
-- **Messages Table**: Stores message content, type (text, image, file), and tracks read/delivery status.
+- **Tables**: Users (profiles, status), Chats (containers, participants), Messages (content, type, status).
 
 ### API Design
-- **Approach**: RESTful endpoints using standard HTTP methods for CRUD operations.
-- **Structure**: Resource-based URLs (e.g., `/api/user/current`, `/api/chats`).
-- **Data Format**: JSON for requests and responses, including error handling.
+- **Approach**: RESTful endpoints using standard HTTP methods.
+- **Data Format**: JSON for requests and responses.
 
-### UI/UX Design Patterns
-- **Responsiveness**: Mobile-first approach with adaptable layouts.
-- **Modularity**: Reusable UI components with variant-based styling.
-- **Accessibility**: Support for screen readers and keyboard navigation.
-- **Inspiration**: Familiar chat interface inspired by WhatsApp, featuring message bubbles, status indicators, and a sidebar.
+### Technical Implementations
+- Full TikTok-style social media interface for posts, including vertical snap scrolling, auto-playing videos, pulsing interaction buttons, flying hearts animation, and enhanced share functionality.
+- Comprehensive notification system with settings modal, unread counts, and granular controls.
+- Real-time follower count updates with robust cache invalidation.
+- Arabic UI and RTL layout support across all components.
 
 ## External Dependencies
 
-### Core Framework Dependencies
-- **@neondatabase/serverless**: PostgreSQL serverless driver.
-- **drizzle-orm**: Type-safe ORM.
-- **drizzle-kit**: Database migration and schema management.
+### Core Framework & Database
+- `@neondatabase/serverless`: PostgreSQL serverless driver.
+- `drizzle-orm`: Type-safe ORM.
+- `drizzle-kit`: Database migration and schema management.
+- `connect-pg-simple`: PostgreSQL session store for Express.
+- `express-session`: Server-side session management middleware.
 
-### UI Component Libraries
-- **@radix-ui/***: Accessible UI primitives.
-- **@tanstack/react-query**: Server state management and data fetching.
-- **class-variance-authority**: Utility for component variant styling.
-- **cmdk**: Command palette and search functionality.
-- **embla-carousel-react**: Touch-friendly carousel.
+### UI & State Management
+- `@radix-ui/*`: Accessible UI primitives.
+- `@tanstack/react-query`: Server state management and data fetching.
+- `class-variance-authority`: Component variant styling.
+- `cmdk`: Command palette and search.
+- `embla-carousel-react`: Touch-friendly carousel.
 
-### Development Tools
-- **@replit/vite-plugin-runtime-error-modal**: Development error overlay for Replit.
-- **@replit/vite-plugin-cartographer**: Replit-specific development tooling.
-- **tsx**: TypeScript execution for Node.js.
+### Development Tools (Replit Specific)
+- `@replit/vite-plugin-runtime-error-modal`: Development error overlay.
+- `@replit/vite-plugin-cartographer`: Replit-specific tooling.
+- `tsx`: TypeScript execution for Node.js.
 
-### Styling and Icons
-- **tailwindcss**: Utility-first CSS framework.
-- **lucide-react**: Modern icon library.
-- **date-fns**: Date formatting and manipulation.
+### Styling, Icons & Utilities
+- `tailwindcss`: Utility-first CSS framework.
+- `lucide-react`: Modern icon library.
+- `date-fns`: Date formatting and manipulation.
 
-### Form and Validation
-- **@hookform/resolvers**: Integration with validation libraries.
-- **react-hook-form**: Performant form library.
-- **zod**: TypeScript-first schema validation.
-
-### Session Management
-- **connect-pg-simple**: PostgreSQL session store for Express.
-- **express-session**: Server-side session management middleware.
-
-## Recent Changes
-
-### September 29, 2025 - GitHub Import Setup Complete (LATEST)
-- ✅ Successfully imported BizChat project from GitHub repository
-- ✅ Verified and configured Replit environment for optimal performance:
-  - Frontend: React + TypeScript + Vite running on host "0.0.0.0" port 5000
-  - Backend: Express.js server listening on "0.0.0.0:5000" with CORS configured
-  - Vite server configured with `allowedHosts: true` for Replit proxy compatibility
-  - SSL certificate verification disabled for development environment
-- ✅ Workflow configuration completed:
-  - "Start application" workflow running `npm run dev`
-  - Webview output type configured for proper preview display
-  - Server successfully running on port 5000
-- ✅ Storage configuration verified:
-  - MemStorage active for development (in-memory data persistence)
-  - PostgreSQL ready for production deployment when needed
-- ✅ Application initialization successful:
-  - 870 default stickers loaded across 13 categories
-  - Admin user auto-created (المدير العام - admin@bizchat.com)
-  - 8 vendor categories, 3 service categories, 12 product categories
-  - Daily missions and all features initialized successfully
-  - Safety systems and error handling fully operational
-- ✅ Deployment configuration completed:
-  - Autoscale deployment target configured
-  - Build command: `npm run build`
-  - Start command: `npm run start`
-- ✅ Application verified working:
-  - Arabic UI login screen displaying correctly
-  - Vite HMR connected successfully
-  - All safety systems initialized
-- ✅ **IMPORT STATUS**: COMPLETE - Ready for development and production deployment
-
-### September 29, 2025 - Complete TikTok-Style Social Media Interface Implementation
-- ✅ **Successfully implemented full TikTok-style interface** replacing Instagram-style layout
-- ✅ **TikTok-PostCard Component**: Created comprehensive vertical full-screen post component
-  - Full-screen snap scrolling with smooth transitions between posts
-  - Auto-playing video functionality with proper mobile support (autoPlay, muted, playsInline)
-  - Interactive pulsing buttons for like, comment, share, save, and follow actions
-  - Flying hearts animation with CSS keyframes when like button is clicked
-  - Profile enlargement modal with proper Dialog component and navigation
-- ✅ **Enhanced Share Functionality**: Web Share API with clipboard fallback and toast notifications
-- ✅ **Fixed Auto-Play Logic**: Resolved critical video playback issues
-  - Changed initial state from `useState(isActive)` to `useState(false)`
-  - Updated useEffect to directly play videos when active without state dependency
-  - Added conditional autoPlay attribute based on isActive status
-- ✅ **Flying Hearts Animation**: Added @keyframes flyHeart to index.css with realistic effects
-- ✅ **Preserved All Existing Features**: Like, comment, share, save, follow, and profile navigation
-- ✅ **Updated Social Feed Page**: Migrated from Instagram-style grid to TikTok-style vertical feed
-- ✅ **Snap Scrolling Container**: Proper CSS classes (snap-y snap-mandatory) for smooth navigation
-- ✅ **Arabic UI Support**: All new components fully support Arabic language and RTL layout
-- ✅ **Architect Review Passed**: All critical requirements met and functionality verified
-- 🎯 **Result**: Complete TikTok-like experience while preserving all BizChat business features
-
-### September 29, 2025 - Fixed User Profile Navigation from Posts (Previous)
-- ✅ Fixed critical navigation bug where "زيارة الملف الشخصي" button failed to navigate to user profiles
-- ✅ Root cause: Route mismatch in App.tsx
-  - Components were navigating to `/user-profile/:userId` 
-  - But route was defined as `/profile/:userId`
-- ✅ Solution implemented:
-  - Updated primary route to `/user-profile/:userId` in App.tsx (line 191)
-  - Added backward compatibility route `/profile/:userId` (line 192) to prevent breaking existing deep links
-- ✅ Navigation now works correctly from:
-  - Instagram-style post cards "زيارة الملف الشخصي" button
-  - Notifications list user profile links
-  - Social feed post interactions
-- ✅ Both new and legacy URL patterns supported
-- ✅ Application HMR updated and verified working
-
-### September 29, 2025 - Fresh GitHub Clone Import Setup (Latest)
-- ✅ Successfully cloned project from GitHub repository
-- ✅ Verified all dependencies are properly installed (React, Express, TypeScript, Tailwind, etc.)
-- ✅ Confirmed Replit environment configuration:
-  - Frontend properly configured with host "0.0.0.0" on port 5000
-  - Vite server configured with `allowedHosts: true` for Replit proxy compatibility
-  - Backend Express server listening on "0.0.0.0:5000" with CORS allowing all origins
-  - SSL certificate verification disabled for development
-- ✅ Workflow configured and running successfully:
-  - "Start application" workflow running `npm run dev`
-  - Server started on port 5000 with webview output type
-  - Application accessible through Replit preview
-- ✅ PostgreSQL database properly configured:
-  - Database created and environment variables set (DATABASE_URL, PGHOST, etc.)
-  - Schema successfully pushed to PostgreSQL with `npm run db:push`
-  - Ready for production deployment with persistent storage
-- ✅ Deployment configuration verified:
-  - Autoscale deployment target configured
-  - Build command: `npm run build`
-  - Start command: `npm run start`
-- ✅ Application initialization confirmed:
-  - MemStorage active for development with 870 default stickers across 13 categories
-  - Admin user created (المدير العام - admin@bizchat.com)
-  - 8 vendor categories, 3 service categories, 12 product categories initialized
-  - Daily missions and all features loaded successfully
-  - Safety systems and error handling fully operational
-- ✅ Application verified working with Arabic UI login screen displayed
-- ✅ **IMPORT COMPLETE**: Application fully functional in Replit environment
-
-### September 29, 2025 - Critical Navigation Fixes for User Profiles (Previous Session)
-- ✅ Fixed broken navigation from notifications to user profiles:
-  - Corrected routing path in notifications list from `/profile/${userId}` to `/user-profile/${userId}`
-  - Resolved issue where clicking notification senders led to "user not found" error
-  - Users can now successfully navigate from notification bell to sender profiles
-- ✅ Fixed navigation issue in social feed post cards:
-  - Enhanced "Visit Profile" button with proper event handling (preventDefault/stopPropagation)
-  - Prevented parent click handlers from hijacking navigation flow
-  - Improved user experience when viewing profiles from Instagram-style post cards
-- ✅ Code quality improvements:
-  - Removed unnecessary console logging statements
-  - Ensured consistent routing patterns across all components
-  - Architect review confirmed no regressions or side effects
-- ✅ Testing verified:
-  - Both navigation paths work correctly without browser console errors
-  - Modal dialogs close properly when navigating to user profiles
-  - Consistent user experience across all profile access points
-
-### September 29, 2025 - Enhanced Notifications and Follow System (Earlier)
-- ✅ Fixed critical navigation issue from notifications to user profiles:
-  - Corrected routing path from `/profile/${userId}` to `/user-profile/${userId}`
-  - Users can now successfully navigate from notifications bell to sender's profile
-  - Resolved "user not found" error when clicking on notification senders
-- ✅ Implemented real-time follower count updates:
-  - Enhanced followMutation with comprehensive cache invalidation
-  - Immediate updates to follower/following counts across all UI components
-  - Added notification system refresh when following/unfollowing users
-  - Optimized query invalidation for better performance (followers, following, stats, notifications)
-- ✅ Improved user experience with instant feedback:
-  - Follow/unfollow actions now reflect immediately in profile statistics
-  - Notification bell updates automatically when new follow notifications arrive
-  - Seamless modal closure and navigation flow between notifications and profiles
-- ✅ Architecture review confirmed all changes follow best practices:
-  - Proper query key segmentation prevents unnecessary API calls
-  - Bounded refetch scope maintains good performance
-  - Authenticated API endpoints ensure security compliance
-
-### September 29, 2025 - Notifications System Enhancement (Earlier)
-- ✅ Fixed critical notifications button functionality issue reported by user
-- ✅ Added comprehensive NotificationsSettingsModal component with Arabic UI:
-  - Sound settings with volume control and test functionality
-  - Browser notifications toggle
-  - Push notifications preferences
-  - Granular notification type controls (messages, groups, social updates, orders)
-  - LocalStorage persistence for user preferences
-- ✅ Enhanced bottom navigation with dedicated notifications button:
-  - Interactive bell icon with unread count badge
-  - Proper click handler opening settings dialog
-  - Resolved previous freeze/non-responsive behavior
-- ✅ Fixed accessibility issues in DialogContent components:
-  - Added missing DialogTitle to CommandDialog for screen reader support
-  - Improved overall UI accessibility compliance
-- ✅ All changes verified working without console errors or functionality issues
-
-### September 28, 2025 - Complete Replit Environment Setup
-- ✅ Successfully imported project from GitHub and configured for Replit environment
-- ✅ Verified full-stack application architecture (React frontend + Express backend)
-- ✅ Configured proper host settings for Replit proxy compatibility:
-  - Frontend: host "0.0.0.0" on port 5000 with webview output type
-  - Backend: server listening on "0.0.0.0:5000" with CORS allowing all origins
-  - SSL certificate verification disabled for development environment
-- ✅ Set up development workflow with proper webview configuration
-- ✅ Configured deployment settings for autoscale production deployment with npm build/start
-- ✅ Application running successfully with all features initialized:
-  - MemStorage with persistent session data and live admin user creation
-  - Admin user auto-created (المدير العام - admin@bizchat.com)
-  - 870 default stickers loaded across 13 categories
-  - 8 vendor categories with 4 sample vendors initialized
-  - 3 service categories with 3 sample services
-  - 12 product categories and daily missions
-  - All safety systems, error handling, and runtime fixes active
-- ✅ Verified application accessibility through Replit proxy with Arabic UI support
-- ✅ All dependencies installed and working correctly (React, Express, TypeScript, Tailwind, etc.)
-
-## Project Status
-- **Development**: ✅ Fully functional in Replit environment with live preview at port 5000
-- **Deployment**: ✅ Configured for autoscale deployment (npm run build → npm start)
-- **Database**: Using MemStorage for development (PostgreSQL ready for production)
-- **Admin Access**: Available via admin.json configuration (admin@bizchat.com)
-- **Features**: Business chat, commerce integration, Arabic language support
-- **UI/UX**: Mobile-responsive with WhatsApp-inspired interface and green theme
-- **Import Status**: ✅ **COMPLETE** - Ready for development and deployment
-- **Frontend**: React + TypeScript + Tailwind CSS with Arabic RTL support
-- **Backend**: Express.js + Drizzle ORM with CORS configured for all origins
-- **Host Configuration**: Frontend and backend properly configured for Replit proxy (0.0.0.0:5000)
+### Form & Validation
+- `@hookform/resolvers`: Integration with validation libraries.
+- `react-hook-form`: Performant form library.
+- `zod`: TypeScript-first schema validation.

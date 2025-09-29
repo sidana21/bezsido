@@ -405,6 +405,7 @@ export function EnhancedCreatePost({ isOpen, onClose, currentUser }: EnhancedCre
               <input
                 ref={videoInputRef}
                 type="file"
+                multiple
                 accept="video/*"
                 onChange={(e) => handleFileSelect(e.target.files, 'video')}
                 className="hidden"
