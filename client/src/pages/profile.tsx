@@ -38,12 +38,19 @@ export default function Profile() {
     enabled: !!currentUser,
   });
 
-  // Fetch user stats (followers, following, posts)
-  const { data: userStats } = useQuery<{ followers: number; following: number; posts: number }>({
-    queryKey: ["/api/users", currentUser?.id, "stats"],
-    queryFn: () => fetch(`/api/users/${currentUser?.id}/stats`).then(res => res.json()),
+  // جلب بيانات الملف الشخصي الكاملة (مثل UserProfile)
+  const { data: profileData } = useQuery({
+    queryKey: ["/api/users/profile", currentUser?.id],
+    queryFn: () => apiRequest(`/api/users/${currentUser?.id}/profile`),
     enabled: !!currentUser?.id,
   });
+
+  // استخراج الإحصائيات من profileData للتوافق مع الكود الحالي
+  const userStats = profileData ? {
+    followers: profileData.followersCount || 0,
+    following: profileData.followingCount || 0,
+    posts: profileData.postsCount || 0
+  } : undefined;
 
   // Update form fields when user data changes
   useEffect(() => {
@@ -64,7 +71,11 @@ export default function Profile() {
       });
     },
     onSuccess: (updatedUser) => {
+      // تحديث جميع البيانات ذات الصلة في كلا الصفحتين
       queryClient.invalidateQueries({ queryKey: ["/api/user/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/profile", currentUser?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser?.id, "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser?.id, "posts"] });
       setIsEditing(false);
       
       // Update local backup with new data for protection
@@ -138,6 +149,10 @@ export default function Profile() {
     },
     onSuccess: (data) => {
       setAvatarUrl(data.mediaUrl);
+      // تحديث جميع البيانات ذات الصلة في كلا الصفحتين (بما في ذلك المنشورات لعرض الصورة الجديدة)
+      queryClient.invalidateQueries({ queryKey: ["/api/user/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/profile", currentUser?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser?.id, "posts"] });
       toast({
         title: "تم رفع الصورة",
         description: "تم رفع صورة الملف الشخصي بنجاح",

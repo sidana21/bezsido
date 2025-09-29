@@ -95,10 +95,12 @@ export default function UserProfile() {
       queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "followers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "following"] });
       
-      // تحديث إحصائيات المستخدم الحالي أيضاً إذا كان يتابع أحد
+      // تحديث إحصائيات المستخدم الحالي في كلا الصفحتين
       if (currentUser?.id) {
         queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id, "stats"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/users/profile", currentUser.id] });
         queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id, "following"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/current"] });
       }
       
       // تحديث قائمة الإشعارات لإظهار إشعار المتابعة الجديد
@@ -382,7 +384,7 @@ export default function UserProfile() {
               
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                <span>انضم في {new Date(profileData.createdAt).toLocaleDateString('ar')}</span>
+                <span>انضم في {profileData.createdAt ? new Date(profileData.createdAt).toLocaleDateString('ar') : 'غير محدد'}</span>
               </div>
 
               {profileData.businessInfo?.website && (
