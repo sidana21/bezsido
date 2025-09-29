@@ -55,21 +55,30 @@ export default function SocialFeed() {
   });
 
   // جلب قائمة الإشعارات
-  const { data: notifications = [] } = useQuery<Array<{
-    id: string;
-    type: string;
-    fromUserId: string;
-    fromUserName?: string;
-    fromUserAvatar?: string;
-    message: string;
-    title: string;
-    createdAt: string;
-    isRead: boolean;
-  }>>({
+  const { data: notificationsResponse, isLoading: notificationsLoading, error: notificationsError } = useQuery<{
+    notifications: Array<{
+      id: string;
+      type: string;
+      fromUserId: string;
+      fromUserName?: string;
+      fromUserAvatar?: string;
+      message: string;
+      title: string;
+      createdAt: string;
+      isRead: boolean;
+    }>;
+    unreadCount?: number;
+  }>({
     queryKey: ["/api/notifications/social"],
     enabled: !!currentUser && showNotifications,
     refetchInterval: showNotifications ? 5000 : false,
+    retry: 2,
+    staleTime: 30000,
+    gcTime: 60000,
   });
+
+  // استخراج البيانات من الاستجابة
+  const notifications = notificationsResponse?.notifications || [];
 
   // إغلاق الإشعارات عند الضغط خارج القائمة
   useEffect(() => {
@@ -165,7 +174,15 @@ export default function SocialFeed() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                      setShowNotifications(!showNotifications);
+                    } catch (error) {
+                      console.error('خطأ في فتح الإشعارات:', error);
+                    }
+                  }}
                   className="relative w-9 h-9 hover:bg-green-50 dark:hover:bg-green-900/20 border border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-600 transition-all duration-300"
                   data-testid="button-notifications"
                 >
@@ -198,7 +215,25 @@ export default function SocialFeed() {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      {notifications.length === 0 ? (
+                      {notificationsLoading ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
+                          <p className="text-gray-500 dark:text-gray-400">جارِ تحميل الإشعارات...</p>
+                        </div>
+                      ) : notificationsError ? (
+                        <div className="text-center py-8 text-red-500 dark:text-red-400">
+                          <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                          <p>حدث خطأ في تحميل الإشعارات</p>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => window.location.reload()} 
+                            className="mt-2 text-xs"
+                          >
+                            إعادة المحاولة
+                          </Button>
+                        </div>
+                      ) : notifications.length === 0 ? (
                         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                           <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
                           <p>لا توجد إشعارات جديدة</p>
