@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button";
 import { useFeatures } from "@/hooks/use-features";
 import { useNotifications } from "@/hooks/use-notifications";
 import { NotificationsSettingsModal } from "./notifications-settings-modal";
+import { NotificationsListModal } from "./notifications-list-modal";
 
 export function BottomNavigation() {
   const [location] = useLocation();
   const { isFeatureEnabled } = useFeatures();
   const [showNotificationsSettings, setShowNotificationsSettings] = useState(false);
+  const [showNotificationsList, setShowNotificationsList] = useState(false);
   
   const { data: cartItems = [] } = useQuery<any[]>({
     queryKey: ["/api/cart"],
@@ -33,7 +35,6 @@ export function BottomNavigation() {
       href: "/",
       isActive: location === "/",
       featureId: "messaging",
-      badge: totalUnreadCount > 0 ? totalUnreadCount : undefined,
       color: "from-blue-500 to-cyan-600",
       activeColor: "from-blue-600 to-cyan-700"
     },
@@ -81,7 +82,6 @@ export function BottomNavigation() {
       href: "/social-feed",
       isActive: location === "/social-feed" || location.startsWith("/profile/"),
       featureId: "social_feed",
-      badge: socialUnreadCount > 0 ? socialUnreadCount : undefined,
       color: "from-purple-500 to-pink-600",
       activeColor: "from-purple-600 to-pink-700"
     },
@@ -114,9 +114,9 @@ export function BottomNavigation() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowNotificationsSettings(true)}
+              onClick={() => setShowNotificationsList(true)}
               className="h-8 px-2 hover:bg-gray-100/80 dark:hover:bg-gray-800/80 relative"
-              data-testid="button-notifications-settings"
+              data-testid="button-notifications-list"
             >
               {totalUnreadCount > 0 ? (
                 <BellDot className="h-4 w-4 text-emerald-600" />
@@ -229,6 +229,16 @@ export function BottomNavigation() {
         {/* خط متدرج سفلي */}
         <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-20"></div>
       </div>
+      
+      {/* قائمة الإشعارات */}
+      <NotificationsListModal
+        open={showNotificationsList}
+        onOpenChange={setShowNotificationsList}
+        onOpenSettings={() => {
+          setShowNotificationsList(false);
+          setShowNotificationsSettings(true);
+        }}
+      />
       
       {/* حوار إعدادات الإشعارات */}
       <NotificationsSettingsModal

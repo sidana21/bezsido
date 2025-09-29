@@ -256,9 +256,18 @@ export default function SocialFeed() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                                  <button
+                                    onClick={() => {
+                                      if (notification.fromUserId) {
+                                        setLocation(`/profile/${notification.fromUserId}`);
+                                        setShowNotifications(false);
+                                      }
+                                    }}
+                                    className="font-semibold text-sm text-gray-900 dark:text-white truncate hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer"
+                                    data-testid={`notification-user-${notification.fromUserId}`}
+                                  >
                                     {notification.fromUserName || 'مستخدم'}
-                                  </span>
+                                  </button>
                                   {!notification.isRead && (
                                     <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
                                   )}
