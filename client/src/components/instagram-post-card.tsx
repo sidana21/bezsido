@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
   Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, 
   Play, Pause, Volume2, VolumeX, MapPin, Verified, Crown,
-  Send, Smile, Camera, Tag, ShoppingBag, Eye, ChevronLeft, ChevronRight
+  Send, Smile, Camera, Tag, ShoppingBag, Eye, ChevronLeft, ChevronRight,
+  User as UserIcon, ExternalLink, X
 } from "lucide-react";
 import type { User, BizChatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -36,10 +37,12 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const [showFullCaption, setShowFullCaption] = useState(false);
   const [hasBeenViewed, setHasBeenViewed] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const postRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // إعجاب بالمنشور
   const likeMutation = useMutation({
@@ -213,6 +216,17 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
     }
   };
 
+  const handleUserProfileClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowUserProfile(true);
+  };
+
+  const handleVisitUserProfile = () => {
+    setShowUserProfile(false);
+    setLocation(`/user-profile/${post.user.id}`);
+  };
+
   const isLongCaption = post.content && post.content.length > 100;
   const displayedCaption = showFullCaption || !isLongCaption 
     ? post.content 
@@ -227,22 +241,26 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-2">
           <div className="flex items-center gap-3">
-            <Link href={`/user-profile/${post.user.id}`}>
-              <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-gradient-to-r from-pink-400 via-purple-500 to-indigo-500 hover:ring-4 hover:ring-green-500 transition-all duration-300 hover:scale-110 shadow-lg">
-                <AvatarImage src={post.user.avatar || undefined} />
-                <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
-                  {post.user.name?.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
+            <Avatar 
+              className="w-10 h-10 cursor-pointer ring-2 ring-gradient-to-r from-pink-400 via-purple-500 to-indigo-500 hover:ring-4 hover:ring-green-500 transition-all duration-300 hover:scale-110 shadow-lg"
+              onClick={handleUserProfileClick}
+              data-testid={`avatar-user-${post.user.id}`}
+            >
+              <AvatarImage src={post.user.avatar || undefined} />
+              <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                {post.user.name?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
             
             <div>
               <div className="flex items-center gap-2">
-                <Link href={`/user-profile/${post.user.id}`}>
-                  <span className="font-semibold text-sm text-gray-900 dark:text-white hover:text-green-600 cursor-pointer transition-colors">
-                    {post.user.name}
-                  </span>
-                </Link>
+                <button
+                  onClick={handleUserProfileClick}
+                  className="font-semibold text-sm text-gray-900 dark:text-white hover:text-green-600 cursor-pointer transition-colors"
+                  data-testid={`button-user-name-${post.user.id}`}
+                >
+                  {post.user.name}
+                </button>
                 {post.user.isVerified && (
                   <Verified className="w-4 h-4 text-blue-500 fill-current" />
                 )}
@@ -624,6 +642,111 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Profile Preview Modal */}
+      <Dialog open={showUserProfile} onOpenChange={setShowUserProfile}>
+        <DialogContent className="max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl">
+          <DialogHeader className="text-center pb-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 top-4 w-8 h-8 hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={() => setShowUserProfile(false)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center text-center space-y-4 pb-6">
+            {/* Profile Picture */}
+            <div className="relative">
+              <Avatar className="w-24 h-24 ring-4 ring-gradient-to-r from-green-400 via-emerald-500 to-teal-500 shadow-2xl">
+                <AvatarImage 
+                  src={post.user.avatar || undefined} 
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-2xl font-bold">
+                  {post.user.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              
+              {/* Status indicators */}
+              {post.user.isOnline && (
+                <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white dark:border-gray-900 shadow-lg"></div>
+              )}
+            </div>
+
+            {/* User Info */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {post.user.name}
+                </h3>
+                {post.user.isVerified && (
+                  <Verified className="w-5 h-5 text-blue-500 fill-current" />
+                )}
+                {post.businessInfo?.businessName && (
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                )}
+              </div>
+
+              {/* Business info */}
+              {post.businessInfo?.businessName && (
+                <div className="space-y-1">
+                  <Badge variant="secondary" className="bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-700 border-none">
+                    {post.businessInfo.businessName}
+                  </Badge>
+                  {post.businessInfo.category && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {post.businessInfo.category}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Location */}
+              {post.user.location && (
+                <div className="flex items-center justify-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                  <MapPin className="w-4 h-4" />
+                  <span>{post.user.location}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2 w-full">
+              {post.user.id !== currentUser?.id && (
+                <Button
+                  onClick={() => followMutation.mutate({ 
+                    action: post.isFollowing ? 'unfollow' : 'follow' 
+                  })}
+                  disabled={followMutation.isPending}
+                  variant={post.isFollowing ? "outline" : "default"}
+                  className={`flex-1 ${
+                    !post.isFollowing 
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0'
+                      : 'border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                  }`}
+                  data-testid={`button-follow-modal-${post.user.id}`}
+                >
+                  <UserIcon className="w-4 h-4 ml-2" />
+                  {post.isFollowing ? 'إلغاء المتابعة' : 'متابعة'}
+                </Button>
+              )}
+              
+              <Button
+                onClick={handleVisitUserProfile}
+                variant="outline"
+                className="flex-1 border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                data-testid={`button-visit-profile-${post.user.id}`}
+              >
+                <ExternalLink className="w-4 h-4 ml-2" />
+                زيارة الملف الشخصي
               </Button>
             </div>
           </div>
