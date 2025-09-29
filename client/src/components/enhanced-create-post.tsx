@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import {
   Camera, Video, Music, Tag, MapPin, Smile, X, Plus,
-  Upload, Image as ImageIcon, Play, Volume2, VolumeX
+  Upload, Image as ImageIcon, Play, Volume2, VolumeX, Send, Sparkles
 } from "lucide-react";
 import type { User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -443,18 +443,22 @@ export function EnhancedCreatePost({ isOpen, onClose, currentUser }: EnhancedCre
               <Button
                 onClick={handleSubmit}
                 disabled={(!content.trim() && mediaFiles.length === 0) || createPostMutation.isPending || isUploading}
-                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6"
+                className="relative bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 hover:from-green-600 hover:via-emerald-600 hover:to-green-700 text-white px-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 overflow-hidden group"
                 data-testid="button-publish-post"
               >
+                {/* Animated shine effect */}
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                
                 {createPostMutation.isPending || isUploading ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2" />
-                    {isUploading ? 'جارِ الرفع...' : 'جارِ النشر...'}
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2 relative z-10" />
+                    <span className="relative z-10">{isUploading ? 'جارِ الرفع...' : 'جارِ النشر...'}</span>
                   </>
                 ) : (
                   <>
-                    <Upload className="w-4 h-4 ml-2" />
-                    نشر
+                    <Send className="w-5 h-5 ml-2 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="relative z-10 font-semibold">نشر المنشور</span>
+                    <Sparkles className="w-4 h-4 mr-2 relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </>
                 )}
               </Button>
