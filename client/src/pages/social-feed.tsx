@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -33,6 +33,7 @@ export default function SocialFeed() {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   // جلب المستخدم الحالي
   const { data: currentUser } = useQuery<User>({
@@ -79,6 +80,18 @@ export default function SocialFeed() {
 
   // استخراج البيانات من الاستجابة
   const notifications = notificationsResponse?.notifications || [];
+
+  // دالة لتحديد جميع الإشعارات كمقروءة
+  const markAllNotificationsAsReadMutation = useMutation({
+    mutationFn: () => apiRequest("/api/notifications/social/mark-all-read", {
+      method: "POST",
+    }),
+    onSuccess: () => {
+      // تحديث الكاش
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/social/unread-count"] });
+    },
+  });
 
   // إغلاق الإشعارات عند الضغط خارج القائمة
   useEffect(() => {
@@ -178,7 +191,16 @@ export default function SocialFeed() {
                     e.preventDefault();
                     e.stopPropagation();
                     try {
-                      setShowNotifications(!showNotifications);
+                      const newShowState = !showNotifications;
+                      setShowNotifications(newShowState);
+                      
+                      // إذا كان المستخدم يفتح الإشعارات وهناك إشعارات غير مقروءة
+                      if (newShowState && notificationData?.unreadCount && notificationData.unreadCount > 0) {
+                        // تأخير بسيط للسماح بتحميل الإشعارات ثم تحديدها كمقروءة
+                        setTimeout(() => {
+                          markAllNotificationsAsReadMutation.mutate();
+                        }, 1000);
+                      }
                     } catch (error) {
                       console.error('خطأ في فتح الإشعارات:', error);
                     }
@@ -259,7 +281,7 @@ export default function SocialFeed() {
                                   <button
                                     onClick={() => {
                                       if (notification.fromUserId) {
-                                        setLocation(`/profile/${notification.fromUserId}`);
+                                        setLocation(`/user-profile/${notification.fromUserId}`);
                                         setShowNotifications(false);
                                       }
                                     }}
