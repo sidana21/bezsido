@@ -72,6 +72,18 @@ import {
 import { randomUUID } from "crypto";
 import { AdminManager } from "./admin-manager";
 
+// دالة مساعدة لتنظيف بيانات المستخدم (إزالة البيانات الحساسة)
+function toPublicUser(user: any) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    avatar: user.avatar,
+    location: user.location,
+    isVerified: user.isVerified,
+  };
+}
+
 // Rate limiting to prevent abuse
 class SimpleRateLimiter {
   private requests: Map<string, number[]> = new Map();
@@ -5817,6 +5829,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error checking follow status:', error);
       res.status(500).json({ message: "خطأ في التحقق من حالة المتابعة" });
+    }
+  });
+
+  // جلب الملف الشخصي للمستخدم
+  app.get("/api/users/:userId/profile", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.userId;
+      
+      // جلب بيانات المستخدم
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+      
+      // جلب الإحصائيات
+      const [followersCount, followingCount] = await Promise.all([
+        storage.getFollowerCount ? storage.getFollowerCount(userId) : 0,
+        storage.getFollowingCount ? storage.getFollowingCount(userId) : 0
+      ]);
+      
+      // جلب عدد المنشورات
+      let postsCount = 0;
+      try {
+        // محاولة جلب المنشورات من الخلاصة المفلترة بالمستخدم
+        if (storage.getFeedPosts) {
+          const allPosts = await storage.getFeedPosts('all', 'all', currentUserId);
+          const userPosts = allPosts.filter(post => post.userId === userId);
+          postsCount = userPosts.length;
+        }
+      } catch (error) {
+        // إذا فشل في جلب المنشورات، نترك العدد 0
+        console.warn('Could not get user posts count:', error);
+      }
+      
+      // التحقق من حالة المتابعة
+      let isFollowing = false;
+      try {
+        if (storage.isUserFollowing && currentUserId !== userId) {
+          isFollowing = await storage.isUserFollowing(currentUserId, userId);
+        }
+      } catch (error) {
+        console.warn('Could not check follow status:', error);
+      }
+      
+      // إنشاء الاستجابة الآمنة (بدون كلمات المرور أو البيانات الحساسة)
+      const profileData = {
+        // بيانات المستخدم الآمنة فقط
+        ...toPublicUser(user),
+        // إحصائيات الملف الشخصي
+        followersCount: followersCount || 0,
+        followingCount: followingCount || 0,
+        postsCount: postsCount,
+        isFollowing: currentUserId !== userId ? isFollowing : undefined,
+        isOwnProfile: currentUserId === userId,
+        // معلومات إضافية
+        bio: null, // سيتم إضافته لاحقاً إذا لزم الأمر
+        businessInfo: {
+          businessName: null, // سيتم إضافته لاحقاً إذا لزم الأمر
+          category: null,
+          location: user.location,
+          website: null, // سيتم إضافته لاحقاً إذا لزم الأمر
+          phone: null, // سيتم إضافته لاحقاً إذا لزم الأمر
+        },
+        businessStats: {
+          totalViews: 0,
+          totalLikes: 0,
+          engagementRate: 0,
+          totalSales: 0,
+        }
+      };
+      
+      res.json(profileData);
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+      res.status(500).json({ message: "خطأ في جلب الملف الشخصي" });
+    }
+  });
+
+  // جلب منشورات المستخدم
+  app.get("/api/users/:userId/posts", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.userId;
+      
+      // التحقق من وجود المستخدم
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+      
+      // جلب منشورات المستخدم
+      let userPosts = [];
+      try {
+        // البحث في جميع المنشورات وفلترتها بالمستخدم
+        if (storage.getFeedPosts) {
+          const allPosts = await storage.getFeedPosts('all', 'all', currentUserId);
+          userPosts = allPosts.filter(post => post.userId === userId);
+        }
+      } catch (error) {
+        console.warn('Could not get user posts:', error);
+        userPosts = [];
+      }
+      
+      // تحسين المنشورات بإضافة بيانات المستخدم الآمنة
+      const enhancedPosts = userPosts.map(post => ({
+        ...post,
+        user: toPublicUser(user), // استخدام الدالة الآمنة لإزالة البيانات الحساسة
+        isLiked: false, // يمكن تحسين هذا لاحقاً للتحقق من الإعجابات
+        isSaved: false  // يمكن تحسين هذا لاحقاً للتحقق من المحفوظات
+      }));
+      
+      res.json(enhancedPosts);
+    } catch (error) {
+      console.error('Error getting user posts:', error);
+      res.status(500).json({ message: "خطأ في جلب منشورات المستخدم" });
     }
   });
 
