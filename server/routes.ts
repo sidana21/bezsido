@@ -5612,15 +5612,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.userId;
       const postData = req.body;
       
-      // التحقق من وجود محتوى المنشور
-      if (!postData.content || !postData.content.trim()) {
-        return res.status(400).json({ message: "محتوى المنشور مطلوب" });
+      // التحقق من وجود محتوى المنشور أو ملفات وسائط
+      const hasContent = postData.content && postData.content.trim();
+      const hasMedia = (postData.images && postData.images.length > 0) || postData.videoUrl;
+      
+      if (!hasContent && !hasMedia) {
+        return res.status(400).json({ message: "يجب إضافة نص أو صور/فيديو للمنشور" });
       }
       
       // إنشاء المنشور الجديد
       const newPost = await storage.createBusinessPost({
         userId,
-        content: postData.content.trim(),
+        content: hasContent ? postData.content.trim() : '',
         images: postData.images || [],
         videoUrl: postData.videoUrl || null,
         postType: postData.isBusinessPost ? 'business' : 'personal',
