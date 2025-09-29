@@ -740,7 +740,11 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
               )}
               
               <Button
-                onClick={handleVisitUserProfile}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleVisitUserProfile();
+                }}
                 variant="outline"
                 className="flex-1 border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
                 data-testid={`button-visit-profile-${post.user.id}`}
