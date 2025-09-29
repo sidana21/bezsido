@@ -74,7 +74,25 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### September 29, 2025 - Enhanced Notifications and Follow System
+### September 29, 2025 - Critical Navigation Fixes for User Profiles
+- ✅ Fixed broken navigation from notifications to user profiles:
+  - Corrected routing path in notifications list from `/profile/${userId}` to `/user-profile/${userId}`
+  - Resolved issue where clicking notification senders led to "user not found" error
+  - Users can now successfully navigate from notification bell to sender profiles
+- ✅ Fixed navigation issue in social feed post cards:
+  - Enhanced "Visit Profile" button with proper event handling (preventDefault/stopPropagation)
+  - Prevented parent click handlers from hijacking navigation flow
+  - Improved user experience when viewing profiles from Instagram-style post cards
+- ✅ Code quality improvements:
+  - Removed unnecessary console logging statements
+  - Ensured consistent routing patterns across all components
+  - Architect review confirmed no regressions or side effects
+- ✅ Testing verified:
+  - Both navigation paths work correctly without browser console errors
+  - Modal dialogs close properly when navigating to user profiles
+  - Consistent user experience across all profile access points
+
+### September 29, 2025 - Enhanced Notifications and Follow System (Earlier)
 - ✅ Fixed critical navigation issue from notifications to user profiles:
   - Corrected routing path from `/profile/${userId}` to `/user-profile/${userId}`
   - Users can now successfully navigate from notifications bell to sender's profile
