@@ -20,6 +20,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { InsertProduct } from "@shared/schema";
 
 interface CreatePostData {
+  title?: string;
   content: string;
   images?: string[];
   videoUrl?: string;
@@ -43,9 +44,11 @@ export default function CreatePost() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   
   // بيانات المنشور
   const [postData, setPostData] = useState<CreatePostData>({
+    title: "",
     content: "",
     images: [],
     location: "",
@@ -64,6 +67,7 @@ export default function CreatePost() {
   const createPostMutation = useMutation({
     mutationFn: async (data: CreatePostData) => {
       const postPayload = {
+        title: data.title,
         content: data.content,
         images: data.images,
         videoUrl: data.videoUrl,
@@ -171,6 +175,52 @@ export default function CreatePost() {
       toast({
         title: "خطأ في رفع الصور",
         description: "فشل في رفع بعض الصور",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // رفع الفيديو
+  const handleVideoUpload = async (files: FileList) => {
+    if (files.length === 0) return;
+    
+    const file = files[0]; // نأخذ أول فيديو فقط
+    setIsUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('media', file);
+      
+      const token = localStorage.getItem('auth_token');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/upload/media', {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      if (!response.ok) throw new Error('فشل في رفع الفيديو');
+      
+      const data = await response.json();
+      setPostData(prev => ({
+        ...prev,
+        videoUrl: data.mediaUrl
+      }));
+      
+      toast({
+        title: "تم رفع الفيديو بنجاح! 🎥",
+        description: "تم رفع الفيديو بنجاح",
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ في رفع الفيديو",
+        description: "فشل في رفع الفيديو",
         variant: "destructive",
       });
     } finally {
@@ -288,7 +338,26 @@ export default function CreatePost() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* العنوان */}
                   <div>
+                    <Label className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4" />
+                      عنوان المنشور (اختياري)
+                    </Label>
+                    <Input
+                      placeholder="أضف عنواناً جذاباً لمنشورك..."
+                      value={postData.title || ""}
+                      onChange={(e) => setPostData(prev => ({ ...prev, title: e.target.value }))}
+                      className="text-lg font-semibold border-2 focus:border-blue-400 dark:focus:border-blue-500"
+                      data-testid="input-title"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="flex items-center gap-2 mb-2">
+                      <Type className="w-4 h-4" />
+                      الوصف
+                    </Label>
                     <Textarea
                       placeholder="ما الذي تفكر فيه؟ شارك أفكارك، تجاربك، أو أي شيء مميز..."
                       value={postData.content}
@@ -370,9 +439,13 @@ export default function CreatePost() {
                     الصور والفيديو
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   {/* رفع الصور */}
-                  <div>
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-green-500" />
+                      رفع الصور
+                    </Label>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -385,58 +458,112 @@ export default function CreatePost() {
                     <Button
                       onClick={() => fileInputRef.current?.click()}
                       variant="outline"
-                      className="w-full h-24 border-2 border-dashed hover:border-blue-400"
+                      className="w-full h-32 border-2 border-dashed hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
                       disabled={isUploading}
+                      data-testid="button-upload-images"
                     >
-                      {isUploading ? (
-                        <>
-                          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin ml-2" />
-                          جارِ رفع الصور...
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="w-8 h-8 text-gray-400 ml-2" />
-                          اضغط لاختيار الصور
-                        </>
-                      )}
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+                          <ImageIcon className="w-8 h-8 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-gray-700 dark:text-gray-300">
+                            اضغط لاختيار الصور 📸
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            يمكنك اختيار عدة صور
+                          </p>
+                        </div>
+                      </div>
                     </Button>
+
+                    {/* معاينة الصور */}
+                    {postData.images && postData.images.length > 0 && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {postData.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={image}
+                              alt={`صورة ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700"
+                            />
+                            <Button
+                              onClick={() => removeImage(image)}
+                              size="icon"
+                              variant="destructive"
+                              className="absolute top-2 right-2 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* معاينة الصور */}
-                  {postData.images && postData.images.length > 0 && (
-                    <div className="grid grid-cols-2 gap-4">
-                      {postData.images.map((image, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={image}
-                            alt={`صورة ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
-                          />
-                          <Button
-                            onClick={() => removeImage(image)}
-                            size="icon"
-                            variant="destructive"
-                            className="absolute top-2 right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-300 dark:border-gray-600" />
                     </div>
-                  )}
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white dark:bg-gray-900 px-2 text-gray-500">أو</span>
+                    </div>
+                  </div>
 
-                  {/* رابط الفيديو */}
-                  <div>
-                    <Label className="flex items-center gap-2 mb-2">
-                      <Video className="w-4 h-4" />
-                      رابط الفيديو (اختياري)
+                  {/* رفع الفيديو */}
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Video className="w-4 h-4 text-purple-500" />
+                      رفع فيديو
                     </Label>
-                    <Input
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      value={postData.videoUrl || ""}
-                      onChange={(e) => setPostData(prev => ({ ...prev, videoUrl: e.target.value }))}
-                      data-testid="input-video"
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => e.target.files && handleVideoUpload(e.target.files)}
+                      className="hidden"
                     />
+                    
+                    <Button
+                      onClick={() => videoInputRef.current?.click()}
+                      variant="outline"
+                      className="w-full h-32 border-2 border-dashed hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                      disabled={isUploading || !!postData.videoUrl}
+                      data-testid="button-upload-video"
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                          <Video className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-gray-700 dark:text-gray-300">
+                            {isUploading ? 'جارِ رفع الفيديو...' : 'اضغط لاختيار فيديو 🎥'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            فيديو واحد فقط (حتى 100MB)
+                          </p>
+                        </div>
+                      </div>
+                    </Button>
+
+                    {/* معاينة الفيديو */}
+                    {postData.videoUrl && (
+                      <div className="relative group">
+                        <video
+                          src={postData.videoUrl}
+                          controls
+                          className="w-full h-64 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-black"
+                        />
+                        <Button
+                          onClick={() => setPostData(prev => ({ ...prev, videoUrl: undefined }))}
+                          size="icon"
+                          variant="destructive"
+                          className="absolute top-2 right-2 w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
