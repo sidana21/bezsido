@@ -185,6 +185,7 @@ function Router() {
             <Route path="/profile" component={Profile} />
             <Route path="/social-feed" component={SocialFeed} />
             <Route path="/create-post" component={CreatePost} />
+            <Route path="/user-profile/:userId" component={UserProfile} />
             <Route path="/profile/:userId" component={UserProfile} />
           </>
         )}

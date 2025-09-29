@@ -74,7 +74,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### September 29, 2025 - Fresh GitHub Clone Import Setup
+### September 29, 2025 - Fixed User Profile Navigation from Posts
+- ✅ Fixed critical navigation bug where "زيارة الملف الشخصي" button failed to navigate to user profiles
+- ✅ Root cause: Route mismatch in App.tsx
+  - Components were navigating to `/user-profile/:userId` 
+  - But route was defined as `/profile/:userId`
+- ✅ Solution implemented:
+  - Updated primary route to `/user-profile/:userId` in App.tsx (line 191)
+  - Added backward compatibility route `/profile/:userId` (line 192) to prevent breaking existing deep links
+- ✅ Navigation now works correctly from:
+  - Instagram-style post cards "زيارة الملف الشخصي" button
+  - Notifications list user profile links
+  - Social feed post interactions
+- ✅ Both new and legacy URL patterns supported
+- ✅ Application HMR updated and verified working
+
+### September 29, 2025 - Fresh GitHub Clone Import Setup (Earlier)
 - ✅ Successfully cloned project from GitHub repository
 - ✅ Verified all dependencies are properly installed (React, Express, TypeScript, Tailwind, etc.)
 - ✅ Confirmed Replit environment configuration:
