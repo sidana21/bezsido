@@ -312,7 +312,7 @@ export default function SocialFeed() {
       </div>
 
       {/* زر إنشاء منشور جديد */}
-      <div className="absolute bottom-20 right-6 z-50">
+      <div className="absolute bottom-32 right-6 z-50">
         <Button
           onClick={() => setLocation('/create-post')}
           className="relative w-16 h-16 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 rounded-full shadow-2xl hover:shadow-red-500/50 hover:scale-110 transition-all duration-300 group overflow-hidden"

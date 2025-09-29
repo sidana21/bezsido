@@ -647,7 +647,7 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
         </div>
 
         {/* أزرار إضافية في الأعلى */}
-        <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start">
+        <div className="absolute top-6 left-4 right-4 z-20 flex justify-between items-start">
           {/* زر كتم الصوت في الأعلى (للفيديوهات) */}
           {post.videoUrl && (
             <Button
