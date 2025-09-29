@@ -10,7 +10,7 @@ import { Link, useLocation } from "wouter";
 import {
   Plus, Search, TrendingUp, MapPin, Tag, 
   ShoppingBag, Users, Camera, 
-  Sparkles, ArrowLeft
+  Sparkles, ArrowLeft, Bell, BellDot
 } from "lucide-react";
 import type { User, BizChatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -41,6 +41,13 @@ export default function SocialFeed() {
     queryFn: () => apiRequest(`/api/social-feed?filter=${selectedFilter}&location=${encodeURIComponent(currentUser?.location || '')}`),
     enabled: !!currentUser,
     refetchInterval: 30000, // تحديث كل 30 ثانية
+  });
+
+  // جلب عدد الإشعارات غير المقروءة
+  const { data: notificationData } = useQuery<{unreadCount: number}>({
+    queryKey: ["/api/notifications/social/unread-count"],
+    enabled: !!currentUser,
+    refetchInterval: 10000, // تحديث كل 10 ثوانِ
   });
 
 
@@ -102,6 +109,27 @@ export default function SocialFeed() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* أيقونة الإشعارات */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative w-9 h-9 hover:bg-green-50 dark:hover:bg-green-900/20 border border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-600 transition-all duration-300"
+                  data-testid="button-notifications"
+                >
+                  {notificationData?.unreadCount && notificationData.unreadCount > 0 ? (
+                    <>
+                      <BellDot className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                        {notificationData.unreadCount > 9 ? '9+' : notificationData.unreadCount}
+                      </span>
+                    </>
+                  ) : (
+                    <Bell className="w-5 h-5 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors" />
+                  )}
+                </Button>
+              </div>
+
               <Button
                 onClick={() => setShowCreatePost(true)}
                 size="sm"

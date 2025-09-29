@@ -4873,8 +4873,15 @@ export class MemStorage implements IStorage {
     
     this.postLikes.set(newLike.id, newLike);
 
-    // إنشاء إشعار اجتماعي للإعجاب بالمنشور
+    // تحديث عداد الإعجابات في المنشور
     const post = this.businessPosts.get(postId);
+    if (post) {
+      const currentLikesCount = await this.getPostLikesCount(postId);
+      const updatedPost = { ...post, likesCount: currentLikesCount };
+      this.businessPosts.set(postId, updatedPost);
+    }
+
+    // إنشاء إشعار اجتماعي للإعجاب بالمنشور
     const liker = this.users.get(userId);
     
     if (post && liker && post.userId !== userId) { // لا نرسل إشعار إذا كان الشخص يحب منشوره
@@ -4900,6 +4907,14 @@ export class MemStorage implements IStorage {
     
     if (likeKey) {
       this.postLikes.delete(likeKey);
+      
+      // تحديث عداد الإعجابات في المنشور
+      const post = this.businessPosts.get(postId);
+      if (post) {
+        const currentLikesCount = await this.getPostLikesCount(postId);
+        const updatedPost = { ...post, likesCount: currentLikesCount };
+        this.businessPosts.set(postId, updatedPost);
+      }
     }
   }
 
@@ -4978,6 +4993,15 @@ export class MemStorage implements IStorage {
     };
     
     this.postComments.set(comment.id, comment);
+
+    // تحديث عداد التعليقات في المنشور
+    const post = this.businessPosts.get(commentData.postId);
+    if (post) {
+      const currentCommentsCount = await this.getPostCommentsCount(commentData.postId);
+      const updatedPost = { ...post, commentsCount: currentCommentsCount };
+      this.businessPosts.set(commentData.postId, updatedPost);
+    }
+    
     console.log(`💬 Comment created: ${comment.id} on post ${commentData.postId}`);
     return comment;
   }
