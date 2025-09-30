@@ -28,17 +28,21 @@ import { apiRequest } from "@/lib/queryClient";
 
 interface Product {
   id: string;
+  vendorId?: string;
   name: string;
   description: string;
-  price: string;
-  imageUrl: string | null;
+  originalPrice?: string;
+  salePrice?: string | null;
+  price?: string;
+  imageUrl?: string | null;
   images?: string[];
-  category: string;
-  location: string;
+  category?: string;
+  categoryId?: string;
+  location?: string;
   isActive: boolean;
-  commissionRate: string;
+  commissionRate?: string;
   createdAt: string;
-  owner: {
+  owner?: {
     id: string;
     name: string;
     avatar: string | null;
@@ -94,7 +98,8 @@ export default function ProductDetail() {
       });
 
       // Send product message
-      const productMessage = `مرحباً 👋\n\nأنا مهتم بهذا المنتج:\n🛍️ ${product?.name}\n💰 ${formatCurrency(product?.price || '0')}\n📍 ${product?.location}\n\nهل يمكنك تزويدي بمزيد من التفاصيل؟\nشكراً لك 🙏`;
+      const displayPrice = product?.salePrice || product?.originalPrice || product?.price || '0';
+      const productMessage = `مرحباً 👋\n\nأنا مهتم بهذا المنتج:\n🛍️ ${product?.name}\n💰 ${formatCurrency(displayPrice)}\n📍 ${product?.location || 'غير محدد'}\n\nهل يمكنك تزويدي بمزيد من التفاصيل؟\nشكراً لك 🙏`;
       
       await apiRequest(`/api/chats/${chatResponse.chatId}/messages`, {
         method: "POST",
@@ -153,6 +158,13 @@ export default function ProductDetail() {
     return `${parseFloat(price.toString()).toLocaleString()} دج`;
   };
 
+  // Get the display price (prefer salePrice, then originalPrice, then price)
+  const getDisplayPrice = () => {
+    if (product?.salePrice) return product.salePrice;
+    if (product?.originalPrice) return product.originalPrice;
+    return product?.price || '0';
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -185,13 +197,22 @@ export default function ProductDetail() {
   const handleContactSeller = () => {
     if (product) {
       console.log("Product data:", product);
+      console.log("Vendor ID:", product.vendorId);
       console.log("Owner ID:", product.owner?.id);
-      console.log("Owner data:", product.owner);
       
-      // Use hardcoded seller ID for now to test
-      const sellerId = product.owner?.id || "user-store-3"; // Bakery owner from storage
+      // Use vendorId from product, or owner.id as fallback
+      const sellerId = product.vendorId || product.owner?.id;
+      
+      if (!sellerId) {
+        toast({
+          title: "خطأ",
+          description: "معرف البائع غير متوفر",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       console.log("Using seller ID:", sellerId);
-      
       startChatMutation.mutate(sellerId);
     }
   };
@@ -406,7 +427,7 @@ export default function ProductDetail() {
             
             <div className="flex items-center gap-3 mb-4">
               <span className="text-3xl font-bold text-whatsapp-green" data-testid="product-price">
-                {formatCurrency(product?.price)}
+                {formatCurrency(getDisplayPrice())}
               </span>
               {product.commissionRate && parseFloat(product.commissionRate) > 0 && (
                 <Badge variant="secondary" className="text-sm">
@@ -417,7 +438,7 @@ export default function ProductDetail() {
             
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <MapPin className="w-4 h-4" />
-              <span>{product.location}</span>
+              <span>{product.location || 'غير محدد'}</span>
               <span className="mx-2">•</span>
               <Clock className="w-4 h-4" />
               <span>منشور منذ {new Date(product.createdAt).toLocaleDateString('ar')}</span>
