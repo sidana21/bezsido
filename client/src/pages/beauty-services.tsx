@@ -365,14 +365,16 @@ export default function BeautyServices() {
 
                 <div className="flex gap-3 mt-6">
                   <Button
+                    type="button"
                     onClick={handleAddService}
-                    disabled={addServiceMutation.isPending}
+                    disabled={addServiceMutation.isPending || isUploading}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                     data-testid="button-submit-service"
                   >
                     {addServiceMutation.isPending ? "جاري النشر..." : "نشر الخدمة"}
                   </Button>
                   <Button
+                    type="button"
                     variant="outline"
                     onClick={() => setShowAddDialog(false)}
                     className="flex-1"
