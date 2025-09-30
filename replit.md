@@ -36,6 +36,7 @@ Preferred communication style: Simple, everyday language.
 - Comprehensive notification system with settings modal, unread counts, and granular controls.
 - Real-time follower count updates with robust cache invalidation.
 - Arabic UI and RTL layout support across all components.
+- Profile page displays real user posts: fetches from `/api/users/:userId/posts` and `/api/user/products`, merges both into unified grid with proper video/image rendering and empty state handling (September 30, 2025).
 
 ## External Dependencies
 
