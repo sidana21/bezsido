@@ -205,10 +205,8 @@ export default function HomeServices() {
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-right"
                     data-testid="select-service-type"
                   >
-                    <option value="home-cleaning">تنظيف المنازل</option>
-                    <option value="home-maintenance">صيانة عامة</option>
-                    <option value="home-renovation">صيانة منزلية</option>
-                    <option value="garden-services">خدمات الحدائق</option>
+                    <option value="labor-services">اليد العاملة</option>
+                    <option value="real-estate">كراء وشراء المنازل</option>
                   </select>
                 </div>
 

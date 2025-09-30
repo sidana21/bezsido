@@ -200,10 +200,7 @@ export default function BeautyServices() {
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-right"
                     data-testid="select-service-type"
                   >
-                    <option value="hair-salon">صالون شعر</option>
-                    <option value="nails-care">عناية بالأظافر</option>
-                    <option value="makeup">مكياج</option>
-                    <option value="skincare">عناية بالبشرة</option>
+                    <option value="henna-beauty">حناييات وتجميل</option>
                   </select>
                 </div>
 
