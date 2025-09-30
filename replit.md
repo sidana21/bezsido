@@ -38,6 +38,7 @@ Preferred communication style: Simple, everyday language.
 - Arabic UI and RTL layout support across all components.
 - Profile page displays real user posts: fetches from `/api/users/:userId/posts` and `/api/user/products`, merges both into unified grid with proper video/image rendering and empty state handling (September 30, 2025).
 - Services page: Horizontal scrolling category cards with snap behavior, gradient designs, and smooth animations. Categories include: تاكسي (Taxi), توصيل (Delivery), خدمات منزلية (Home Services), تجميل (Beauty) - integrated within /stores page (September 30, 2025).
+- Service categories redesigned with circular pulsing design: Perfect circles with animated outer glow, inner pulsing effects, and interactive hover animations (scale, rotate, shadow). Includes continuous color pulse animations to attract user attention (September 30, 2025).
 
 ## External Dependencies
 
