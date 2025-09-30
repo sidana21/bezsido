@@ -30,6 +30,10 @@ export default function BeautyServices() {
     queryKey: ["/api/user/current"],
   });
 
+  const { data: serviceCategories = [] } = useQuery<any[]>({
+    queryKey: ["/api/service-categories"],
+  });
+
   const { data: homeServices = [], isLoading } = useQuery<Service[]>({
     queryKey: ["/api/services", "beauty", currentUser?.location],
     queryFn: () => apiRequest(`/api/services?location=${encodeURIComponent(currentUser?.location || '')}&type=beauty`),
@@ -163,11 +167,22 @@ export default function BeautyServices() {
       return;
     }
 
+    const beautyCategory = serviceCategories.find(cat => cat.nameAr === "حناييات وتجميل");
+    if (!beautyCategory) {
+      toast({
+        title: "خطأ",
+        description: "فئة الخدمة غير متوفرة",
+        variant: "destructive",
+      });
+      return;
+    }
+
     addServiceMutation.mutate({
       name: newService.name,
       description: newService.description,
       basePrice: newService.basePrice,
       serviceType: newService.serviceType,
+      categoryId: beautyCategory.id,
       location: currentUser?.location || "",
       vendorId: currentUser?.id,
       images: uploadedImages

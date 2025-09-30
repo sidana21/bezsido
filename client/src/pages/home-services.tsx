@@ -30,6 +30,10 @@ export default function HomeServices() {
     queryKey: ["/api/user/current"],
   });
 
+  const { data: serviceCategories = [] } = useQuery<any[]>({
+    queryKey: ["/api/service-categories"],
+  });
+
   const { data: homeServices = [], isLoading } = useQuery<Service[]>({
     queryKey: ["/api/services", "home", currentUser?.location],
     queryFn: () => apiRequest(`/api/services?location=${encodeURIComponent(currentUser?.location || '')}&type=home`),
@@ -163,11 +167,22 @@ export default function HomeServices() {
       return;
     }
 
+    const laborCategory = serviceCategories.find(cat => cat.nameAr === "اليد العاملة");
+    if (!laborCategory) {
+      toast({
+        title: "خطأ",
+        description: "فئة الخدمة غير متوفرة",
+        variant: "destructive",
+      });
+      return;
+    }
+
     addServiceMutation.mutate({
       name: newService.name,
       description: newService.description,
       basePrice: newService.basePrice,
       serviceType: newService.serviceType,
+      categoryId: laborCategory.id,
       location: currentUser?.location || "",
       vendorId: currentUser?.id,
       images: uploadedImages
