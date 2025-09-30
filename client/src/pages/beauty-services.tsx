@@ -34,10 +34,20 @@ export default function BeautyServices() {
     queryKey: ["/api/service-categories"],
   });
 
+  // Find the beauty services category (حناييات وتجميل - Henna & Beauty)
+  const beautyServiceCategory = serviceCategories.find(cat => 
+    cat.nameAr === "حناييات وتجميل" || cat.name === "Henna & Beauty"
+  );
+
   const { data: homeServices = [], isLoading } = useQuery<Service[]>({
-    queryKey: ["/api/services", "beauty", currentUser?.location],
-    queryFn: () => apiRequest(`/api/services?location=${encodeURIComponent(currentUser?.location || '')}&type=beauty`),
-    enabled: !!currentUser,
+    queryKey: ["/api/services", "beauty", currentUser?.location, beautyServiceCategory?.id],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (currentUser?.location) params.append('location', currentUser.location);
+      if (beautyServiceCategory?.id) params.append('categoryId', beautyServiceCategory.id);
+      return apiRequest(`/api/services?${params.toString()}`);
+    },
+    enabled: !!currentUser && !!beautyServiceCategory,
   });
 
   const uploadImageMutation = useMutation({

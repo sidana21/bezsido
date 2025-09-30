@@ -34,10 +34,20 @@ export default function HomeServices() {
     queryKey: ["/api/service-categories"],
   });
 
+  // Find the home services category (اليد العاملة - Labor Services)
+  const homeServiceCategory = serviceCategories.find(cat => 
+    cat.nameAr === "اليد العاملة" || cat.name === "Labor Services"
+  );
+
   const { data: homeServices = [], isLoading } = useQuery<Service[]>({
-    queryKey: ["/api/services", "home", currentUser?.location],
-    queryFn: () => apiRequest(`/api/services?location=${encodeURIComponent(currentUser?.location || '')}&type=home`),
-    enabled: !!currentUser,
+    queryKey: ["/api/services", "home", currentUser?.location, homeServiceCategory?.id],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (currentUser?.location) params.append('location', currentUser.location);
+      if (homeServiceCategory?.id) params.append('categoryId', homeServiceCategory.id);
+      return apiRequest(`/api/services?${params.toString()}`);
+    },
+    enabled: !!currentUser && !!homeServiceCategory,
   });
 
   const uploadImageMutation = useMutation({
