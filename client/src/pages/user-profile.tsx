@@ -514,7 +514,7 @@ export default function UserProfile() {
                       className="aspect-square bg-gray-100 dark:bg-gray-800 relative group cursor-pointer overflow-hidden"
                       onClick={() => {
                         if (item.type === 'post') {
-                          navigate(`/post/${item.id}`);
+                          navigate(`/social-feed`);
                         } else if (item.type === 'product') {
                           navigate(`/product/${item.id}`);
                         }
@@ -607,7 +607,7 @@ export default function UserProfile() {
                       <div
                         key={post.id}
                         className="aspect-square bg-gray-100 dark:bg-gray-800 relative group cursor-pointer overflow-hidden"
-                        onClick={() => navigate(`/post/${post.id}`)}
+                        onClick={() => navigate(`/social-feed`)}
                       >
                         {post.images && post.images.length > 0 ? (
                           <img
