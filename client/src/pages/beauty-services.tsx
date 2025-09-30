@@ -154,24 +154,9 @@ export default function BeautyServices() {
         {/* Services Categories */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <div className="text-3xl mb-2">💇</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">صالون شعر</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">قص وتصفيف وصبغ</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <div className="text-3xl mb-2">💅</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">عناية بالأظافر</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">مانيكير وبيديكير</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <div className="text-3xl mb-2">💄</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">مكياج</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">مكياج احترافي</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <div className="text-3xl mb-2">🌸</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">عناية بالبشرة</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">تنظيف وترطيب</p>
+            <div className="text-3xl mb-2">✨</div>
+            <h3 className="font-bold text-gray-800 dark:text-white">حناييات وتجميل</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">نقش حناء ومكياج للمناسبات</p>
           </div>
         </div>
 
@@ -339,9 +324,9 @@ export default function BeautyServices() {
           </div>
         ) : !isLoading && (
           <div className="text-center py-12">
-            <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <Scissors className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-              لا توجد خدمات منزلية متاحة حالياً
+              لا توجد خدمات تجميل متاحة حالياً
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
               سنضيف المزيد من الخدمات قريباً في منطقتك

@@ -154,24 +154,14 @@ export default function HomeServices() {
         {/* Services Categories */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <div className="text-3xl mb-2">🧹</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">تنظيف المنازل</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">تنظيف شامل ومتخصص</p>
+            <div className="text-3xl mb-2">👷</div>
+            <h3 className="font-bold text-gray-800 dark:text-white">اليد العاملة</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">عمال وخدمات احترافية</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <div className="text-3xl mb-2">🔧</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">صيانة عامة</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">كهرباء، سباكة، نجارة</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <div className="text-3xl mb-2">🏡</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">صيانة منزلية</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">ترميمات وتجديدات</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-            <div className="text-3xl mb-2">🌱</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">خدمات الحدائق</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">تنسيق وصيانة حدائق</p>
+            <div className="text-3xl mb-2">🏠</div>
+            <h3 className="font-bold text-gray-800 dark:text-white">كراء وشراء المنازل</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">عقارات وإيجار</p>
           </div>
         </div>
 
