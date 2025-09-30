@@ -991,17 +991,6 @@ export default function MyVendorPage() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">المزايا التي ستحصل عليها:</h4>
-                <ul className="space-y-1 text-sm text-blue-800">
-                  <li>• عرض منتجاتك لآلاف العملاء المحتملين</li>
-                  <li>• نظام إدارة متقدم للطلبات والمبيعات</li>
-                  <li>• أدوات تسويقية قوية لزيادة المبيعات</li>
-                  <li>• تقارير مفصلة عن الأداء والإحصائيات</li>
-                  <li>• دعم فني متخصص على مدار الساعة</li>
-                </ul>
-              </div>
-
               <Button
                 type="submit"
                 className="w-full"
