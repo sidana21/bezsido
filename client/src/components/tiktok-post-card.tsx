@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -107,6 +107,13 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
     },
   });
 
+  // جلب التعليقات
+  const { data: commentsData = [] } = useQuery<any[]>({
+    queryKey: [`/api/posts/${post.id}/comments`],
+    queryFn: () => apiRequest(`/api/posts/${post.id}/comments`),
+    enabled: showComments,
+  });
+
   // إضافة تعليق
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -116,6 +123,7 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
       });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/posts/${post.id}/comments`] });
       queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/social/unread-count"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/social"] });
@@ -761,17 +769,58 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
             <DialogTitle>التعليقات</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="max-h-64 overflow-y-auto">
-              {/* قائمة التعليقات هنا */}
+            <div className="max-h-64 overflow-y-auto space-y-3" dir="rtl">
+              {commentsData.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>لا توجد تعليقات بعد</p>
+                  <p className="text-sm">كن أول من يعلق على هذا المنشور</p>
+                </div>
+              ) : (
+                commentsData.map((comment: any) => (
+                  <div key={comment.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarImage src={comment.user?.avatar} />
+                      <AvatarFallback>
+                        {comment.user?.name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm">
+                          {comment.user?.name || 'مستخدم'}
+                        </span>
+                        {comment.user?.isVerified && (
+                          <Verified className="w-3 h-3 text-blue-500 fill-current" />
+                        )}
+                        <span className="text-xs text-gray-500">
+                          {new Date(comment.createdAt).toLocaleDateString('ar-DZ', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 break-words">
+                        {comment.content}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2" dir="rtl">
               <Input
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="اكتب تعليقاً..."
                 className="flex-1"
                 data-testid={`input-comment-${post.id}`}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && commentText.trim() && !addCommentMutation.isPending) {
+                    addCommentMutation.mutate(commentText);
+                  }
+                }}
               />
               <Button
                 onClick={() => addCommentMutation.mutate(commentText)}
