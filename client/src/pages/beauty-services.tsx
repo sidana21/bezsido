@@ -1,0 +1,354 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Search, Scissors, MapPin, Star, MessageCircle, Plus } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import type { User, Service } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+
+export default function BeautyServices() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newService, setNewService] = useState({
+    name: "",
+    description: "",
+    basePrice: "",
+    serviceType: "hair-salon"
+  });
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ["/api/user/current"],
+  });
+
+  const { data: homeServices = [], isLoading } = useQuery<Service[]>({
+    queryKey: ["/api/services", "beauty", currentUser?.location],
+    queryFn: () => apiRequest(`/api/services?location=${encodeURIComponent(currentUser?.location || '')}&type=beauty`),
+    enabled: !!currentUser,
+  });
+
+  const addServiceMutation = useMutation({
+    mutationFn: async (serviceData: any) => {
+      return apiRequest("/api/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(serviceData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      setShowAddDialog(false);
+      setNewService({ name: "", description: "", basePrice: "", serviceType: "hair-salon" });
+      toast({
+        title: "تم النشر بنجاح",
+        description: "تم نشر خدمة التجميل بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في نشر الخدمة",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const requestServiceMutation = useMutation({
+    mutationFn: async ({ serviceId, vendorId }: { serviceId: string; vendorId: string }) => {
+      return apiRequest("/api/chats/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId: vendorId }),
+      });
+    },
+    onSuccess: (data: any) => {
+      setLocation(`/chat/${data.chatId}`);
+      toast({
+        title: "تم بدء المحادثة",
+        description: "تم الاتصال بمقدم الخدمة بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في الاتصال بمقدم الخدمة",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddService = () => {
+    if (!newService.name || !newService.description || !newService.basePrice) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    addServiceMutation.mutate({
+      name: newService.name,
+      description: newService.description,
+      basePrice: newService.basePrice,
+      serviceType: newService.serviceType,
+      location: currentUser?.location || "",
+      vendorId: currentUser?.id
+    });
+  };
+
+  const filteredServices = homeServices.filter(service =>
+    service?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    service?.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50/30 to-rose-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 pb-20">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 text-white p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/stores">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-pink-600 w-12 h-12 rounded-full"
+                data-testid="button-back"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold mb-1 flex items-center gap-3">
+                <Scissors className="w-8 h-8" />
+                خدمات التجميل
+              </h1>
+              <p className="text-white/80 text-sm">صالونات، مكياج، عناية بالبشرة والشعر</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-8">
+        {/* Search Bar */}
+        <div className="relative mb-8">
+          <div className="absolute right-6 top-1/2 transform -translate-y-1/2 z-10">
+            <Search className="w-6 h-6 text-gray-400" />
+          </div>
+          <Input
+            type="text"
+            placeholder="ابحث عن خدمة تجميل..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-16 text-lg h-16 rounded-2xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 shadow-xl"
+            data-testid="input-search-services"
+          />
+        </div>
+
+        {/* Services Categories */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+            <div className="text-3xl mb-2">💇</div>
+            <h3 className="font-bold text-gray-800 dark:text-white">صالون شعر</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">قص وتصفيف وصبغ</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+            <div className="text-3xl mb-2">💅</div>
+            <h3 className="font-bold text-gray-800 dark:text-white">عناية بالأظافر</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">مانيكير وبيديكير</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+            <div className="text-3xl mb-2">💄</div>
+            <h3 className="font-bold text-gray-800 dark:text-white">مكياج</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">مكياج احترافي</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+            <div className="text-3xl mb-2">🌸</div>
+            <h3 className="font-bold text-gray-800 dark:text-white">عناية بالبشرة</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">تنظيف وترطيب</p>
+          </div>
+        </div>
+
+        {/* Add Service Button */}
+        <div className="mb-8">
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-lg py-6 rounded-2xl shadow-lg"
+                data-testid="button-add-service"
+              >
+                <Plus className="w-6 h-6 mr-2" />
+                انشر خدمة التجميل الخاصة بك
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold text-right">نشر خدمة تجميل جديدة</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                    اسم الخدمة
+                  </label>
+                  <Input
+                    placeholder="مثال: صبغة شعر احترافية"
+                    value={newService.name}
+                    onChange={(e) => setNewService({ ...newService, name: e.target.value })}
+                    className="text-right"
+                    data-testid="input-service-name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                    نوع الخدمة
+                  </label>
+                  <select
+                    value={newService.serviceType}
+                    onChange={(e) => setNewService({ ...newService, serviceType: e.target.value })}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-right"
+                    data-testid="select-service-type"
+                  >
+                    <option value="hair-salon">صالون شعر</option>
+                    <option value="nails-care">عناية بالأظافر</option>
+                    <option value="makeup">مكياج</option>
+                    <option value="skincare">عناية بالبشرة</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                    الوصف
+                  </label>
+                  <Textarea
+                    placeholder="وصف تفصيلي للخدمة..."
+                    value={newService.description}
+                    onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+                    rows={4}
+                    className="text-right"
+                    data-testid="textarea-service-description"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                    السعر (دج)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="مثال: 5000"
+                    value={newService.basePrice}
+                    onChange={(e) => setNewService({ ...newService, basePrice: e.target.value })}
+                    className="text-right"
+                    data-testid="input-service-price"
+                  />
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    onClick={handleAddService}
+                    disabled={addServiceMutation.isPending}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    data-testid="button-submit-service"
+                  >
+                    {addServiceMutation.isPending ? "جاري النشر..." : "نشر الخدمة"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddDialog(false)}
+                    className="flex-1"
+                    data-testid="button-cancel"
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 animate-pulse">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Services List */}
+        {!isLoading && filteredServices.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredServices.map((service) => (
+              <div
+                key={service.id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300"
+                data-testid={`service-card-${service.id}`}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
+                      {service.name}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+                      {service.description}
+                    </p>
+                  </div>
+                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200">
+                    {service.serviceType}
+                  </Badge>
+                </div>
+
+                <div className="flex items-center gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    <span>{service.location}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                    <span>4.5</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl font-bold text-green-600">
+                    {parseInt(service?.basePrice || '0').toLocaleString()} دج
+                  </div>
+                  <Button
+                    className="bg-whatsapp-green hover:bg-green-600 text-white"
+                    onClick={() => requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId })}
+                    disabled={requestServiceMutation.isPending}
+                    data-testid={`button-request-${service.id}`}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    اطلب الخدمة
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !isLoading && (
+          <div className="text-center py-12">
+            <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
+              لا توجد خدمات منزلية متاحة حالياً
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              سنضيف المزيد من الخدمات قريباً في منطقتك
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

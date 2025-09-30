@@ -257,28 +257,32 @@ export default function Stores() {
               </Link> */}
 
               {/* Home Services */}
-              <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative text-center">
-                  <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                    <Home className="w-10 h-10 text-white drop-shadow-lg" />
+              <Link href="/home-services">
+                <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative text-center">
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                      <Home className="w-10 h-10 text-white drop-shadow-lg" />
+                    </div>
+                    <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">خدمات منزلية</h4>
+                    <p className="text-sm text-white/90 drop-shadow">تنظيف ومنزلية</p>
                   </div>
-                  <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">خدمات منزلية</h4>
-                  <p className="text-sm text-white/90 drop-shadow">تنظيف ومنزلية</p>
                 </div>
-              </div>
+              </Link>
 
               {/* Beauty Services */}
-              <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative text-center">
-                  <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                    <Scissors className="w-10 h-10 text-white drop-shadow-lg" />
+              <Link href="/beauty-services">
+                <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative text-center">
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                      <Scissors className="w-10 h-10 text-white drop-shadow-lg" />
+                    </div>
+                    <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">تجميل</h4>
+                    <p className="text-sm text-white/90 drop-shadow">صالونات وتجميل</p>
                   </div>
-                  <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">تجميل</h4>
-                  <p className="text-sm text-white/90 drop-shadow">صالونات وتجميل</p>
                 </div>
-              </div>
+              </Link>
             </div>
             
             {/* Scroll Indicator */}
