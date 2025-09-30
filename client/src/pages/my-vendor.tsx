@@ -872,7 +872,7 @@ export default function MyVendorPage() {
               اكمل المعلومات أدناه لبدء رحلتك في البيع عبر السوق
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-24 md:pb-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
