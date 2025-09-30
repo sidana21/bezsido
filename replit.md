@@ -121,6 +121,14 @@ Preferred communication style: Simple, everyday language.
   - Implementation: Flexible category lookup matching both Arabic (nameAr) and English (name) fields with partial matching fallback
   - Categories: "حناييات وتجميل" (Henna & Beauty) for beauty services, "اليد العاملة" (Labor Services) for home services
 
+- **Service Images Display**: Added image rendering to service cards
+  - Added comprehensive image display to both beauty-services.tsx and home-services.tsx
+  - Single image displays full width at top of service card
+  - Multiple images (2-3) display side by side with responsive widths
+  - More than 3 images show first 3 with "+X" overflow indicator
+  - Used optional chaining to prevent null/undefined errors
+  - Images appear at top of service card before service information
+
 ### Known Items
 - TypeScript errors exist in storage.ts (158 diagnostics) but don't prevent runtime execution
 - Notification sound loading error (uses fallback ringtone) - cosmetic only

@@ -224,72 +224,115 @@ export default function Stores() {
 
         {/* Service Categories - Horizontal Scroll */}
         <div className="mb-10">
-          <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">فئات الخدمات</h3>
+          <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-3">
+            <Sparkles className="w-7 h-7 text-purple-500 animate-pulse" />
+            فئات الخدمات
+          </h3>
           <div className="relative">
             {/* Horizontal Scrollable Container */}
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {/* Transportation Services - HIDDEN TEMPORARILY */}
+            <div className="flex gap-8 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory px-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              
+              {/* Home Services - Circular with Pulse */}
+              <Link href="/home-services" data-testid="link-home-services">
+                <div className="flex-shrink-0 snap-start cursor-pointer group">
+                  <div className="relative">
+                    {/* Outer Pulsing Ring */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 blur-xl opacity-60 animate-pulse group-hover:opacity-80 transition-opacity"></div>
+                    
+                    {/* Main Circle */}
+                    <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-3xl overflow-hidden">
+                      {/* Animated Background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      
+                      {/* Pulsing Inner Glow */}
+                      <div className="absolute inset-2 rounded-full bg-gradient-to-br from-green-300/40 to-transparent animate-pulse"></div>
+                      
+                      {/* Icon */}
+                      <Home className="w-14 h-14 text-white drop-shadow-2xl relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                    </div>
+                  </div>
+                  
+                  {/* Label */}
+                  <div className="mt-4 text-center">
+                    <h4 className="font-bold text-gray-800 dark:text-white text-base mb-1">خدمات منزلية</h4>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">تنظيف ومنزلية</p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Beauty Services - Circular with Pulse */}
+              <Link href="/beauty-services" data-testid="link-beauty-services">
+                <div className="flex-shrink-0 snap-start cursor-pointer group">
+                  <div className="relative">
+                    {/* Outer Pulsing Ring */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 blur-xl opacity-60 animate-pulse group-hover:opacity-80 transition-opacity"></div>
+                    
+                    {/* Main Circle */}
+                    <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-3xl overflow-hidden">
+                      {/* Animated Background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      
+                      {/* Pulsing Inner Glow */}
+                      <div className="absolute inset-2 rounded-full bg-gradient-to-br from-purple-300/40 to-transparent animate-pulse"></div>
+                      
+                      {/* Icon */}
+                      <Scissors className="w-14 h-14 text-white drop-shadow-2xl relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                    </div>
+                  </div>
+                  
+                  {/* Label */}
+                  <div className="mt-4 text-center">
+                    <h4 className="font-bold text-gray-800 dark:text-white text-base mb-1">تجميل</h4>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">صالونات وتجميل</p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Taxi Services - Circular with Pulse (Hidden for now) */}
               {/* <Link href="/taxi">
-                <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative text-center">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                      <Car className="w-10 h-10 text-white drop-shadow-lg" />
+                <div className="flex-shrink-0 snap-start cursor-pointer group" data-testid="category-taxi">
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 blur-xl opacity-60 animate-pulse group-hover:opacity-80 transition-opacity"></div>
+                    
+                    <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-3xl overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-2 rounded-full bg-gradient-to-br from-yellow-300/40 to-transparent animate-pulse"></div>
+                      <Car className="w-14 h-14 text-white drop-shadow-2xl relative z-10 group-hover:rotate-12 transition-transform duration-300" />
                     </div>
-                    <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">تاكسي</h4>
-                    <p className="text-sm text-white/90 drop-shadow">نقل الركاب</p>
+                  </div>
+                  
+                  <div className="mt-4 text-center">
+                    <h4 className="font-bold text-gray-800 dark:text-white text-base mb-1">تاكسي</h4>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">نقل الركاب</p>
                   </div>
                 </div>
               </Link> */}
 
-              {/* Delivery Services - HIDDEN TEMPORARILY */}
+              {/* Delivery Services - Circular with Pulse (Hidden for now) */}
               {/* <Link href="/taxi-driver">
-                <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-blue-500 to-cyan-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative text-center">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                      <Truck className="w-10 h-10 text-white drop-shadow-lg" />
+                <div className="flex-shrink-0 snap-start cursor-pointer group" data-testid="category-delivery">
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 blur-xl opacity-60 animate-pulse group-hover:opacity-80 transition-opacity"></div>
+                    
+                    <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-3xl overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-300/40 to-transparent animate-pulse"></div>
+                      <Truck className="w-14 h-14 text-white drop-shadow-2xl relative z-10 group-hover:rotate-12 transition-transform duration-300" />
                     </div>
-                    <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">توصيل</h4>
-                    <p className="text-sm text-white/90 drop-shadow">خدمة التوصيل</p>
+                  </div>
+                  
+                  <div className="mt-4 text-center">
+                    <h4 className="font-bold text-gray-800 dark:text-white text-base mb-1">توصيل</h4>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">خدمة التوصيل</p>
                   </div>
                 </div>
               </Link> */}
-
-              {/* Home Services */}
-              <Link href="/home-services">
-                <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative text-center">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                      <Home className="w-10 h-10 text-white drop-shadow-lg" />
-                    </div>
-                    <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">خدمات منزلية</h4>
-                    <p className="text-sm text-white/90 drop-shadow">تنظيف ومنزلية</p>
-                  </div>
-                </div>
-              </Link>
-
-              {/* Beauty Services */}
-              <Link href="/beauty-services">
-                <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative text-center">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                      <Scissors className="w-10 h-10 text-white drop-shadow-lg" />
-                    </div>
-                    <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">تجميل</h4>
-                    <p className="text-sm text-white/90 drop-shadow">صالونات وتجميل</p>
-                  </div>
-                </div>
-              </Link>
             </div>
             
-            {/* Scroll Indicator */}
-            <div className="flex justify-center mt-2 gap-2">
-              <div className="h-1 w-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full"></div>
-              <div className="h-1 w-8 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-              <div className="h-1 w-8 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+            {/* Scroll Indicator - Animated */}
+            <div className="flex justify-center mt-6 gap-2">
+              <div className="h-1.5 w-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full animate-pulse shadow-lg"></div>
+              <div className="h-1.5 w-8 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
             </div>
           </div>
           
@@ -297,6 +340,14 @@ export default function Stores() {
           <style>{`
             .scrollbar-hide::-webkit-scrollbar {
               display: none;
+            }
+            @keyframes pulse {
+              0%, 100% {
+                opacity: 1;
+              }
+              50% {
+                opacity: 0.5;
+              }
             }
           `}</style>
         </div>
