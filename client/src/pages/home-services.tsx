@@ -15,6 +15,7 @@ export default function HomeServices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<"labor" | "real-estate">("labor");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [newService, setNewService] = useState({
     name: "",
     description: "",
@@ -499,7 +500,8 @@ export default function HomeServices() {
                       <img
                         src={service.images[0]}
                         alt={service.name}
-                        className="w-full h-full object-cover"
+                        onClick={() => setSelectedImage(service.images[0])}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
                         data-testid={`service-image-${service.id}`}
                       />
                     ) : (
@@ -509,7 +511,8 @@ export default function HomeServices() {
                             key={idx}
                             src={image}
                             alt={`${service.name} ${idx + 1}`}
-                            className={`object-cover ${service.images?.length === 2 ? 'w-1/2' : 'w-1/3'}`}
+                            onClick={() => setSelectedImage(image)}
+                            className={`object-cover cursor-pointer hover:opacity-90 transition-opacity ${service.images?.length === 2 ? 'w-1/2' : 'w-1/3'}`}
                             data-testid={`service-image-${service.id}-${idx}`}
                           />
                         ))}
@@ -579,6 +582,29 @@ export default function HomeServices() {
           </div>
         )}
       </div>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <div className="relative">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+              data-testid="button-close-preview"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt="معاينة الصورة"
+                className="w-full h-auto max-h-[80vh] object-contain"
+                data-testid="preview-image"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
