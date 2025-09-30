@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, Home, MapPin, Star, MessageCircle, Plus } from "lucide-react";
+import { ArrowLeft, Search, Home, MapPin, Star, MessageCircle, Plus, ImageIcon, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { User, Service } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -20,6 +20,9 @@ export default function HomeServices() {
     basePrice: "",
     serviceType: "home-cleaning"
   });
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -31,6 +34,45 @@ export default function HomeServices() {
     queryKey: ["/api/services", "home", currentUser?.location],
     queryFn: () => apiRequest(`/api/services?location=${encodeURIComponent(currentUser?.location || '')}&type=home`),
     enabled: !!currentUser,
+  });
+
+  const uploadImageMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('media', file);
+      
+      const response = await fetch("/api/upload/media", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error("فشل في رفع الصورة");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.fileType !== 'video') {
+        setUploadedImages(prev => [...prev, data.mediaUrl]);
+        toast({
+          title: "تم رفع الصورة",
+          description: "تم رفع الصورة بنجاح",
+        });
+      }
+      setIsUploading(false);
+    },
+    onError: (error: any) => {
+      setIsUploading(false);
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في رفع الصورة",
+        variant: "destructive",
+      });
+    },
   });
 
   const addServiceMutation = useMutation({
@@ -45,6 +87,7 @@ export default function HomeServices() {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       setShowAddDialog(false);
       setNewService({ name: "", description: "", basePrice: "", serviceType: "home-cleaning" });
+      setUploadedImages([]);
       toast({
         title: "تم النشر بنجاح",
         description: "تم نشر خدمتك المنزلية بنجاح",
@@ -83,6 +126,33 @@ export default function HomeServices() {
     },
   });
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check if file is an image
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "خطأ",
+          description: "يرجى اختيار ملف صورة فقط",
+          variant: "destructive",
+        });
+        return;
+      }
+      setIsUploading(true);
+      uploadImageMutation.mutate(file);
+    }
+  };
+
+  const handleImageUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleRemoveImage = (imageUrl: string) => {
+    setUploadedImages(prev => prev.filter(url => url !== imageUrl));
+  };
+
   const handleAddService = () => {
     if (!newService.name || !newService.description || !newService.basePrice) {
       toast({
@@ -99,7 +169,8 @@ export default function HomeServices() {
       basePrice: newService.basePrice,
       serviceType: newService.serviceType,
       location: currentUser?.location || "",
-      vendorId: currentUser?.id
+      vendorId: currentUser?.id,
+      images: uploadedImages
     });
   };
 
@@ -236,6 +307,66 @@ export default function HomeServices() {
                     className="text-right"
                     data-testid="input-service-price"
                   />
+                </div>
+
+                {/* صور الخدمة */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                    صور الخدمة (اختياري)
+                  </label>
+                  
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    data-testid="input-service-image"
+                  />
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleImageUploadClick}
+                    disabled={isUploading}
+                    className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-500 h-24"
+                    data-testid="button-upload-image"
+                  >
+                    {isUploading ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                        <span className="text-sm">جاري الرفع...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <ImageIcon className="w-8 h-8 text-gray-400" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">اضغط لرفع صورة من الهاتف</span>
+                      </div>
+                    )}
+                  </Button>
+
+                  {/* عرض الصور المرفوعة */}
+                  {uploadedImages.length > 0 && (
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      {uploadedImages.map((imageUrl, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={imageUrl}
+                            alt={`صورة ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(imageUrl)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            data-testid={`button-remove-image-${index}`}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 mt-6">
