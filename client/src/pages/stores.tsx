@@ -26,49 +26,11 @@ export default function Stores() {
     queryKey: ["/api/user/current"],
   });
 
-  // Fetch all services from all vendors for service marketplace display
-  const { data: allServices = [], isLoading: isLoadingServices } = useQuery<Service[]>({
-    queryKey: ["/api/services", currentUser?.location],
-    queryFn: () => apiRequest(`/api/services?location=${encodeURIComponent(currentUser?.location || '')}`),
-    enabled: !!currentUser,
-  });
-
   // Fetch all products from all vendors for product marketplace display
   const { data: allProducts = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ["/api/products", currentUser?.location],
     queryFn: () => apiRequest(`/api/products?location=${encodeURIComponent(currentUser?.location || '')}`),
     enabled: !!currentUser,
-  });
-
-  const { data: serviceCategories = [], isLoading: isLoadingCategories } = useQuery<ServiceCategory[]>({
-    queryKey: ["/api/service-categories"],
-    enabled: !!currentUser,
-  });
-
-
-
-  const requestServiceMutation = useMutation({
-    mutationFn: async ({ serviceId, vendorId }: { serviceId: string; vendorId: string }) => {
-      return apiRequest("/api/chats/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otherUserId: vendorId }),
-      });
-    },
-    onSuccess: (data: any) => {
-      setLocation(`/chat/${data.chatId}`);
-      toast({
-        title: "تم بدء المحادثة",
-        description: "تم الاتصال بمقدم الخدمة بنجاح",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "خطأ",
-        description: "فشل في الاتصال بمقدم الخدمة",
-        variant: "destructive",
-      });
-    },
   });
 
   // Add to cart mutation
@@ -135,14 +97,6 @@ export default function Stores() {
     },
   });
 
-  // Filter services for service marketplace search
-  const filteredServices = allServices.filter(service =>
-    service?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    service?.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    service?.serviceType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    service?.location?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Filter products for product marketplace search
   const filteredProducts = allProducts.filter(product =>
     product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -175,8 +129,8 @@ export default function Stores() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-white to-white/90 bg-clip-text">خدمات BizChat</h1>
-              <p className="text-white/80 text-sm">اكتشف مئات الخدمات المتنوعة من مقدمين موثوقين</p>
+              <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-white to-white/90 bg-clip-text">متاجر BizChat</h1>
+              <p className="text-white/80 text-sm">تسوق من مجموعة واسعة من المنتجات المحلية</p>
             </div>
           </div>
           <Link href="/profile">
@@ -201,8 +155,8 @@ export default function Stores() {
               <Package className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">خدمات متاحة في {currentUser?.location}</h2>
-              <p className="text-gray-600 dark:text-gray-300 text-lg">مئات الخدمات المتنوعة من مقدمين محليين موثوقين</p>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">منتجات متاحة في {currentUser?.location}</h2>
+              <p className="text-gray-600 dark:text-gray-300 text-lg">تسوق من مجموعة واسعة من المنتجات المحلية</p>
             </div>
           </div>
         </div>
@@ -214,7 +168,7 @@ export default function Stores() {
           </div>
           <Input
             type="text"
-            placeholder="ابحث عن خدمة، منتج، مقدم خدمة أو متجر..."
+            placeholder="ابحث عن منتج، فئة أو متجر..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pr-16 text-lg h-16 rounded-2xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-xl focus:shadow-2xl transition-all duration-300 focus:scale-[1.02]"
@@ -374,144 +328,6 @@ export default function Stores() {
           </div>
         </div>
 
-        {/* Loading State - Premium Services Grid */}
-        {isLoadingServices && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden animate-pulse">
-                <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600"></div>
-                <div className="p-3 space-y-2">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Services Grid - Professional Style */}
-        {!isLoadingServices && filteredServices.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {filteredServices.map((service) => (
-              <div
-                key={service.id}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer transform"
-                data-testid={`service-card-${service.id}`}
-                onClick={() => {/* TODO: Navigate to service detail */}}
-              >
-                {/* Service Image - AliExpress Style */}
-                <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
-                  {service.images && service.images.length > 0 ? (
-                    <img
-                      src={service.images[0]}
-                      alt={service.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      data-testid={`img-service-${service.id}`}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center">
-                      <Package className="w-12 h-12 text-gray-400" />
-                    </div>
-                  )}
-                  
-                  {/* Wishlist Button */}
-                  <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="w-8 h-8 p-0 bg-white/80 hover:bg-white rounded-full shadow-md"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // TODO: Add to wishlist
-                      }}
-                    >
-                      <Heart className="w-4 h-4 text-gray-600" />
-                    </Button>
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <Button
-                      size="sm"
-                      className="bg-whatsapp-green hover:bg-green-600 text-white shadow-md h-8 px-3"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId });
-                      }}
-                      disabled={requestServiceMutation.isPending}
-                      data-testid={`button-request-service-${service.id}`}
-                    >
-                      <MessageCircle className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Service Info - AliExpress Style */}
-                <div className="p-3 space-y-2">
-                  {/* Service Price - Most Prominent */}
-                  <div className="flex items-center justify-between">
-                    <div className="text-lg font-bold text-red-500">
-                      {parseInt(service?.basePrice || '0').toLocaleString()} دج
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                      <span className="text-xs text-gray-500">4.8</span>
-                    </div>
-                  </div>
-                  
-                  {/* Service Name */}
-                  <h3 className="font-medium text-sm text-gray-800 dark:text-white line-clamp-2 leading-4 group-hover:text-whatsapp-green transition-colors">
-                    {service?.name || 'اسم الخدمة'}
-                  </h3>
-                  
-                  {/* Service Provider Name */}
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Store className="w-3 h-3" />
-                    <span className="truncate">
-                      مقدم خدمة
-                    </span>
-                  </div>
-                  
-                  {/* Category Badge */}
-                  <Badge 
-                    variant="secondary" 
-                    className="text-xs h-5 px-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                  >
-                    {service?.serviceType || 'نوع الخدمة'}
-                  </Badge>
-                  
-                  {/* Request Service Button */}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full mt-2 h-7 text-xs border-gray-200 hover:border-whatsapp-green hover:text-whatsapp-green transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId });
-                    }}
-                    disabled={requestServiceMutation.isPending}
-                    data-testid={`button-request-now-${service.id}`}
-                  >
-                    <MessageCircle className="w-3 h-3 mr-1" />
-                    اطلب الآن
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Products Section Header */}
-        <div className="mt-16 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">المنتجات المتاحة في {currentUser?.location}</h2>
-              <p className="text-gray-600 dark:text-gray-300 text-lg">تسوق من مجموعة واسعة من المنتجات المحلية</p>
-            </div>
-          </div>
-        </div>
-
         {/* Loading State - Premium Products Grid */}
         {isLoadingProducts && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mb-10">
@@ -613,22 +429,22 @@ export default function Stores() {
         )}
 
         {/* Empty State - Premium */}
-        {!isLoadingServices && !isLoadingProducts && filteredServices.length === 0 && filteredProducts.length === 0 && (
+        {!isLoadingProducts && filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl">
               <Package className="w-16 h-16 text-gray-400" />
             </div>
             <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-              {searchQuery ? "لا توجد خدمات أو منتجات تطابق البحث" : "لا توجد خدمات أو منتجات في هذه المنطقة حالياً"}
+              {searchQuery ? "لا توجد منتجات تطابق البحث" : "لا توجد منتجات في هذه المنطقة حالياً"}
             </h3>
             {!searchQuery && (
               <p className="text-gray-500 text-lg mb-8">
-                كن أول من يقدم خدماته ومنتجاته في هذه المنطقة!
+                كن أول من يضيف منتجاته في هذه المنطقة!
               </p>
             )}
-            <Link href="/my-vendor">
+            <Link href="/my-store">
               <Button className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-                أضف خدماتك
+                أضف منتجاتك
               </Button>
             </Link>
           </div>
