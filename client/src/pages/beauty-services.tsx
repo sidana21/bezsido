@@ -444,12 +444,12 @@ export default function BeautyServices() {
                       />
                     ) : (
                       <div className="flex gap-1 h-full">
-                        {service.images.slice(0, 3).map((image: string, idx: number) => (
+                        {service.images?.slice(0, 3).map((image: string, idx: number) => (
                           <img
                             key={idx}
                             src={image}
                             alt={`${service.name} ${idx + 1}`}
-                            className={`object-cover ${service.images.length === 2 ? 'w-1/2' : 'w-1/3'}`}
+                            className={`object-cover ${service.images?.length === 2 ? 'w-1/2' : 'w-1/3'}`}
                             data-testid={`service-image-${service.id}-${idx}`}
                           />
                         ))}
