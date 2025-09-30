@@ -45,11 +45,44 @@ export default function Profile() {
     enabled: !!currentUser?.id,
   });
 
+  // جلب منشورات المستخدم الحقيقية
+  const { data: userPosts = [] } = useQuery({
+    queryKey: ["/api/users", currentUser?.id, "posts"],
+    queryFn: () => apiRequest(`/api/users/${currentUser?.id}/posts`),
+    enabled: !!currentUser?.id,
+  });
+
+  // جلب منتجات المستخدم الحقيقية
+  const { data: userProducts = [] } = useQuery<any[]>({
+    queryKey: ["/api/user/products"],
+    enabled: !!currentUser,
+  });
+
+  // دمج المنشورات والمنتجات في مصفوفة واحدة للعرض
+  const allUserPosts = [
+    ...(userPosts as any[]).map((post: any) => ({
+      id: post.id,
+      type: 'post',
+      imageUrl: post.imageUrl,
+      videoUrl: post.videoUrl,
+      likesCount: post.likesCount || 0,
+      commentsCount: post.commentsCount || 0,
+    })),
+    ...userProducts.map((product: any) => ({
+      id: product.id,
+      type: 'product',
+      imageUrl: product.imageUrl,
+      videoUrl: product.videoUrl,
+      likesCount: product.likesCount || 0,
+      commentsCount: 0,
+    })),
+  ];
+
   // استخراج الإحصائيات من profileData للتوافق مع الكود الحالي
   const userStats = profileData ? {
     followers: profileData.followersCount || 0,
     following: profileData.followingCount || 0,
-    posts: profileData.postsCount || 0
+    posts: allUserPosts.length || 0
   } : undefined;
 
   // Update form fields when user data changes
@@ -629,120 +662,63 @@ export default function Profile() {
             </div>
             
             {/* Posts Grid */}
-            <div className="grid grid-cols-3 gap-1">
-              {/* Sample Post 1 */}
-              <div className="aspect-square bg-gradient-to-br from-pink-400 to-purple-500 rounded-lg relative overflow-hidden group cursor-pointer" data-testid="post-grid-item-1">
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-4 text-white">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">124</span>
+            {allUserPosts.length > 0 ? (
+              <div className="grid grid-cols-3 gap-1">
+                {allUserPosts.map((post, index) => (
+                  <div 
+                    key={post.id} 
+                    className="aspect-square bg-gray-200 dark:bg-gray-800 rounded-lg relative overflow-hidden group cursor-pointer" 
+                    data-testid={`post-grid-item-${index + 1}`}
+                  >
+                    {/* عرض الصورة أو الفيديو */}
+                    {post.videoUrl ? (
+                      <video 
+                        src={post.videoUrl} 
+                        className="w-full h-full object-cover"
+                        muted
+                      />
+                    ) : post.imageUrl ? (
+                      <img 
+                        src={post.imageUrl} 
+                        alt="منشور" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800" />
+                    )}
+                    
+                    {/* معلومات المنشور عند التمرير */}
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-4 text-white">
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-4 h-4 fill-white" />
+                          <span className="text-sm font-medium">{post.likesCount}</span>
+                        </div>
+                        {post.commentsCount > 0 && (
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="w-4 h-4 fill-white" />
+                            <span className="text-sm font-medium">{post.commentsCount}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">12</span>
-                    </div>
+                    
+                    {/* أيقونة نوع المنشور */}
+                    {post.type === 'product' && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">
+                        منتج
+                      </div>
+                    )}
                   </div>
-                </div>
+                ))}
               </div>
-              
-              {/* Sample Post 2 */}
-              <div className="aspect-square bg-gradient-to-br from-blue-400 to-cyan-500 rounded-lg relative overflow-hidden group cursor-pointer" data-testid="post-grid-item-2">
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-4 text-white">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">89</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">5</span>
-                    </div>
-                  </div>
-                </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <Grid3X3 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-lg mb-2">لا توجد منشورات بعد</p>
+                <p className="text-sm">ابدأ بنشر منتجاتك أو قصصك</p>
               </div>
-              
-              {/* Sample Post 3 */}
-              <div className="aspect-square bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg relative overflow-hidden group cursor-pointer" data-testid="post-grid-item-3">
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-4 text-white">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">201</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">18</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Sample Post 4 */}
-              <div className="aspect-square bg-gradient-to-br from-orange-400 to-red-500 rounded-lg relative overflow-hidden group cursor-pointer" data-testid="post-grid-item-4">
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-4 text-white">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">67</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">3</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Sample Post 5 */}
-              <div className="aspect-square bg-gradient-to-br from-purple-400 to-indigo-500 rounded-lg relative overflow-hidden group cursor-pointer" data-testid="post-grid-item-5">
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-4 text-white">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">156</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">9</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Sample Post 6 */}
-              <div className="aspect-square bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg relative overflow-hidden group cursor-pointer" data-testid="post-grid-item-6">
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-4 text-white">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">93</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4 fill-white" />
-                      <span className="text-sm font-medium">7</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* More posts indicator */}
-              <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-testid="post-grid-more">
-                <div className="text-center text-gray-500 dark:text-gray-400">
-                  <Grid3X3 className="w-6 h-6 mx-auto mb-1" />
-                  <div className="text-xs">+6 أخرى</div>
-                </div>
-              </div>
-              
-              <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-testid="post-grid-add">
-                <div className="text-center text-gray-500 dark:text-gray-400">
-                  <Camera className="w-6 h-6 mx-auto mb-1" />
-                  <div className="text-xs">منشور جديد</div>
-                </div>
-              </div>
-              
-              <div className="aspect-square"></div> {/* Empty space for grid alignment */}
-            </div>
+            )}
           </div>
         )}
 
