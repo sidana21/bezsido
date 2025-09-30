@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +14,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 export default function HomeServices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<"labor" | "real-estate">("labor");
   const [newService, setNewService] = useState({
     name: "",
     description: "",
     basePrice: "",
-    serviceType: "home-cleaning"
+    serviceType: "labor-services"
   });
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -34,20 +35,36 @@ export default function HomeServices() {
     queryKey: ["/api/service-categories"],
   });
 
-  // Find the home services category (اليد العاملة - Labor Services)
-  const homeServiceCategory = serviceCategories.find(cat => 
+  // تحديث نوع الخدمة تلقائياً عند تغيير الفئة المختارة
+  useEffect(() => {
+    setNewService(prev => ({
+      ...prev,
+      serviceType: selectedCategory === "real-estate" ? "real-estate" : "labor-services"
+    }));
+  }, [selectedCategory]);
+
+  // Find the labor services category (اليد العاملة)
+  const laborCategory = serviceCategories.find(cat => 
     cat.nameAr === "اليد العاملة" || cat.name === "Labor Services"
   );
 
+  // Find the real estate category (كراء وشراء المنازل)
+  const realEstateCategory = serviceCategories.find(cat => 
+    cat.nameAr === "كراء وشراء المنازل" || cat.name === "Real Estate"
+  );
+
+  // Get the active category based on selection
+  const activeCategory = selectedCategory === "labor" ? laborCategory : realEstateCategory;
+
   const { data: homeServices = [], isLoading } = useQuery<Service[]>({
-    queryKey: ["/api/services", "home", currentUser?.location, homeServiceCategory?.id],
+    queryKey: ["/api/services", selectedCategory, currentUser?.location, activeCategory?.id],
     queryFn: () => {
       const params = new URLSearchParams();
       if (currentUser?.location) params.append('location', currentUser.location);
-      if (homeServiceCategory?.id) params.append('categoryId', homeServiceCategory.id);
+      if (activeCategory?.id) params.append('categoryId', activeCategory.id);
       return apiRequest(`/api/services?${params.toString()}`);
     },
-    enabled: !!currentUser && !!homeServiceCategory,
+    enabled: !!currentUser && !!activeCategory,
   });
 
   const uploadImageMutation = useMutation({
@@ -100,7 +117,12 @@ export default function HomeServices() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       setShowAddDialog(false);
-      setNewService({ name: "", description: "", basePrice: "", serviceType: "home-cleaning" });
+      setNewService({ 
+        name: "", 
+        description: "", 
+        basePrice: "", 
+        serviceType: selectedCategory === "real-estate" ? "real-estate" : "labor-services"
+      });
       setUploadedImages([]);
       toast({
         title: "تم النشر بنجاح",
@@ -177,14 +199,12 @@ export default function HomeServices() {
       return;
     }
 
-    const laborCategory = serviceCategories.find(cat => 
-      cat.nameAr === "اليد العاملة" || 
-      cat.name === "Labor Services" ||
-      cat.nameAr?.includes("العاملة") ||
-      cat.name?.toLowerCase().includes("labor")
-    );
+    // تحديد الفئة الصحيحة بناءً على نوع الخدمة المختار
+    const selectedServiceCategory = newService.serviceType === "real-estate" 
+      ? realEstateCategory 
+      : laborCategory;
     
-    if (!laborCategory) {
+    if (!selectedServiceCategory) {
       console.error("Available categories:", serviceCategories);
       toast({
         title: "خطأ",
@@ -199,7 +219,7 @@ export default function HomeServices() {
       description: newService.description,
       basePrice: newService.basePrice,
       serviceType: newService.serviceType,
-      categoryId: laborCategory.id,
+      categoryId: selectedServiceCategory.id,
       location: currentUser?.location || "",
       vendorId: currentUser?.id,
       images: uploadedImages
@@ -254,18 +274,42 @@ export default function HomeServices() {
           />
         </div>
 
-        {/* Services Categories */}
+        {/* Services Categories - تبويبات الفئات */}
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+          <button
+            onClick={() => setSelectedCategory("labor")}
+            className={`rounded-xl p-4 shadow-md transition-all duration-300 ${
+              selectedCategory === "labor" 
+                ? "bg-gradient-to-br from-green-600 to-emerald-600 text-white ring-4 ring-green-300 dark:ring-green-700 scale-105" 
+                : "bg-white dark:bg-gray-800 hover:shadow-xl hover:scale-105"
+            }`}
+            data-testid="button-category-labor"
+          >
             <div className="text-3xl mb-2">👷</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">اليد العاملة</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">عمال وخدمات احترافية</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+            <h3 className={`font-bold ${selectedCategory === "labor" ? "text-white" : "text-gray-800 dark:text-white"}`}>
+              اليد العاملة
+            </h3>
+            <p className={`text-sm ${selectedCategory === "labor" ? "text-white/90" : "text-gray-600 dark:text-gray-400"}`}>
+              عمال وخدمات احترافية
+            </p>
+          </button>
+          <button
+            onClick={() => setSelectedCategory("real-estate")}
+            className={`rounded-xl p-4 shadow-md transition-all duration-300 ${
+              selectedCategory === "real-estate" 
+                ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white ring-4 ring-blue-300 dark:ring-blue-700 scale-105" 
+                : "bg-white dark:bg-gray-800 hover:shadow-xl hover:scale-105"
+            }`}
+            data-testid="button-category-real-estate"
+          >
             <div className="text-3xl mb-2">🏠</div>
-            <h3 className="font-bold text-gray-800 dark:text-white">كراء وشراء المنازل</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">عقارات وإيجار</p>
-          </div>
+            <h3 className={`font-bold ${selectedCategory === "real-estate" ? "text-white" : "text-gray-800 dark:text-white"}`}>
+              كراء وشراء المنازل
+            </h3>
+            <p className={`text-sm ${selectedCategory === "real-estate" ? "text-white/90" : "text-gray-600 dark:text-gray-400"}`}>
+              عقارات وإيجار
+            </p>
+          </button>
         </div>
 
         {/* Add Service Button */}
