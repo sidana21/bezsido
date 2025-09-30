@@ -5951,6 +5951,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // جلب منتجات المستخدم
+  app.get("/api/users/:userId/products", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // التحقق من وجود المستخدم
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+      
+      // جلب منتجات المستخدم
+      let userProducts = [];
+      try {
+        userProducts = await storage.getUserProducts(userId);
+      } catch (error) {
+        console.warn('Could not get user products:', error);
+        userProducts = [];
+      }
+      
+      res.json(userProducts);
+    } catch (error) {
+      console.error('Error getting user products:', error);
+      res.status(500).json({ message: "خطأ في جلب منتجات المستخدم" });
+    }
+  });
+
   // Social Notifications API Routes - إشعارات التفاعلات الاجتماعية
   app.get("/api/notifications/social", requireAuth, async (req: any, res) => {
     try {

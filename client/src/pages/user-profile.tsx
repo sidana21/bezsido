@@ -81,6 +81,36 @@ export default function UserProfile() {
     enabled: profileData?.isOwnProfile,
   });
 
+  // جلب منتجات المستخدم
+  const { data: userProducts = [] } = useQuery<any[]>({
+    queryKey: ["/api/users", userId, "products"],
+    queryFn: () => apiRequest(`/api/users/${userId}/products`),
+    enabled: !!userId,
+  });
+
+  // دمج المنشورات والمنتجات في مصفوفة واحدة للعرض
+  const allUserContent = [
+    ...(userPosts as any[]).map((post: any) => ({
+      id: post.id,
+      type: 'post',
+      imageUrl: post.images?.[0],
+      videoUrl: post.videoUrl,
+      likesCount: post.likesCount || 0,
+      commentsCount: post.commentsCount || 0,
+      images: post.images,
+      ...post
+    })),
+    ...(userProducts as any[]).map((product: any) => ({
+      id: product.id,
+      type: 'product',
+      imageUrl: product.imageUrl,
+      videoUrl: product.videoUrl,
+      name: product.name,
+      price: product.price,
+      ...product
+    }))
+  ];
+
   // متابعة/إلغاء متابعة
   const followMutation = useMutation({
     mutationFn: async (action: 'follow' | 'unfollow') => {
@@ -456,7 +486,7 @@ export default function UserProfile() {
               </TabsTrigger>
             </TabsList>
 
-            {/* منشورات المستخدم */}
+            {/* منشورات ومنتجات المستخدم */}
             <TabsContent value="posts" className="mt-6">
               {isLoadingPosts ? (
                 <div className="grid grid-cols-3 gap-1">
@@ -464,31 +494,50 @@ export default function UserProfile() {
                     <div key={i} className="aspect-square bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
                   ))}
                 </div>
-              ) : userPosts.length === 0 ? (
+              ) : allUserContent.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Camera className="w-8 h-8 text-gray-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">
-                    لا توجد منشورات بعد
+                    لا توجد منشورات أو منتجات بعد
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    {profileData.isOwnProfile ? "شارك منشورك الأول!" : "لم يشارك أي منشورات بعد"}
+                    {profileData.isOwnProfile ? "شارك منشورك أو منتجك الأول!" : "لم يشارك أي منشورات أو منتجات بعد"}
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-1">
-                  {userPosts.map((post) => (
+                  {allUserContent.map((item) => (
                     <div
-                      key={post.id}
+                      key={`${item.type}-${item.id}`}
                       className="aspect-square bg-gray-100 dark:bg-gray-800 relative group cursor-pointer overflow-hidden"
-                      onClick={() => navigate(`/post/${post.id}`)}
-                      data-testid={`post-${post.id}`}
+                      onClick={() => {
+                        if (item.type === 'post') {
+                          navigate(`/post/${item.id}`);
+                        } else if (item.type === 'product') {
+                          navigate(`/product/${item.id}`);
+                        }
+                      }}
+                      data-testid={`${item.type}-${item.id}`}
                     >
-                      {post.images && post.images.length > 0 ? (
+                      {/* عرض الصورة أو الفيديو */}
+                      {item.videoUrl ? (
+                        <video
+                          src={item.videoUrl}
+                          className="w-full h-full object-cover"
+                          muted
+                        />
+                      ) : item.imageUrl ? (
                         <img
-                          src={post.images[0]}
-                          alt="منشور"
+                          src={item.imageUrl}
+                          alt={item.type === 'product' ? item.name : 'منشور'}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : item.images && item.images.length > 0 ? (
+                        <img
+                          src={item.images[0]}
+                          alt={item.type === 'product' ? item.name : 'منشور'}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
@@ -499,24 +548,38 @@ export default function UserProfile() {
                       
                       {/* إحصائيات عند التمرير */}
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <div className="flex items-center gap-4 text-white">
-                          <div className="flex items-center gap-1">
-                            <Heart className="w-5 h-5 fill-current" />
-                            <span>{formatNumber(post.likesCount || 0)}</span>
+                        {item.type === 'post' ? (
+                          <div className="flex items-center gap-4 text-white">
+                            <div className="flex items-center gap-1">
+                              <Heart className="w-5 h-5 fill-current" />
+                              <span>{formatNumber(item.likesCount || 0)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MessageCircle className="w-5 h-5 fill-current" />
+                              <span>{formatNumber(item.commentsCount || 0)}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <MessageCircle className="w-5 h-5 fill-current" />
-                            <span>{formatNumber(post.commentsCount || 0)}</span>
+                        ) : (
+                          <div className="text-white text-center px-2">
+                            <ShoppingBag className="w-6 h-6 mx-auto mb-1" />
+                            <p className="text-sm font-semibold truncate">{item.name}</p>
+                            {item.price && (
+                              <p className="text-xs">{item.price} د.ج</p>
+                            )}
                           </div>
-                        </div>
+                        )}
                       </div>
 
-                      {/* مؤشر المنشورات متعددة الصور */}
-                      {post.images && post.images.length > 1 && (
-                        <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1">
+                      {/* مؤشر نوع المحتوى */}
+                      <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1">
+                        {item.type === 'product' ? (
+                          <ShoppingBag className="w-4 h-4 text-white" />
+                        ) : item.images && item.images.length > 1 ? (
                           <Grid className="w-4 h-4 text-white" />
-                        </div>
-                      )}
+                        ) : item.videoUrl ? (
+                          <div className="w-4 h-4 text-white">▶</div>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
