@@ -228,8 +228,8 @@ export default function Stores() {
           <div className="relative">
             {/* Horizontal Scrollable Container */}
             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {/* Transportation Services */}
-              <Link href="/taxi">
+              {/* Transportation Services - HIDDEN TEMPORARILY */}
+              {/* <Link href="/taxi">
                 <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div className="relative text-center">
@@ -240,10 +240,10 @@ export default function Stores() {
                     <p className="text-sm text-white/90 drop-shadow">نقل الركاب</p>
                   </div>
                 </div>
-              </Link>
+              </Link> */}
 
-              {/* Delivery Services */}
-              <Link href="/taxi-driver">
+              {/* Delivery Services - HIDDEN TEMPORARILY */}
+              {/* <Link href="/taxi-driver">
                 <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-blue-500 to-cyan-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div className="relative text-center">
@@ -254,7 +254,7 @@ export default function Stores() {
                     <p className="text-sm text-white/90 drop-shadow">خدمة التوصيل</p>
                   </div>
                 </div>
-              </Link>
+              </Link> */}
 
               {/* Home Services */}
               <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
