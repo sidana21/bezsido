@@ -311,19 +311,6 @@ export default function SocialFeed() {
         </div>
       </div>
 
-      {/* زر إنشاء منشور جديد - فوق زر القلب */}
-      <div className="absolute bottom-[280px] right-6 z-50">
-        <Button
-          onClick={() => setLocation('/create-post')}
-          className="relative w-14 h-14 bg-gradient-to-r from-green-500/20 to-emerald-600/20 hover:from-green-500 hover:to-emerald-600 active:from-green-600 active:to-emerald-700 rounded-full shadow-2xl shadow-green-500/30 hover:shadow-green-500/60 hover:scale-110 active:scale-95 transition-all duration-300 group overflow-hidden backdrop-blur-md border-2 border-green-400/30 hover:border-green-300/60 animate-pulse"
-          data-testid="button-create-post"
-        >
-          {/* Glow effect */}
-          <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-20 group-hover:opacity-50 transition-opacity duration-300" />
-          <Plus className="w-8 h-8 text-green-300/70 group-hover:text-white relative z-10 group-hover:rotate-90 transition-all duration-300" />
-        </Button>
-      </div>
-
       {/* مؤشر المنشورات الجانبي */}
       {posts.length > 1 && (
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-40 flex flex-col gap-2">

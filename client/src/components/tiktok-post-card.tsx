@@ -11,7 +11,7 @@ import {
   Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, 
   Play, Pause, Volume2, VolumeX, MapPin, Verified, Crown,
   Send, Smile, Camera, Tag, ShoppingBag, Eye, ChevronLeft, ChevronRight,
-  User as UserIcon, ExternalLink, X, UserPlus
+  User as UserIcon, ExternalLink, X, UserPlus, Plus
 } from "lucide-react";
 import type { User, BizChatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -547,6 +547,19 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
 
             {/* أزرار التفاعل الجانبية */}
             <div className="flex flex-col gap-6 items-center">
+              {/* زر إنشاء منشور - فوق زر القلب */}
+              <div className="flex flex-col items-center">
+                <Button
+                  onClick={() => setLocation('/create-post')}
+                  className="relative w-14 h-14 bg-gradient-to-r from-green-500/20 to-emerald-600/20 hover:from-green-500 hover:to-emerald-600 active:from-green-600 active:to-emerald-700 rounded-full shadow-2xl shadow-green-500/30 hover:shadow-green-500/60 hover:scale-110 active:scale-95 transition-all duration-300 group overflow-hidden backdrop-blur-md border-2 border-green-400/30 hover:border-green-300/60 animate-pulse"
+                  data-testid="button-create-post"
+                >
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-20 group-hover:opacity-50 transition-opacity duration-300" />
+                  <Plus className="w-8 h-8 text-green-300/70 group-hover:text-white relative z-10 group-hover:rotate-90 transition-all duration-300" />
+                </Button>
+              </div>
+              
               {/* زر الإعجاب */}
               <div className="flex flex-col items-center">
                 <Button
