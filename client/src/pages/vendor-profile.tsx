@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { useParams } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useParams, useLocation } from 'wouter';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,6 +81,8 @@ interface Product {
 
 export default function VendorProfilePage() {
   const { vendorId } = useParams<{ vendorId: string }>();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
@@ -97,6 +101,41 @@ export default function VendorProfilePage() {
     setSelectedImages(images);
     setSelectedImageTitle(title);
     setImageModalOpen(true);
+  };
+
+  // Quick contact mutation
+  const quickContactMutation = useMutation({
+    mutationFn: async (sellerId: string) => {
+      console.log("Starting chat with seller ID:", sellerId);
+      
+      const chatResponse = await apiRequest("/api/chats/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId: sellerId }),
+      });
+
+      return chatResponse;
+    },
+    onSuccess: (data) => {
+      console.log("Chat started successfully:", data);
+      toast({
+        title: "✅ تم بدء المحادثة",
+        description: "يمكنك الآن التواصل مع البائع",
+      });
+      navigate(`/chats/${data.chatId}`);
+    },
+    onError: (error: any) => {
+      console.error("Error starting chat:", error);
+      toast({
+        title: "خطأ في إنشاء المحادثة",
+        description: error.message || "حدث خطأ أثناء محاولة التواصل مع البائع",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleQuickContact = (sellerId: string) => {
+    quickContactMutation.mutate(sellerId);
   };
 
   if (vendorLoading) {
@@ -469,6 +508,8 @@ export default function VendorProfilePage() {
         title={selectedImageTitle}
         showNavigation={true}
         showActions={true}
+        sellerId={vendor?.owner?.id}
+        onQuickContact={handleQuickContact}
       />
     </div>
   );

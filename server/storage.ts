@@ -6021,6 +6021,71 @@ export class MemStorage implements IStorage {
 
   // Initialize default vendor categories and sample vendors
   private initializeDefaultVendorData() {
+    // First, create sample vendor owners (users)
+    const sampleVendorUsers = [
+      {
+        id: 'user-vendor-1',
+        name: 'مدير تك ستور',
+        email: 'techstore@example.com',
+        password: 'hashedpassword123',
+        location: 'الجزائر العاصمة',
+        avatar: null,
+        bio: null,
+        isOnline: true,
+        verifiedAt: new Date(),
+        lastStreakDate: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date()
+      },
+      {
+        id: 'user-vendor-2',
+        name: 'مديرة أناقة مودرن',
+        email: 'anaqamodern@example.com',
+        password: 'hashedpassword123',
+        location: 'وهران',
+        avatar: null,
+        bio: null,
+        isOnline: true,
+        verifiedAt: new Date(),
+        lastStreakDate: null,
+        createdAt: new Date('2024-01-15'),
+        updatedAt: new Date()
+      },
+      {
+        id: 'user-vendor-3',
+        name: 'مدير حلويات الشرق',
+        email: 'oriental@example.com',
+        password: 'hashedpassword123',
+        location: 'قسنطينة',
+        avatar: null,
+        bio: null,
+        isOnline: true,
+        verifiedAt: new Date(),
+        lastStreakDate: null,
+        createdAt: new Date('2024-02-01'),
+        updatedAt: new Date()
+      },
+      {
+        id: 'user-vendor-4',
+        name: 'مديرة الأثاث الفاخر',
+        email: 'furniture@example.com',
+        password: 'hashedpassword123',
+        location: 'سطيف',
+        avatar: null,
+        bio: null,
+        isOnline: true,
+        verifiedAt: new Date(),
+        lastStreakDate: null,
+        createdAt: new Date('2024-03-01'),
+        updatedAt: new Date()
+      }
+    ];
+
+    // Add sample vendor users to the users map
+    sampleVendorUsers.forEach(user => {
+      this.users.set(user.id, user);
+    });
+
     // Initialize vendor categories
     const defaultCategories = [
       {

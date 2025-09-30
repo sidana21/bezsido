@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, ChevronLeft, ChevronRight, Download, Share2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Download, Share2, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ImageModalProps {
@@ -12,6 +12,8 @@ interface ImageModalProps {
   title?: string;
   showNavigation?: boolean;
   showActions?: boolean;
+  sellerId?: string;
+  onQuickContact?: (sellerId: string) => void;
 }
 
 export function ImageModal({
@@ -22,6 +24,8 @@ export function ImageModal({
   title,
   showNavigation = true,
   showActions = true,
+  sellerId,
+  onQuickContact,
 }: ImageModalProps) {
   const [activeIndex, setActiveIndex] = useState(currentIndex);
 
@@ -143,6 +147,22 @@ export function ImageModal({
             {/* Actions */}
             {showActions && (
               <div className="flex items-center gap-2">
+                {sellerId && onQuickContact && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      onQuickContact(sellerId);
+                      onClose();
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    data-testid="button-quick-contact"
+                  >
+                    <MessageCircle className="h-4 w-4 ml-2" />
+                    توصل سريع
+                  </Button>
+                )}
+                
                 <Button
                   variant="ghost"
                   size="sm"
