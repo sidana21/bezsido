@@ -5,11 +5,9 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Function to conditionally load Replit plugins
 async function getReplitPlugins() {
   const plugins = [];
   
-  // Only load Replit plugins when in Replit environment
   if (process.env.REPL_ID !== undefined) {
     try {
       const runtimeErrorOverlay = await import("@replit/vite-plugin-runtime-error-modal");
