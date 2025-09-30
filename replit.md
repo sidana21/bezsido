@@ -67,3 +67,33 @@ Preferred communication style: Simple, everyday language.
 - `@hookform/resolvers`: Integration with validation libraries.
 - `react-hook-form`: Performant form library.
 - `zod`: TypeScript-first schema validation.
+
+## Replit Environment Setup
+
+### Date
+- Configured: September 30, 2025
+
+### Development Configuration
+- **Port**: 5000 (frontend and backend on same port)
+- **Host**: 0.0.0.0 (configured for Replit proxy)
+- **Workflow**: "Start application" runs `npm run dev`
+- **Output Type**: webview for frontend preview
+- **Database**: PostgreSQL (Replit managed) - DATABASE_URL configured
+- **Storage Mode**: In-memory (MemStorage) for development
+
+### Deployment Configuration
+- **Type**: Autoscale (stateless web app)
+- **Build**: `npm run build`
+- **Run**: `npm run start`
+- **Production Mode**: Serves static files from dist/public
+
+### Key Files
+- **Server Entry**: `server/index.ts` - Express server with Vite integration
+- **Vite Config**: `vite.config.ts` - Already configured with `allowedHosts: true` for Replit proxy
+- **Schema**: `shared/schema.ts` - Drizzle ORM schema definitions
+- **Storage**: `server/storage.ts` - Storage interface (MemStorage/DatabaseStorage)
+
+### Known Items
+- TypeScript errors exist in storage.ts (158 diagnostics) but don't prevent runtime execution
+- Notification sound loading error (uses fallback ringtone) - cosmetic only
+- App successfully loads with Arabic RTL support and login screen
