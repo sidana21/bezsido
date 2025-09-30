@@ -222,80 +222,79 @@ export default function Stores() {
           />
         </div>
 
-        {/* Service Categories - Professional Grid */}
+        {/* Service Categories - Horizontal Scroll */}
         <div className="mb-10">
           <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">فئات الخدمات</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {/* Transportation Services */}
-            <Link href="/taxi">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <Car className="w-8 h-8 text-white" />
+          <div className="relative">
+            {/* Horizontal Scrollable Container */}
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {/* Transportation Services */}
+              <Link href="/taxi">
+                <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative text-center">
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                      <Car className="w-10 h-10 text-white drop-shadow-lg" />
+                    </div>
+                    <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">تاكسي</h4>
+                    <p className="text-sm text-white/90 drop-shadow">نقل الركاب</p>
                   </div>
-                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">تاكسي</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">نقل الركاب</p>
                 </div>
-              </div>
-            </Link>
+              </Link>
 
-            {/* Delivery Services */}
-            <Link href="/taxi-driver">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <Truck className="w-8 h-8 text-white" />
+              {/* Delivery Services */}
+              <Link href="/taxi-driver">
+                <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-blue-500 to-cyan-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative text-center">
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                      <Truck className="w-10 h-10 text-white drop-shadow-lg" />
+                    </div>
+                    <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">توصيل</h4>
+                    <p className="text-sm text-white/90 drop-shadow">خدمة التوصيل</p>
                   </div>
-                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">لوحة السائق</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">إدارة خدمة التاكسي</p>
+                </div>
+              </Link>
+
+              {/* Home Services */}
+              <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative text-center">
+                  <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <Home className="w-10 h-10 text-white drop-shadow-lg" />
+                  </div>
+                  <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">خدمات منزلية</h4>
+                  <p className="text-sm text-white/90 drop-shadow">تنظيف ومنزلية</p>
                 </div>
               </div>
-            </Link>
 
-            {/* Home Services */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Home className="w-8 h-8 text-white" />
+              {/* Beauty Services */}
+              <div className="flex-shrink-0 w-40 snap-start bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative text-center">
+                  <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <Scissors className="w-10 h-10 text-white drop-shadow-lg" />
+                  </div>
+                  <h4 className="font-bold text-white text-lg mb-1 drop-shadow-md">تجميل</h4>
+                  <p className="text-sm text-white/90 drop-shadow">صالونات وتجميل</p>
                 </div>
-                <h4 className="font-bold text-gray-800 dark:text-white mb-1">خدمات منزلية</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">تنظيف وصيانة</p>
               </div>
             </div>
-
-            {/* Repair Services */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Wrench className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="font-bold text-gray-800 dark:text-white mb-1">إصلاحات</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">صيانة تقنية</p>
-              </div>
-            </div>
-
-            {/* Beauty Services */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Scissors className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="font-bold text-gray-800 dark:text-white mb-1">تجميل</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">حلاقة وتجميل</p>
-              </div>
-            </div>
-
-            {/* Care Services */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Baby className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="font-bold text-gray-800 dark:text-white mb-1">رعاية</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">رعاية أطفال ومسنين</p>
-              </div>
+            
+            {/* Scroll Indicator */}
+            <div className="flex justify-center mt-2 gap-2">
+              <div className="h-1 w-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full"></div>
+              <div className="h-1 w-8 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+              <div className="h-1 w-8 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
             </div>
           </div>
+          
+          {/* CSS to hide scrollbar */}
+          <style>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
         </div>
 
         {/* Promote Banner - Ultra Premium */}
