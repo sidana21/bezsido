@@ -312,15 +312,15 @@ export default function SocialFeed() {
       </div>
 
       {/* زر إنشاء منشور جديد */}
-      <div className="absolute bottom-32 right-6 z-50">
+      <div className="absolute bottom-40 right-6 z-50">
         <Button
           onClick={() => setLocation('/create-post')}
-          className="relative w-16 h-16 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 rounded-full shadow-2xl hover:shadow-red-500/50 hover:scale-110 transition-all duration-300 group overflow-hidden"
+          className="relative w-16 h-16 bg-gradient-to-r from-red-500/30 to-pink-600/30 hover:from-red-500 hover:to-pink-600 active:from-red-600 active:to-pink-700 rounded-full shadow-2xl hover:shadow-red-500/50 hover:scale-110 active:scale-95 transition-all duration-300 group overflow-hidden backdrop-blur-sm border-2 border-white/20 hover:border-white/40"
           data-testid="button-create-post"
         >
           {/* Pulse animation ring */}
-          <div className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-20 group-hover:opacity-40" />
-          <Plus className="w-8 h-8 text-white relative z-10 group-hover:rotate-90 transition-transform duration-300" />
+          <div className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-0 group-hover:opacity-40 transition-opacity duration-300" />
+          <Plus className="w-8 h-8 text-white/60 group-hover:text-white relative z-10 group-hover:rotate-90 transition-all duration-300" />
         </Button>
       </div>
 
