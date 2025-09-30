@@ -429,47 +429,80 @@ export default function BeautyServices() {
             {filteredServices.map((service) => (
               <div
                 key={service.id}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
                 data-testid={`service-card-${service.id}`}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                      {service.name}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
-                      {service.description}
-                    </p>
+                {/* Service Images */}
+                {service.images && service.images.length > 0 && (
+                  <div className="relative h-48 bg-gray-100 dark:bg-gray-700">
+                    {service.images.length === 1 ? (
+                      <img
+                        src={service.images[0]}
+                        alt={service.name}
+                        className="w-full h-full object-cover"
+                        data-testid={`service-image-${service.id}`}
+                      />
+                    ) : (
+                      <div className="flex gap-1 h-full">
+                        {service.images.slice(0, 3).map((image: string, idx: number) => (
+                          <img
+                            key={idx}
+                            src={image}
+                            alt={`${service.name} ${idx + 1}`}
+                            className={`object-cover ${service.images.length === 2 ? 'w-1/2' : 'w-1/3'}`}
+                            data-testid={`service-image-${service.id}-${idx}`}
+                          />
+                        ))}
+                        {service.images.length > 3 && (
+                          <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded-md text-sm">
+                            +{service.images.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200">
-                    {service.serviceType}
-                  </Badge>
-                </div>
+                )}
 
-                <div className="flex items-center gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>{service.location}</span>
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
+                        {service.name}
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+                        {service.description}
+                      </p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200">
+                      {service.serviceType}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    <span>4.5</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="text-2xl font-bold text-green-600">
-                    {parseInt(service?.basePrice || '0').toLocaleString()} دج
+                  <div className="flex items-center gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>{service.location}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                      <span>4.5</span>
+                    </div>
                   </div>
-                  <Button
-                    className="bg-whatsapp-green hover:bg-green-600 text-white"
-                    onClick={() => requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId })}
-                    disabled={requestServiceMutation.isPending}
-                    data-testid={`button-request-${service.id}`}
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    اطلب الخدمة
-                  </Button>
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl font-bold text-green-600">
+                      {parseInt(service?.basePrice || '0').toLocaleString()} دج
+                    </div>
+                    <Button
+                      className="bg-whatsapp-green hover:bg-green-600 text-white"
+                      onClick={() => requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId })}
+                      disabled={requestServiceMutation.isPending}
+                      data-testid={`button-request-${service.id}`}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      اطلب الخدمة
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
