@@ -167,8 +167,15 @@ export default function BeautyServices() {
       return;
     }
 
-    const beautyCategory = serviceCategories.find(cat => cat.nameAr === "حناييات وتجميل");
+    const beautyCategory = serviceCategories.find(cat => 
+      cat.nameAr === "حناييات وتجميل" || 
+      cat.name === "Henna & Beauty" ||
+      cat.nameAr?.includes("تجميل") ||
+      cat.name?.toLowerCase().includes("beauty")
+    );
+    
     if (!beautyCategory) {
+      console.error("Available categories:", serviceCategories);
       toast({
         title: "خطأ",
         description: "فئة الخدمة غير متوفرة",

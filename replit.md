@@ -114,6 +114,13 @@ Preferred communication style: Simple, everyday language.
 - ✅ Build process tested and working (npm run build)
 - ✅ Production build artifacts generated in dist/ directory
 
+### Recent Bug Fixes (September 30, 2025)
+- **Service Publishing Bug**: Fixed critical bug where publishing services failed due to missing `categoryId` field
+  - Root cause: Frontend forms (beauty-services.tsx, home-services.tsx) weren't sending categoryId required by backend
+  - Solution: Added API query to fetch service categories dynamically and include categoryId in service submission
+  - Implementation: Flexible category lookup matching both Arabic (nameAr) and English (name) fields with partial matching fallback
+  - Categories: "حناييات وتجميل" (Henna & Beauty) for beauty services, "اليد العاملة" (Labor Services) for home services
+
 ### Known Items
 - TypeScript errors exist in storage.ts (158 diagnostics) but don't prevent runtime execution
 - Notification sound loading error (uses fallback ringtone) - cosmetic only

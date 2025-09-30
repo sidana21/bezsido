@@ -167,8 +167,15 @@ export default function HomeServices() {
       return;
     }
 
-    const laborCategory = serviceCategories.find(cat => cat.nameAr === "اليد العاملة");
+    const laborCategory = serviceCategories.find(cat => 
+      cat.nameAr === "اليد العاملة" || 
+      cat.name === "Labor Services" ||
+      cat.nameAr?.includes("العاملة") ||
+      cat.name?.toLowerCase().includes("labor")
+    );
+    
     if (!laborCategory) {
+      console.error("Available categories:", serviceCategories);
       toast({
         title: "خطأ",
         description: "فئة الخدمة غير متوفرة",
