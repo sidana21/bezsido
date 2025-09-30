@@ -313,7 +313,7 @@ export default function HomeServices() {
         </div>
 
         {/* Add Service Button */}
-        <div className="mb-8">
+        <div className="mb-16 mt-6">
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
               <Button 
