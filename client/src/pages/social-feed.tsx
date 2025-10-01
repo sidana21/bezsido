@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
-  Plus, Bell, BellDot, Camera, ArrowLeft, Home
+  Plus, Bell, BellDot, Camera, ArrowLeft, Home, Settings
 } from "lucide-react";
 import type { User, BizChatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { TikTokPostCard } from "@/components/tiktok-post-card";
 import { EnhancedCreatePost } from "@/components/enhanced-create-post";
+import { NotificationsSettingsModal } from "@/components/notifications-settings-modal";
 
 interface PostWithUser extends BizChatPost {
   user: User;
@@ -22,6 +23,7 @@ export default function SocialFeed() {
   const [, setLocation] = useLocation();
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -261,8 +263,20 @@ export default function SocialFeed() {
             {/* قائمة الإشعارات */}
             {showNotifications && (
               <div className="absolute left-0 top-16 w-80 max-h-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in-0 duration-200">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 dark:text-white">الإشعارات</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowNotificationSettings(true);
+                    }}
+                    className="w-8 h-8 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    data-testid="button-notification-settings"
+                  >
+                    <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </Button>
                 </div>
                 
                 <div className="max-h-80 overflow-y-auto">
@@ -334,6 +348,12 @@ export default function SocialFeed() {
         isOpen={showCreatePost}
         onClose={() => setShowCreatePost(false)}
         currentUser={currentUser}
+      />
+
+      {/* نافذة إعدادات الإشعارات */}
+      <NotificationsSettingsModal
+        open={showNotificationSettings}
+        onOpenChange={setShowNotificationSettings}
       />
     </div>
   );

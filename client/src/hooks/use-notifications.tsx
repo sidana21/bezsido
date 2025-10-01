@@ -8,11 +8,26 @@ interface NotificationOptions {
   soundVolume?: number;
 }
 
+// قراءة الإعدادات من localStorage
+function getNotificationSettings() {
+  try {
+    const settings = localStorage.getItem('bizchat_notification_settings');
+    if (settings) {
+      return JSON.parse(settings);
+    }
+  } catch (error) {
+    console.log('خطأ في قراءة إعدادات الإشعارات:', error);
+  }
+  return null;
+}
+
 export function useNotifications(options: NotificationOptions = {}) {
+  const savedSettings = getNotificationSettings();
+  
   const {
-    enableSound = true,
-    enableBrowserNotifications = true,
-    soundVolume = 0.6
+    enableSound = savedSettings?.enableSound ?? true,
+    enableBrowserNotifications = savedSettings?.enableBrowserNotifications ?? true,
+    soundVolume = savedSettings?.soundVolume ? savedSettings.soundVolume / 100 : 0.6
   } = options;
 
   const soundRef = useRef<HTMLAudioElement | null>(null);
