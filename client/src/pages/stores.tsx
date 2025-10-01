@@ -363,9 +363,6 @@ export default function Stores() {
               >
                 {/* Animated Background Effects */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-pulse"></div>
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-xl animate-bounce" style={{ animationDelay: '0.5s' }}></div>
                 
                 {/* Content */}
                 <div className="relative text-center h-full flex flex-col justify-center">
