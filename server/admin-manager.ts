@@ -166,6 +166,22 @@ export class AdminManager {
             lastError = attemptError;
             retries--;
             
+            // إذا كان الخطأ duplicate key، فهذا يعني أن المستخدم موجود بالفعل
+            if (attemptError?.message?.includes('duplicate key') || attemptError?.message?.includes('users_email_key')) {
+              console.log('⚠️ Admin user already exists with this email, searching for it...');
+              
+              // البحث مرة أخرى عن المستخدم
+              try {
+                adminUser = await this.storage.getUserByEmail(adminConfig.email);
+                if (adminUser) {
+                  console.log('✅ تم العثور على المستخدم الإداري الموجود:', adminUser.name);
+                  break;
+                }
+              } catch (findError) {
+                console.error('❌ Error finding existing admin user:', findError);
+              }
+            }
+            
             if (retries > 0) {
               console.log(`⚠️ User creation failed, retrying... (${retries} attempts left)`);
               await new Promise(resolve => setTimeout(resolve, 2000)); // انتظار ثانيتين
@@ -180,6 +196,25 @@ export class AdminManager {
       } catch (createError: any) {
         console.error('❌ Error creating admin user after all retries:', createError);
         console.error('❌ Error details:', createError?.message || 'Unknown error');
+        
+        // إذا كانت المشكلة duplicate key، نبحث عن المستخدم الموجود
+        if (createError?.message?.includes('duplicate key') || createError?.message?.includes('users_email_key')) {
+          console.log('🔍 Attempting to find existing admin user with duplicate email...');
+          try {
+            adminUser = await this.storage.getUserByEmail(adminConfig.email);
+            if (adminUser) {
+              console.log('✅ وجدنا المستخدم الإداري الموجود بنجاح!');
+              // منح صلاحيات الإدارة إذا لم يكن لديه
+              if (!adminUser.isAdmin) {
+                adminUser = await this.storage.updateUserAdminStatus(adminUser.id, true);
+                console.log('✅ Admin status granted');
+              }
+              return adminUser;
+            }
+          } catch (findError) {
+            console.error('❌ Failed to find existing admin user:', findError);
+          }
+        }
         
         // في حالة فشل إنشاء المستخدم في الإنتاج، نتجاهل الخطأ ونكمل التشغيل
         if (process.env.NODE_ENV === 'production') {
