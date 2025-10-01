@@ -89,7 +89,7 @@ import {
   type InsertSocialNotification
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, storyViews, socialNotifications } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, storyViews, socialNotifications, follows } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
@@ -4857,6 +4857,529 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error finding or creating chat:', error);
       throw error;
+    }
+  }
+
+  // Business Posts - Social Feed Implementation
+  async getFeedPosts(location?: string, filter?: string, currentUserId?: string): Promise<BusinessPost[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`📄 getFeedPosts called with location: "${location}", filter: "${filter}", currentUserId: "${currentUserId}"`);
+
+      let query = db.select().from(businessPosts);
+      let posts = await query;
+
+      console.log(`📊 Found ${posts.length} total posts in database`);
+
+      // Apply location filter
+      if (location && location.trim() && location !== 'undefined' && location !== 'null') {
+        const beforeFilter = posts.length;
+        posts = posts.filter(post => {
+          if (post.locationInfo && typeof post.locationInfo === 'object') {
+            const locationData = post.locationInfo as any;
+            return locationData.name === location;
+          }
+          return filter === 'all' || filter === 'local';
+        });
+        console.log(`📍 Location filter applied: ${beforeFilter} -> ${posts.length} posts`);
+      }
+
+      // Apply user filter
+      if (filter && currentUserId) {
+        if (filter === "following") {
+          const followingUsers = await db.select()
+            .from(follows)
+            .where(eq(follows.followerId, currentUserId));
+          
+          const followingIds = followingUsers.map(f => f.followingId);
+          console.log(`👥 User is following ${followingIds.length} users`);
+          
+          posts = posts.filter(post => followingIds.includes(post.userId));
+          console.log(`🔍 Following filter applied: ${posts.length} posts`);
+        }
+      }
+
+      // Sort by creation date (newest first)
+      posts.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+      
+      console.log(`✅ Returning ${posts.length} posts`);
+      return posts;
+    } catch (error) {
+      console.error('Error fetching feed posts:', error);
+      throw error;
+    }
+  }
+
+  async createBusinessPost(post: InsertBusinessPost): Promise<BusinessPost> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`📝 Creating new business post for user: ${post.userId}`);
+
+      const [newPost] = await db.insert(businessPosts).values(post).returning();
+      
+      console.log(`✅ Business post created with ID: ${newPost.id}`);
+      return newPost;
+    } catch (error) {
+      console.error('Error creating business post:', error);
+      throw error;
+    }
+  }
+
+  async getBusinessPost(postId: string): Promise<BusinessPost | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`🔍 Getting business post: ${postId}`);
+
+      const [post] = await db.select()
+        .from(businessPosts)
+        .where(eq(businessPosts.id, postId));
+
+      return post;
+    } catch (error) {
+      console.error('Error getting business post:', error);
+      throw error;
+    }
+  }
+
+  async getUserPosts(userId: string): Promise<BusinessPost[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`📄 Getting posts for user: ${userId}`);
+
+      const posts = await db.select()
+        .from(businessPosts)
+        .where(eq(businessPosts.userId, userId))
+        .orderBy(desc(businessPosts.createdAt));
+
+      console.log(`✅ Found ${posts.length} posts for user`);
+      return posts;
+    } catch (error) {
+      console.error('Error getting user posts:', error);
+      throw error;
+    }
+  }
+
+  async deleteBusinessPost(postId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`🗑️ Deleting business post: ${postId}`);
+
+      await db.delete(businessPosts).where(eq(businessPosts.id, postId));
+      
+      console.log(`✅ Business post deleted`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting business post:', error);
+      return false;
+    }
+  }
+
+  async getPostById(postId: string): Promise<BusinessPost | undefined> {
+    return this.getBusinessPost(postId);
+  }
+
+  // Post Interactions - Stub Implementations
+  async likePost(postId: string, userId: string): Promise<PostLike> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`❤️ User ${userId} liking post ${postId}`);
+
+      // Check if already liked
+      const existingLike = await db.select()
+        .from(postLikes)
+        .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+
+      if (existingLike.length > 0) {
+        console.log(`⚠️ User already liked this post`);
+        return existingLike[0];
+      }
+
+      const [newLike] = await db.insert(postLikes)
+        .values({ postId, userId })
+        .returning();
+
+      console.log(`✅ Post liked`);
+      return newLike;
+    } catch (error) {
+      console.error('Error liking post:', error);
+      throw error;
+    }
+  }
+
+  async unlikePost(postId: string, userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`💔 User ${userId} unliking post ${postId}`);
+
+      await db.delete(postLikes)
+        .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+
+      console.log(`✅ Post unliked`);
+    } catch (error) {
+      console.error('Error unliking post:', error);
+      throw error;
+    }
+  }
+
+  async savePost(postId: string, userId: string): Promise<PostSave> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`💾 User ${userId} saving post ${postId}`);
+
+      // Check if already saved
+      const existingSave = await db.select()
+        .from(postSaves)
+        .where(and(eq(postSaves.postId, postId), eq(postSaves.userId, userId)));
+
+      if (existingSave.length > 0) {
+        console.log(`⚠️ User already saved this post`);
+        return existingSave[0];
+      }
+
+      const [newSave] = await db.insert(postSaves)
+        .values({ postId, userId })
+        .returning();
+
+      console.log(`✅ Post saved`);
+      return newSave;
+    } catch (error) {
+      console.error('Error saving post:', error);
+      throw error;
+    }
+  }
+
+  async unsavePost(postId: string, userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`🗑️ User ${userId} unsaving post ${postId}`);
+
+      await db.delete(postSaves)
+        .where(and(eq(postSaves.postId, postId), eq(postSaves.userId, userId)));
+
+      console.log(`✅ Post unsaved`);
+    } catch (error) {
+      console.error('Error unsaving post:', error);
+      throw error;
+    }
+  }
+
+  async viewPost(postId: string, userId: string): Promise<void> {
+    console.log(`👁️ User ${userId} viewing post ${postId} (stub implementation)`);
+  }
+
+  async hasUserLikedPost(postId: string, userId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const likes = await db.select()
+        .from(postLikes)
+        .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+
+      return likes.length > 0;
+    } catch (error) {
+      console.error('Error checking if user liked post:', error);
+      return false;
+    }
+  }
+
+  async hasUserSavedPost(postId: string, userId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const saves = await db.select()
+        .from(postSaves)
+        .where(and(eq(postSaves.postId, postId), eq(postSaves.userId, userId)));
+
+      return saves.length > 0;
+    } catch (error) {
+      console.error('Error checking if user saved post:', error);
+      return false;
+    }
+  }
+
+  async getPostLikesCount(postId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const likes = await db.select()
+        .from(postLikes)
+        .where(eq(postLikes.postId, postId));
+
+      return likes.length;
+    } catch (error) {
+      console.error('Error getting post likes count:', error);
+      return 0;
+    }
+  }
+
+  async getPostViewsCount(postId: string): Promise<number> {
+    console.log(`📊 Getting views count for post ${postId} (stub - returning 0)`);
+    return 0;
+  }
+
+  async getPostCommentsCount(postId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const comments = await db.select()
+        .from(postComments)
+        .where(eq(postComments.postId, postId));
+
+      return comments.length;
+    } catch (error) {
+      console.error('Error getting post comments count:', error);
+      return 0;
+    }
+  }
+
+  async getPostComments(postId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`💬 Getting comments for post ${postId}`);
+
+      const comments = await db.select()
+        .from(postComments)
+        .where(eq(postComments.postId, postId))
+        .orderBy(desc(postComments.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      return comments;
+    } catch (error) {
+      console.error('Error getting post comments:', error);
+      return [];
+    }
+  }
+
+  async createPostComment(commentData: any): Promise<any> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`💬 Creating comment on post ${commentData.postId}`);
+
+      const [comment] = await db.insert(postComments)
+        .values(commentData)
+        .returning();
+
+      console.log(`✅ Comment created: ${comment.id}`);
+      return comment;
+    } catch (error) {
+      console.error('Error creating post comment:', error);
+      throw error;
+    }
+  }
+
+  // User Following Implementation
+  async followUser(followerId: string, followingId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`👥 User ${followerId} following ${followingId}`);
+
+      // Check if already following
+      const existingFollow = await db.select()
+        .from(follows)
+        .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+
+      if (existingFollow.length > 0) {
+        console.log(`⚠️ User already following`);
+        return;
+      }
+
+      await db.insert(follows)
+        .values({ followerId, followingId });
+
+      console.log(`✅ User followed`);
+    } catch (error) {
+      console.error('Error following user:', error);
+      throw error;
+    }
+  }
+
+  async unfollowUser(followerId: string, followingId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`👥 User ${followerId} unfollowing ${followingId}`);
+
+      await db.delete(follows)
+        .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+
+      console.log(`✅ User unfollowed`);
+    } catch (error) {
+      console.error('Error unfollowing user:', error);
+      throw error;
+    }
+  }
+
+  async isUserFollowing(followerId: string, followingId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const followRecords = await db.select()
+        .from(follows)
+        .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+
+      return followRecords.length > 0;
+    } catch (error) {
+      console.error('Error checking if user is following:', error);
+      return false;
+    }
+  }
+
+  async getFollowerCount(userId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const followers = await db.select()
+        .from(follows)
+        .where(eq(follows.followingId, userId));
+
+      return followers.length;
+    } catch (error) {
+      console.error('Error getting follower count:', error);
+      return 0;
+    }
+  }
+
+  async getFollowingCount(userId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const following = await db.select()
+        .from(follows)
+        .where(eq(follows.followerId, userId));
+
+      return following.length;
+    } catch (error) {
+      console.error('Error getting following count:', error);
+      return 0;
+    }
+  }
+
+  async getFollowers(userId: string): Promise<User[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const followerRecords = await db.select()
+        .from(follows)
+        .where(eq(follows.followingId, userId));
+
+      const followerIds = followerRecords.map(f => f.followerId);
+      
+      if (followerIds.length === 0) {
+        return [];
+      }
+
+      const followers = await db.select()
+        .from(users)
+        .where(sql`${users.id} IN ${sql.raw(`(${followerIds.map(id => `'${id}'`).join(',')})`)}`);
+
+      return followers;
+    } catch (error) {
+      console.error('Error getting followers:', error);
+      return [];
+    }
+  }
+
+  async getFollowing(userId: string): Promise<User[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const followingRecords = await db.select()
+        .from(follows)
+        .where(eq(follows.followerId, userId));
+
+      const followingIds = followingRecords.map(f => f.followingId);
+      
+      if (followingIds.length === 0) {
+        return [];
+      }
+
+      const followingUsers = await db.select()
+        .from(users)
+        .where(sql`${users.id} IN ${sql.raw(`(${followingIds.map(id => `'${id}'`).join(',')})`)}`);
+
+      return followingUsers;
+    } catch (error) {
+      console.error('Error getting following users:', error);
+      return [];
     }
   }
 }
