@@ -55,10 +55,18 @@ Preferred communication style: Simple, everyday language.
   * Automatic audio notification when new verification requests arrive
   * Debouncing mechanism (5s cooldown) to prevent notification spam
   * Base64 encoded beep sound with fallback for browser autoplay restrictions
+- **Admin Announcements System**:
+  * Dedicated admin page for sending announcements to all users
+  * Announcements appear in user notifications with distinctive pulsing golden gradient background
+  * Special app logo icon displayed as announcement sender (not admin user avatar)
+  * Non-clickable notification style with "إشعار من الإدارة" badge
+  * Form includes title and message fields with validation
+  * Immediate notification delivery to all active users
 - **API Endpoints**:
   * `/api/admin/dashboard-stats` - Comprehensive statistics endpoint
   * `/api/admin/recent-activities` - Latest system activities
   * `/api/admin/users` - User management with block/unblock capabilities
+  * `/api/admin/send-announcement` - Send announcement to all users
   * 30-second polling intervals for real-time updates
 
 ## External Dependencies
