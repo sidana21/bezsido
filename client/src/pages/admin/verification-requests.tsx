@@ -7,7 +7,9 @@ import {
   FileText, 
   User,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Star,
+  Crown
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -44,6 +46,7 @@ interface VerificationRequestsResponse {
 export function VerificationRequests() {
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
   const [adminNote, setAdminNote] = useState('');
+  const [verificationType, setVerificationType] = useState<'verified' | 'admin'>('verified');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -54,22 +57,24 @@ export function VerificationRequests() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ requestId, status, adminNote }: { 
+    mutationFn: ({ requestId, status, adminNote, verificationType }: { 
       requestId: string; 
       status: 'approved' | 'rejected'; 
       adminNote?: string;
+      verificationType?: 'verified' | 'admin';
     }) => apiRequest(`/api/admin/verification-requests/${requestId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ status, adminNote }),
+      body: JSON.stringify({ status, adminNote, verificationType }),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/verification-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-stats'] });
       setSelectedRequest(null);
       setAdminNote('');
+      setVerificationType('verified');
       toast({
         title: 'تم التحديث',
         description: 'تم تحديث حالة الطلب بنجاح',
@@ -88,7 +93,8 @@ export function VerificationRequests() {
     updateStatusMutation.mutate({ 
       requestId, 
       status: 'approved', 
-      adminNote: adminNote || undefined 
+      adminNote: adminNote || undefined,
+      verificationType
     });
   };
 
@@ -336,6 +342,46 @@ export function VerificationRequests() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
+                    اختر نوع التوثيق:
+                  </label>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setVerificationType('verified')}
+                      className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                        verificationType === 'verified'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                          : 'border-gray-200 dark:border-gray-700'
+                      }`}
+                      data-testid="select-verified"
+                    >
+                      <Star className={`w-5 h-5 ${verificationType === 'verified' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />
+                      <div className="text-right">
+                        <div className="font-medium">مستخدم موثق</div>
+                        <div className="text-xs text-gray-500">نجمة زرقاء متوهجة</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationType('admin')}
+                      className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                        verificationType === 'admin'
+                          ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950'
+                          : 'border-gray-200 dark:border-gray-700'
+                      }`}
+                      data-testid="select-admin"
+                    >
+                      <Crown className={`w-5 h-5 ${verificationType === 'admin' ? 'text-yellow-500 animate-pulse' : 'text-gray-400'}`} />
+                      <div className="text-right">
+                        <div className="font-medium">مشرف موثق</div>
+                        <div className="text-xs text-gray-500">نجمة ذهبية + صلاحيات</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
                     ملاحظة الإدارة:
                   </label>
                   <Textarea
@@ -354,6 +400,7 @@ export function VerificationRequests() {
                     onClick={() => {
                       setSelectedRequest(null);
                       setAdminNote('');
+                      setVerificationType('verified');
                     }}
                     data-testid="cancel-review"
                   >
@@ -370,10 +417,11 @@ export function VerificationRequests() {
                   <Button
                     onClick={() => handleApprove(selectedRequest.id)}
                     disabled={updateStatusMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
+                    className={verificationType === 'admin' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'}
                     data-testid="approve-request"
                   >
-                    {updateStatusMutation.isPending ? 'جاري الموافقة...' : 'موافقة'}
+                    {updateStatusMutation.isPending ? 'جاري الموافقة...' : 
+                      verificationType === 'admin' ? '✓ توثيق كمشرف' : '✓ توثيق كمستخدم'}
                   </Button>
                 </div>
               </CardContent>

@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   isOnline: boolean("is_online").default(false),
   isVerified: boolean("is_verified").default(false), // Account verification status
   verifiedAt: timestamp("verified_at"), // When account was verified
+  verificationType: text("verification_type"), // "verified" للمستخدم العادي الموثق، "admin" للمشرف الموثق
   isAdmin: boolean("is_admin").default(false), // Admin privileges
   lastSeen: timestamp("last_seen").defaultNow(),
   points: integer("points").default(0), // نقاط المستخدم
@@ -725,6 +726,7 @@ export const verificationRequests = pgTable("verification_requests", {
   userId: varchar("user_id").notNull().references(() => users.id), // User requesting verification
   vendorId: varchar("vendor_id").references(() => vendors.id), // Optional: for vendor verification requests
   requestType: text("request_type").notNull(), // "user" or "store"
+  verificationType: text("verification_type"), // نوع التوثيق المطلوب: "verified" للمستخدم العادي، "admin" للمشرف
   status: text("status").notNull().default("pending"), // pending, approved, rejected
   documents: jsonb("documents").$type<string[]>().default([]), // Document URLs submitted
   reason: text("reason"), // User's reason for requesting verification

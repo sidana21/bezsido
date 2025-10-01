@@ -3925,10 +3925,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/verification-requests/:requestId", requireAdmin, async (req: any, res) => {
     try {
       const { requestId } = req.params;
-      const { status, adminNote } = req.body;
+      const { status, adminNote, verificationType } = req.body;
       
       if (!['approved', 'rejected'].includes(status)) {
         return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
+      }
+      
+      // التحقق من نوع التوثيق عند الموافقة
+      if (status === 'approved' && !verificationType) {
+        return res.status(400).json({ message: "نوع التوثيق مطلوب عند الموافقة" });
+      }
+      
+      if (verificationType && !['verified', 'admin'].includes(verificationType)) {
+        return res.status(400).json({ message: "نوع التوثيق يجب أن يكون 'verified' أو 'admin'" });
       }
       
       const updatedRequest = await storage.updateVerificationRequest(
@@ -3936,6 +3945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { 
           status, 
           adminNote,
+          verificationType: status === 'approved' ? verificationType : undefined,
           reviewedBy: req.userId,
           reviewedAt: new Date()
         }
@@ -3945,19 +3955,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Verification request not found" });
       }
 
-      // 🎯 إصلاح المشكلة: إذا تم قبول التوثيق، حدث حالة المستخدم مباشرة
-      if (status === 'approved' && updatedRequest.userId) {
+      // 🎯 إصلاح المشكلة: إذا تم قبول التوثيق، حدث حالة المستخدم بناءً على نوع التوثيق
+      if (status === 'approved' && updatedRequest.userId && verificationType) {
         try {
-          console.log(`✅ تم قبول التوثيق للمستخدم ${updatedRequest.userId} - تطبيق إشارة التحقق...`);
-          // Update user verification status via admin  
+          console.log(`✅ تم قبول التوثيق للمستخدم ${updatedRequest.userId} - نوع التوثيق: ${verificationType}`);
+          
           const user = await storage.getUserById(updatedRequest.userId);
           if (user) {
+            // تحديث المستخدم بنوع التوثيق
             await storage.updateUser(updatedRequest.userId, {
               name: user.name,
               email: user.email,
-              location: user.location
+              location: user.location,
+              isVerified: true,
+              verifiedAt: new Date(),
+              verificationType: verificationType,
+              isAdmin: verificationType === 'admin' ? true : user.isAdmin // فقط توثيق المشرف يمنح صلاحيات الأدمن
             });
+            
+            if (verificationType === 'admin') {
+              console.log(`👑 تم منح صلاحيات المشرف للمستخدم ${updatedRequest.userId}`);
+            } else {
+              console.log(`⭐ تم توثيق المستخدم ${updatedRequest.userId} كمستخدم عادي`);
+            }
           }
+          
           console.log(`🎉 تم تطبيق إشارة التحقق بنجاح للمستخدم ${updatedRequest.userId}`);
         } catch (verificationError) {
           console.error('خطأ في تطبيق إشارة التحقق:', verificationError);

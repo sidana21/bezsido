@@ -192,7 +192,7 @@ export interface IStorage {
   getUserVerificationRequests(userId: string): Promise<VerificationRequest[]>;
   getVerificationRequest(requestId: string): Promise<VerificationRequest | undefined>;
   getAllVerificationRequests(status?: string): Promise<VerificationRequest[]>;
-  updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy'>>): Promise<VerificationRequest | undefined>;
+  updateVerificationRequest(requestId: string, updates: Partial<Pick<VerificationRequest, 'status' | 'adminNote' | 'reviewedBy' | 'verificationType'>>): Promise<VerificationRequest | undefined>;
   
   // فئات البائعين - Vendor Categories
   getVendorCategories(): Promise<VendorCategory[]>;
