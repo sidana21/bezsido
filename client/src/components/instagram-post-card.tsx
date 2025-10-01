@@ -365,20 +365,6 @@ export function InstagramPostCard({ post, currentUser }: InstagramPostCardProps)
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
-                  
-                  {/* Dots indicator */}
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1">
-                    {post.images.map((_, index) => (
-                      <div
-                        key={index}
-                        className={`w-2 h-2 rounded-full transition-colors ${
-                          index === currentImageIndex 
-                            ? 'bg-white' 
-                            : 'bg-white/50'
-                        }`}
-                      />
-                    ))}
-                  </div>
                 </>
               )}
 
