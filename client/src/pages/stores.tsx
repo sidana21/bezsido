@@ -22,10 +22,47 @@ export default function Stores() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const { data: currentUser } = useQuery<User>({
     queryKey: ["/api/user/current"],
   });
+
+  // Carousel slides data
+  const slides = [
+    {
+      icon: <Store className="w-10 h-10 text-white" />,
+      title: "قدم خدماتك",
+      description: "انضم إلى منصة الخدمات المحلية الرائدة وقدم خدماتك لآلاف العملاء في منطقتك",
+      gradient: "from-blue-600 via-purple-600 to-pink-600"
+    },
+    {
+      icon: <Sparkles className="w-10 h-10 text-white" />,
+      title: "تطبيق يجمع كل شيء في المخيمات",
+      description: "الأفضل في مجال التجارة - منصة شاملة تربط البائعين والمشترين في منطقتك بكل سهولة وأمان",
+      gradient: "from-emerald-600 via-teal-600 to-cyan-600"
+    },
+    {
+      icon: <TrendingUp className="w-10 h-10 text-white" />,
+      title: "زد أرباحك اليوم",
+      description: "انضم لآلاف التجار الناجحين واعرض منتجاتك وخدماتك لجمهور واسع من العملاء المحتملين",
+      gradient: "from-orange-600 via-red-600 to-pink-600"
+    },
+    {
+      icon: <Award className="w-10 h-10 text-white" />,
+      title: "منصة موثوقة وآمنة",
+      description: "نوفر لك بيئة تجارية آمنة مع نظام حماية للمشترين والبائعين وخدمة عملاء على مدار الساعة",
+      gradient: "from-violet-600 via-purple-600 to-fuchsia-600"
+    }
+  ];
+
+  // Auto-slide effect
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
 
   // Fetch all products from all vendors for product marketplace display
   const { data: allProducts = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
@@ -309,27 +346,108 @@ export default function Stores() {
           `}</style>
         </div>
 
-        {/* Promote Banner - Ultra Premium */}
-        <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white rounded-3xl p-8 mb-10 overflow-hidden shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-pulse"></div>
-          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse delay-1000"></div>
-          <div className="relative text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-3xl mb-6 backdrop-blur-sm">
-              <Store className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-white/90 bg-clip-text">قدم خدماتك</h2>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed">انضم إلى منصة الخدمات المحلية الرائدة وقدم خدماتك لآلاف العملاء في منطقتك</p>
-            <Link href="/my-vendor">
-              <Button
-                className="bg-white text-purple-600 hover:bg-white/90 text-lg px-8 py-4 rounded-2xl font-bold shadow-xl transition-all duration-300 hover:scale-105"
-                data-testid="button-add-service"
+        {/* Promote Banner - Animated Carousel */}
+        <div className="relative overflow-hidden rounded-3xl mb-10 shadow-2xl">
+          {/* Slides Container */}
+          <div className="relative h-80">
+            {slides.map((slide, index) => (
+              <div
+                key={index}
+                className={`absolute inset-0 bg-gradient-to-r ${slide.gradient} text-white rounded-3xl p-8 transition-all duration-700 ease-in-out ${
+                  index === currentSlide 
+                    ? 'opacity-100 translate-x-0 scale-100' 
+                    : index < currentSlide 
+                      ? 'opacity-0 -translate-x-full scale-95' 
+                      : 'opacity-0 translate-x-full scale-95'
+                }`}
               >
-                سجل خدماتك مجاناً الآن
-              </Button>
-            </Link>
+                {/* Animated Background Effects */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl animate-pulse"></div>
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-xl animate-bounce" style={{ animationDelay: '0.5s' }}></div>
+                
+                {/* Content */}
+                <div className="relative text-center h-full flex flex-col justify-center">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-3xl mb-6 backdrop-blur-sm mx-auto animate-pulse">
+                    {slide.icon}
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-white to-white/90 bg-clip-text animate-fade-in">
+                    {slide.title}
+                  </h2>
+                  <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto px-4 animate-slide-up">
+                    {slide.description}
+                  </p>
+                  <Link href="/my-vendor">
+                    <Button
+                      className="bg-white text-purple-600 hover:bg-white/90 text-lg px-8 py-4 rounded-2xl font-bold shadow-xl transition-all duration-300 hover:scale-105 animate-bounce-subtle"
+                      data-testid="button-add-service"
+                    >
+                      سجل خدماتك مجاناً الآن
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {/* Slide Indicators */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  index === currentSlide 
+                    ? 'w-8 bg-white shadow-lg' 
+                    : 'w-2 bg-white/40 hover:bg-white/60'
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+
+          {/* Navigation Arrows */}
+          <button
+            onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm p-3 rounded-full transition-all duration-300 group z-10"
+            aria-label="Previous slide"
+          >
+            <ArrowLeft className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+          </button>
+          <button
+            onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm p-3 rounded-full transition-all duration-300 group z-10"
+            aria-label="Next slide"
+          >
+            <ArrowLeft className="w-6 h-6 text-white transform rotate-180 group-hover:scale-110 transition-transform" />
+          </button>
         </div>
+
+        {/* CSS Animations */}
+        <style>{`
+          @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes slide-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes bounce-subtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+          }
+          .animate-fade-in {
+            animation: fade-in 0.6s ease-out;
+          }
+          .animate-slide-up {
+            animation: slide-up 0.8s ease-out 0.2s both;
+          }
+          .animate-bounce-subtle {
+            animation: bounce-subtle 2s ease-in-out infinite;
+          }
+        `}</style>
 
         {/* Loading State - Premium Products Grid */}
         {isLoadingProducts && (
