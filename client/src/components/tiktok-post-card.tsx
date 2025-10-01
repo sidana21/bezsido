@@ -613,6 +613,25 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
 
             {/* أزرار التفاعل الجانبية */}
             <div className="flex flex-col gap-6 items-center">
+              {/* زر حذف المنشور - فوق زر إنشاء منشور */}
+              {post.user.id === currentUser?.id && (
+                <div className="flex flex-col items-center">
+                  <Button 
+                    onClick={() => {
+                      if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
+                        deletePostMutation.mutate();
+                      }
+                    }}
+                    disabled={deletePostMutation.isPending}
+                    className="relative w-14 h-14 bg-red-500/80 hover:bg-red-600/90 active:bg-red-700 rounded-full shadow-2xl shadow-red-500/30 hover:shadow-red-500/60 hover:scale-110 active:scale-95 transition-all duration-300 group overflow-hidden backdrop-blur-md border-2 border-red-400/50 hover:border-red-300/70"
+                    data-testid={`button-delete-post-${post.id}`}
+                  >
+                    <Trash2 className="w-7 h-7 text-white relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                  </Button>
+                  <span className="text-white text-xs mt-1 font-semibold">حذف</span>
+                </div>
+              )}
+              
               {/* زر إنشاء منشور - فوق زر القلب */}
               <div className="flex flex-col items-center">
                 <Button
@@ -754,22 +773,7 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
             </Button>
           )}
           
-          {post.user.id === currentUser?.id && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="w-10 h-10 bg-red-500/70 hover:bg-red-600/80 backdrop-blur-md text-white"
-              onClick={() => {
-                if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
-                  deletePostMutation.mutate();
-                }
-              }}
-              disabled={deletePostMutation.isPending}
-              data-testid={`button-delete-post-${post.id}`}
-            >
-              <Trash2 className="w-5 h-5" />
-            </Button>
-          )}
+          <div className="flex-1" />
           
           <Button variant="ghost" size="icon" className="w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white">
             <MoreHorizontal className="w-6 h-6" />
