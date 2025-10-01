@@ -3829,7 +3829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get recent posts (last 10)
-      const allPosts = await storage.getAllBusinessPosts();
+      const allPosts = await storage.getFeedPosts();
       const recentPosts = allPosts
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 10);

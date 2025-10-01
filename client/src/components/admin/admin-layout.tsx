@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
 import { 
   LayoutDashboard, 
   Users, 
@@ -21,9 +22,20 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+interface AdminStats {
+  pendingVerifications: number;
+}
+
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Get dashboard stats to show pending verifications count
+  const { data: stats } = useQuery<AdminStats>({
+    queryKey: ['/api/admin/dashboard-stats'],
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds
+  });
 
   const menuItems = [
     {
@@ -101,13 +113,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {menuItems.map((item) => {
           const isActive = location === item.href || 
             (item.href !== '/admin' && location.startsWith(item.href));
+          const showBadge = item.href === '/admin/verification-requests' && stats?.pendingVerifications && stats.pendingVerifications > 0;
           
           return (
             <Link key={item.href} href={item.href}>
               <Button
                 variant={isActive ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-2",
+                  "w-full justify-start gap-2 relative",
                   "text-right",
                   isActive && "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
                 )}
@@ -115,6 +128,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               >
                 <item.icon className="h-4 w-4" />
                 {item.title}
+                {showBadge && (
+                  <span 
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center animate-pulse"
+                    data-testid="badge-pending-verifications"
+                  >
+                    {stats.pendingVerifications}
+                  </span>
+                )}
               </Button>
             </Link>
           );

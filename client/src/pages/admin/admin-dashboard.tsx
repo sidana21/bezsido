@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Users, 
@@ -17,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/admin-layout';
 import { Link } from 'wouter';
+import { cn } from '@/lib/utils';
 
 interface AdminStats {
   totalUsers: number;
@@ -40,15 +42,37 @@ interface Activity {
 }
 
 export function AdminDashboard() {
+  const [previousPendingCount, setPreviousPendingCount] = React.useState<number | null>(null);
+  const [hasPlayedSound, setHasPlayedSound] = React.useState(false);
+
   const { data: stats, isLoading } = useQuery<AdminStats>({
     queryKey: ['/api/admin/dashboard-stats'],
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 30 * 1000, // Check every 30 seconds for new activities
   });
 
   const { data: activities, isLoading: activitiesLoading } = useQuery<Activity[]>({
     queryKey: ['/api/admin/recent-activities'],
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 30 * 1000, // Check every 30 seconds
   });
+
+  // Play notification sound when new verification requests arrive
+  React.useEffect(() => {
+    if (stats?.pendingVerifications && previousPendingCount !== null) {
+      if (stats.pendingVerifications > previousPendingCount && !hasPlayedSound) {
+        // Play notification sound
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSyBzvLZiTYIGWi77eeeSwINUKXi8LZjHAU5ktjzy3gsBSN2yPDekEELFF+z6ey');
+        audio.volume = 0.5;
+        audio.play().catch(err => console.log('Could not play notification sound:', err));
+        setHasPlayedSound(true);
+        
+        // Reset sound flag after 5 seconds
+        setTimeout(() => setHasPlayedSound(false), 5000);
+      }
+    }
+    setPreviousPendingCount(stats?.pendingVerifications ?? 0);
+  }, [stats?.pendingVerifications, previousPendingCount, hasPlayedSound]);
 
   const getActivityIcon = (iconName: string) => {
     const iconMap: Record<string, any> = {
@@ -196,28 +220,69 @@ export function AdminDashboard() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
+          <Card className={cn(
+            "relative overflow-hidden transition-all duration-300",
+            stats?.pendingVerifications && stats.pendingVerifications > 0 
+              ? "ring-2 ring-yellow-500 ring-offset-2 shadow-xl" 
+              : ""
+          )}>
+            {stats?.pendingVerifications && stats.pendingVerifications > 0 && (
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 animate-pulse"></div>
+            )}
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-yellow-600" />
-                طلبات التوثيق المعلقة
+              <CardTitle className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-yellow-600" />
+                  طلبات التوثيق المعلقة
+                </div>
+                {stats?.pendingVerifications && stats.pendingVerifications > 0 && (
+                  <span className="flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                    </span>
+                    جديد
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8">
-                <div className="text-3xl font-bold text-yellow-600 mb-2">
+                <div className={cn(
+                  "text-5xl font-bold mb-2",
+                  stats?.pendingVerifications && stats.pendingVerifications > 0 
+                    ? "text-yellow-600 animate-pulse" 
+                    : "text-yellow-600"
+                )}>
                   {stats?.pendingVerifications || 0}
                 </div>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  طلب في انتظار المراجعة
+                <p className="text-gray-600 dark:text-gray-400 mb-4 font-semibold">
+                  {stats?.pendingVerifications === 0 
+                    ? "لا توجد طلبات معلقة" 
+                    : stats?.pendingVerifications === 1 
+                    ? "طلب واحد في انتظار المراجعة" 
+                    : `${stats?.pendingVerifications} طلبات في انتظار المراجعة`}
                 </p>
-                <a 
-                  href="/admin/verification-requests"
-                  className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
-                  data-testid="link-verification-requests"
-                >
-                  مراجعة الطلبات
-                </a>
+                <Link href="/admin/verification-requests">
+                  <button 
+                    className={cn(
+                      "inline-flex items-center px-6 py-3 rounded-md transition-all duration-300 font-bold",
+                      stats?.pendingVerifications && stats.pendingVerifications > 0
+                        ? "bg-yellow-600 text-white hover:bg-yellow-700 shadow-lg hover:shadow-xl"
+                        : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                    )}
+                    data-testid="link-verification-requests"
+                  >
+                    {stats?.pendingVerifications && stats.pendingVerifications > 0 ? (
+                      <>
+                        <Bell className="h-5 w-5 ml-2 animate-bounce" />
+                        مراجعة الطلبات الآن
+                      </>
+                    ) : (
+                      <>مشاهدة الطلبات</>
+                    )}
+                  </button>
+                </Link>
               </div>
             </CardContent>
           </Card>
