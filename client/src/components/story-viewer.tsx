@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
-import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle, Heart, MessageSquare, Send, Share, VolumeOff, Volume2 } from "lucide-react";
+import { X, Play, Pause, ChevronLeft, ChevronRight, MessageCircle, Heart, MessageSquare, Send, Share, VolumeOff, Volume2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
@@ -127,6 +127,25 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
       setNewComment('');
     },
   });
+
+  // Delete story mutation
+  const deleteStoryMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/stories/${storyId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stories'] });
+      onClose();
+    },
+  });
+
+  const handleDeleteStory = () => {
+    if (window.confirm('هل أنت متأكد من حذف هذه الحالة؟')) {
+      deleteStoryMutation.mutate();
+    }
+  };
 
   const handleLikeToggle = () => {
     if (likesData?.hasUserLiked) {
@@ -263,6 +282,18 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
                 data-testid="button-message-story-owner"
               >
                 <MessageCircle className="h-4 w-4" />
+              </Button>
+            )}
+            {currentUser?.id === story.userId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDeleteStory}
+                disabled={deleteStoryMutation.isPending}
+                className="text-white hover:bg-red-500 hover:bg-opacity-20"
+                data-testid="button-delete-story"
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             )}
             {story.videoUrl && (
