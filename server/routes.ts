@@ -3765,6 +3765,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Recent Activities and Notifications
+  app.get("/api/admin/recent-activities", requireAdmin, async (req: any, res) => {
+    try {
+      const activities = [];
+      
+      // Get recent users (last 10)
+      const allUsers = await storage.getAllUsers();
+      const recentUsers = allUsers
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10);
+      
+      recentUsers.forEach(user => {
+        activities.push({
+          type: 'new_user',
+          title: 'مستخدم جديد',
+          description: `انضم ${user.name} إلى المنصة`,
+          timestamp: user.createdAt,
+          icon: 'user',
+          color: 'blue',
+          link: '/admin/users'
+        });
+      });
+      
+      // Get recent orders (last 10)
+      const allOrders = await storage.getAllOrders();
+      const recentOrders = allOrders
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10);
+      
+      recentOrders.forEach(order => {
+        activities.push({
+          type: 'new_order',
+          title: 'طلب جديد',
+          description: `طلب جديد من ${order.customerName} بقيمة ${order.totalAmount} دج`,
+          timestamp: order.createdAt,
+          icon: 'shopping-cart',
+          color: 'green',
+          link: '/admin/orders'
+        });
+      });
+      
+      // Get pending verification requests (last 10)
+      const verificationRequests = await storage.getAllVerificationRequests();
+      const pendingVerifications = verificationRequests
+        .filter(req => req.status === 'pending')
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10);
+      
+      for (const verif of pendingVerifications) {
+        const user = await storage.getUserById(verif.userId);
+        if (user) {
+          activities.push({
+            type: 'verification_request',
+            title: 'طلب توثيق جديد',
+            description: `طلب توثيق من ${user.name}`,
+            timestamp: verif.createdAt,
+            icon: 'check-circle',
+            color: 'yellow',
+            link: '/admin/verification-requests'
+          });
+        }
+      }
+      
+      // Get recent posts (last 10)
+      const allPosts = await storage.getAllBusinessPosts();
+      const recentPosts = allPosts
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10);
+      
+      for (const post of recentPosts) {
+        const user = await storage.getUserById(post.userId);
+        if (user) {
+          activities.push({
+            type: 'new_post',
+            title: 'منشور جديد',
+            description: `نشر ${user.name} منشوراً جديداً`,
+            timestamp: post.createdAt,
+            icon: 'file-text',
+            color: 'purple',
+            link: '/admin/posts'
+          });
+        }
+      }
+      
+      // Sort all activities by timestamp and take the most recent 20
+      const sortedActivities = activities
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 20);
+      
+      res.json(sortedActivities);
+    } catch (error) {
+      console.error("Failed to get recent activities:", error);
+      res.status(500).json({ message: "Failed to get recent activities" });
+    }
+  });
+
   // Admin Verification Management
   // Note: Duplicate endpoint removed - using the enriched version below
 

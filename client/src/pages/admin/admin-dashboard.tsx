@@ -7,11 +7,16 @@ import {
   TrendingUp,
   Clock,
   UserCheck,
-  DollarSign
+  DollarSign,
+  Bell,
+  FileText,
+  User,
+  Ban
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/admin-layout';
+import { Link } from 'wouter';
 
 interface AdminStats {
   totalUsers: number;
@@ -24,11 +29,46 @@ interface AdminStats {
   verifiedUsers: number;
 }
 
+interface Activity {
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  icon: string;
+  color: string;
+  link: string;
+}
+
 export function AdminDashboard() {
   const { data: stats, isLoading } = useQuery<AdminStats>({
     queryKey: ['/api/admin/dashboard-stats'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  const { data: activities, isLoading: activitiesLoading } = useQuery<Activity[]>({
+    queryKey: ['/api/admin/recent-activities'],
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+
+  const getActivityIcon = (iconName: string) => {
+    const iconMap: Record<string, any> = {
+      'user': User,
+      'shopping-cart': ShoppingCart,
+      'check-circle': CheckCircle,
+      'file-text': FileText
+    };
+    return iconMap[iconName] || Bell;
+  };
+
+  const getColorClasses = (color: string) => {
+    const colorMap: Record<string, { bg: string; text: string; border: string }> = {
+      'blue': { bg: 'bg-blue-50 dark:bg-blue-950', text: 'text-blue-600', border: 'border-blue-200' },
+      'green': { bg: 'bg-green-50 dark:bg-green-950', text: 'text-green-600', border: 'border-green-200' },
+      'yellow': { bg: 'bg-yellow-50 dark:bg-yellow-950', text: 'text-yellow-600', border: 'border-yellow-200' },
+      'purple': { bg: 'bg-purple-50 dark:bg-purple-950', text: 'text-purple-600', border: 'border-purple-200' }
+    };
+    return colorMap[color] || colorMap['blue'];
+  };
 
   const statCards = [
     {
@@ -222,6 +262,69 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recent Activities and Notifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-blue-600" />
+              آخر الأنشطة والإشعارات
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activitiesLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="animate-pulse flex gap-3 p-3 border rounded-lg">
+                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : activities && activities.length > 0 ? (
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {activities.map((activity, index) => {
+                  const IconComponent = getActivityIcon(activity.icon);
+                  const colors = getColorClasses(activity.color);
+                  
+                  return (
+                    <Link key={index} href={activity.link}>
+                      <div 
+                        className={`flex items-start gap-3 p-3 border ${colors.border} rounded-lg hover:shadow-md transition-shadow cursor-pointer`}
+                        data-testid={`activity-${activity.type}-${index}`}
+                      >
+                        <div className={`p-2 rounded-full ${colors.bg}`}>
+                          <IconComponent className={`h-5 w-5 ${colors.text}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`font-semibold ${colors.text}`}>
+                            {activity.title}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            {activity.description}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            {new Date(activity.timestamp).toLocaleString('ar-DZ')}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">
+                  لا توجد إشعارات حالياً
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );
