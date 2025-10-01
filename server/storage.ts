@@ -377,6 +377,7 @@ export interface IStorage {
   markSocialNotificationAsRead(notificationId: string): Promise<void>;
   markAllSocialNotificationsAsRead(userId: string): Promise<void>;
   deleteSocialNotification(notificationId: string): Promise<void>;
+  sendAdminAnnouncement(title: string, message: string, adminUserId: string): Promise<number>;
   
   // Business Posts - Social Feed
   getFeedPosts(location?: string, filter?: string, currentUserId?: string): Promise<BusinessPost[]>;
@@ -7712,6 +7713,35 @@ export class MemStorage implements IStorage {
 
   async deleteSocialNotification(notificationId: string): Promise<void> {
     this.socialNotifications.delete(notificationId);
+  }
+
+  async sendAdminAnnouncement(title: string, message: string, adminUserId: string): Promise<number> {
+    // Get all users except the admin
+    const allUsers = Array.from(this.users.values()).filter(user => user.id !== adminUserId);
+    let sentCount = 0;
+
+    // Create notification for each user
+    for (const user of allUsers) {
+      try {
+        await this.createSocialNotification({
+          userId: user.id,
+          fromUserId: adminUserId,
+          type: 'admin_announcement',
+          title: title,
+          message: message,
+          isRead: false,
+          postId: null,
+          commentId: null,
+          storyId: null
+        });
+        sentCount++;
+      } catch (error) {
+        console.error(`Failed to send announcement to user ${user.id}:`, error);
+      }
+    }
+
+    console.log(`📢 Admin announcement sent to ${sentCount} users`);
+    return sentCount;
   }
 
 }

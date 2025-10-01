@@ -4191,6 +4191,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send Admin Announcement to All Users
+  app.post("/api/admin/send-announcement", requireAdmin, async (req: any, res) => {
+    try {
+      const { title, message } = req.body;
+      
+      if (!title || !message) {
+        return res.status(400).json({ message: "العنوان والمحتوى مطلوبان" });
+      }
+      
+      if (title.length > 100) {
+        return res.status(400).json({ message: "العنوان يجب أن يكون أقل من 100 حرف" });
+      }
+      
+      if (message.length > 500) {
+        return res.status(400).json({ message: "المحتوى يجب أن يكون أقل من 500 حرف" });
+      }
+      
+      const sentCount = await storage.sendAdminAnnouncement(title, message, req.userId);
+      
+      res.json({ 
+        success: true,
+        message: "تم إرسال الإشعار بنجاح",
+        sentCount
+      });
+    } catch (error) {
+      console.error("Failed to send admin announcement:", error);
+      res.status(500).json({ message: "فشل في إرسال الإشعار" });
+    }
+  });
+
   // ===========================
   // Additional Admin API Routes
   // ===========================
