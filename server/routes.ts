@@ -5925,6 +5925,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // تتبع زيارة الملف الشخصي
+  app.post("/api/users/:userId/profile-visit", requireAuth, async (req: any, res) => {
+    try {
+      const { userId: targetUserId } = req.params;
+      const visitorId = req.userId;
+      
+      // عدم إرسال إشعار إذا كان المستخدم يزور ملفه الخاص
+      if (visitorId === targetUserId) {
+        return res.json({ success: true, message: "زيارة الملف الشخصي" });
+      }
+      
+      // إنشاء إشعار زيارة الملف
+      await storage.createSocialNotification({
+        userId: targetUserId,
+        triggeredByUserId: visitorId,
+        notificationType: 'profile_visit',
+        message: 'زار ملفك الشخصي',
+        isRead: false
+      });
+      
+      res.json({ success: true, message: "تم تسجيل زيارة الملف الشخصي" });
+    } catch (error) {
+      console.error('Error tracking profile visit:', error);
+      // لا نرسل خطأ لأن تتبع الزيارة ليس أساسياً
+      res.json({ success: true, message: "تم تسجيل الزيارة" });
+    }
+  });
+
   // جلب الملف الشخصي للمستخدم
   app.get("/api/users/:userId/profile", requireAuth, async (req: any, res) => {
     try {

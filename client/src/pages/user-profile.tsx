@@ -67,6 +67,30 @@ export default function UserProfile() {
     enabled: !!userId,
   });
 
+  // تتبع زيارة الملف الشخصي وإرسال إشعار
+  useEffect(() => {
+    const trackProfileVisit = async () => {
+      // عدم إرسال إشعار إذا كان المستخدم يزور ملفه الخاص
+      if (!userId || !currentUser || !profileData || profileData.isOwnProfile) {
+        return;
+      }
+
+      try {
+        // إرسال إشعار زيارة الملف
+        await apiRequest(`/api/users/${userId}/profile-visit`, {
+          method: 'POST',
+        });
+      } catch (error) {
+        // تجاهل الأخطاء - تتبع زيارة اختياري
+        console.log('Profile visit tracking error:', error);
+      }
+    };
+
+    // تأخير بسيط للتأكد من أن البيانات جاهزة
+    const timer = setTimeout(trackProfileVisit, 1000);
+    return () => clearTimeout(timer);
+  }, [userId, currentUser, profileData]);
+
   // جلب منشورات المستخدم
   const { data: userPosts = [], isLoading: isLoadingPosts } = useQuery<PostWithStats[]>({
     queryKey: ["/api/users", userId, "posts"],

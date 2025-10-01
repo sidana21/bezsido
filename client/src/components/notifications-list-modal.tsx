@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Heart, MessageCircle, UserPlus, X, Trash2, Settings } from "lucide-react";
+import { Bell, Heart, MessageCircle, UserPlus, X, Trash2, Settings, Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,12 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
         return <MessageCircle className="w-4 h-4 text-blue-500" />;
       case 'follow':
         return <UserPlus className="w-4 h-4 text-green-500" />;
+      case 'profile_visit':
+        return <Eye className="w-4 h-4 text-purple-500" />;
+      case 'story_like':
+        return <Heart className="w-4 h-4 text-pink-500" />;
+      case 'story_comment':
+        return <MessageCircle className="w-4 h-4 text-cyan-500" />;
       default:
         return <Bell className="w-4 h-4 text-gray-500" />;
     }
@@ -69,6 +75,12 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
         return `علق ${userName} على منشورك`;
       case 'follow':
         return `بدأ ${userName} بمتابعتك`;
+      case 'profile_visit':
+        return `زار ${userName} ملفك الشخصي`;
+      case 'story_like':
+        return `أعجب ${userName} بحالتك`;
+      case 'story_comment':
+        return `علق ${userName} على حالتك`;
       default:
         return `إشعار جديد من ${userName}`;
     }
@@ -108,17 +120,39 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
     },
   });
 
-  // دالة للانتقال إلى المنشور
-  const handlePostClick = (postId: string, notificationId: string) => {
-    if (postId) {
-      setLocation(`/social-feed`);
-      onOpenChange(false);
-      
-      // تمييز كمقروء
-      if (!notificationsResponse?.notifications.find(n => n.id === notificationId)?.isRead) {
-        markAsReadMutation.mutate(notificationId);
-      }
+  // دالة للانتقال حسب نوع الإشعار
+  const handleNotificationClick = (notification: SocialNotification) => {
+    // تمييز الإشعار كمقروء
+    if (!notification.isRead) {
+      markAsReadMutation.mutate(notification.id);
     }
+
+    // الانتقال حسب نوع الإشعار
+    switch (notification.type) {
+      case 'like':
+      case 'comment':
+      case 'story_like':
+      case 'story_comment':
+        // الانتقال إلى المنشور أو الحالة
+        if (notification.postId) {
+          setLocation(`/social-feed`);
+        }
+        break;
+      case 'follow':
+      case 'profile_visit':
+        // الانتقال إلى ملف الزائر الشخصي
+        if (notification.fromUserId) {
+          setLocation(`/user-profile/${notification.fromUserId}`);
+        }
+        break;
+      default:
+        // الانتقال الافتراضي إلى الملف الشخصي للمستخدم
+        if (notification.fromUserId) {
+          setLocation(`/user-profile/${notification.fromUserId}`);
+        }
+    }
+    
+    onOpenChange(false);
   };
 
   const notifications = notificationsResponse?.notifications || [];
@@ -183,7 +217,7 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
                       
                       {/* صورة المستخدم */}
                       <button
-                        onClick={() => handleUserClick(notification.fromUserId)}
+                        onClick={() => handleNotificationClick(notification)}
                         className="flex-shrink-0 hover:scale-105 transition-transform"
                         data-testid={`avatar-${notification.fromUserId}`}
                       >
@@ -199,13 +233,7 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <button
-                            onClick={() => {
-                              if (notification.postId) {
-                                handlePostClick(notification.postId, notification.id);
-                              } else {
-                                handleUserClick(notification.fromUserId);
-                              }
-                            }}
+                            onClick={() => handleNotificationClick(notification)}
                             className="text-right flex-1 hover:opacity-80 transition-opacity"
                             data-testid={`notification-${notification.id}`}
                           >
