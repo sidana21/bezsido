@@ -78,6 +78,7 @@ export default function Orders() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders/seller"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/user"] });
       toast({
         title: "تم التحديث",
         description: "تم تحديث حالة الطلب بنجاح",
@@ -323,6 +324,27 @@ export default function Orders() {
                   تم التسليم
                 </Button>
               )}
+            </div>
+          )}
+
+          {/* User Actions - Cancel Order */}
+          {!isSellerView && order.status === "pending" && (
+            <div className="flex gap-2 pt-3 border-t">
+              <Button 
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  if (confirm('هل أنت متأكد من إلغاء هذا الطلب؟')) {
+                    updateOrderStatus(order.id, "cancelled");
+                  }
+                }}
+                disabled={updateStatusMutation.isPending}
+                className="w-full"
+                data-testid={`button-user-cancel-${order.id}`}
+              >
+                <XCircle className="w-3 h-3 ml-1" />
+                {updateStatusMutation.isPending ? "جاري الإلغاء..." : "إلغاء الطلب"}
+              </Button>
             </div>
           )}
         </CardContent>
