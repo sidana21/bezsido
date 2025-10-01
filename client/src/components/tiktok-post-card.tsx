@@ -754,7 +754,7 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
             </Button>
           )}
           
-          {post.userId === currentUser?.id && (
+          {post.user.id === currentUser?.id && (
             <Button 
               variant="ghost" 
               size="icon" 
