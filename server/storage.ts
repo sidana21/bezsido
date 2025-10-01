@@ -4769,8 +4769,15 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      // Get all users except the admin
-      const allUsers = await db.select().from(users).where(ne(users.id, adminUserId));
+      // Get all non-admin users only (exclude all admins, not just current one)
+      const allUsers = await db.select().from(users).where(
+        and(
+          ne(users.isAdmin, true),
+          ne(users.id, adminUserId)
+        )
+      );
+      
+      console.log(`📊 Found ${allUsers.length} non-admin users to send announcement to`);
       let sentCount = 0;
 
       // Create notification and chat message for each user
@@ -7907,8 +7914,12 @@ export class MemStorage implements IStorage {
   }
 
   async sendAdminAnnouncement(title: string, message: string, adminUserId: string): Promise<number> {
-    // Get all users except the admin
-    const allUsers = Array.from(this.users.values()).filter(user => user.id !== adminUserId);
+    // Get all non-admin users only (exclude all admins, not just current one)
+    const allUsers = Array.from(this.users.values()).filter(user => 
+      !user.isAdmin && user.id !== adminUserId
+    );
+    
+    console.log(`📊 Found ${allUsers.length} non-admin users to send announcement to`);
     let sentCount = 0;
 
     // Create notification for each user
