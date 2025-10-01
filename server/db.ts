@@ -512,6 +512,16 @@ async function ensureTablesExist() {
       console.log('ℹ️ Password column already exists or could not be added:', error instanceof Error ? error.message : error);
     }
 
+    // Add verification_type column to existing users table if it doesn't exist
+    try {
+      await db.execute(sql`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_type TEXT
+      `);
+      console.log('✅ Verification_type column added/verified for users table');
+    } catch (error) {
+      console.log('ℹ️ Verification_type column already exists or could not be added:', error instanceof Error ? error.message : error);
+    }
+
     // Fix messages table schema for existing Render deployments
     try {
       // Check if old 'type' column exists and rename it to 'message_type'
