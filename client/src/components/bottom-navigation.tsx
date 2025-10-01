@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { useFeatures } from "@/hooks/use-features";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export function BottomNavigation() {
   const [location] = useLocation();
   const { isFeatureEnabled } = useFeatures();
+  const { unreadCount } = useNotifications();
   
   const { data: cartItems = [] } = useQuery<any[]>({
     queryKey: ["/api/cart"],
@@ -21,6 +23,7 @@ export function BottomNavigation() {
       icon: MessageSquare,
       href: "/",
       isActive: location === "/",
+      badge: unreadCount > 0 ? unreadCount : undefined,
       featureId: "messaging",
       color: "from-blue-500 to-cyan-600",
       activeColor: "from-blue-600 to-cyan-700"
