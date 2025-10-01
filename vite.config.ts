@@ -32,7 +32,7 @@ async function getReplitPlugins() {
 export default defineConfig(async () => {
   const replitPlugins = await getReplitPlugins();
   
-  return {
+  const config = {
     plugins: [
       react(),
       ...replitPlugins,
@@ -50,13 +50,15 @@ export default defineConfig(async () => {
       emptyOutDir: true,
     },
     server: {
-      host: "0.0.0.0",
+      host: "0.0.0.0" as const,
       port: 5000,
-      allowedHosts: true,
+      allowedHosts: true as const,
       fs: {
         strict: true,
         deny: ["**/.*"],
       },
     },
   };
+  
+  return config;
 });
