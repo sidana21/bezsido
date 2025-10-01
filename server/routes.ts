@@ -2348,6 +2348,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete story
+  app.delete("/api/stories/:storyId", requireAuth, async (req: any, res) => {
+    try {
+      const { storyId } = req.params;
+      
+      const story = await storage.getStory(storyId);
+      if (!story) {
+        return res.status(404).json({ message: "Story not found" });
+      }
+      
+      if (story.userId !== req.userId) {
+        return res.status(403).json({ message: "You can only delete your own stories" });
+      }
+      
+      const success = await storage.deleteStory(storyId);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ message: "Failed to delete story" });
+      }
+    } catch (error) {
+      console.error('Error deleting story:', error);
+      res.status(500).json({ message: "Failed to delete story" });
+    }
+  });
+
   // Story Likes endpoints
   app.post("/api/stories/:storyId/like", requireAuth, async (req: any, res) => {
     try {
