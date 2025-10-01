@@ -131,11 +131,19 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
     switch (notification.type) {
       case 'like':
       case 'comment':
-      case 'story_like':
-      case 'story_comment':
-        // الانتقال إلى المنشور أو الحالة
+        // الانتقال إلى المنشور في الخلاصة
         if (notification.postId) {
           setLocation(`/social-feed`);
+        }
+        break;
+      case 'story_like':
+      case 'story_comment':
+        // الانتقال إلى صفحة الحالات
+        if (notification.postId) {
+          setLocation(`/status`);
+        } else if (notification.fromUserId) {
+          // إذا لم يكن هناك postId، انتقل إلى ملف المستخدم
+          setLocation(`/user-profile/${notification.fromUserId}`);
         }
         break;
       case 'follow':

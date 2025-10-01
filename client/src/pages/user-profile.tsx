@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { User, BizChatPost, Follow } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { TopBar } from "@/components/top-bar";
 
 interface ProfileData extends User {
   followersCount: number;
@@ -67,11 +68,22 @@ export default function UserProfile() {
     enabled: !!userId,
   });
 
-  // تتبع زيارة الملف الشخصي وإرسال إشعار
+  // تتبع زيارة الملف الشخصي وإرسال إشعار (مع تحديد معدل الزيارات)
   useEffect(() => {
     const trackProfileVisit = async () => {
       // عدم إرسال إشعار إذا كان المستخدم يزور ملفه الخاص
       if (!userId || !currentUser || !profileData || profileData.isOwnProfile) {
+        return;
+      }
+
+      // تحديد معدل الزيارات - عدم إرسال إشعار إذا تم زيارة نفس الملف في آخر 5 دقائق
+      const visitKey = `profile_visit_${currentUser.id}_${userId}`;
+      const lastVisit = sessionStorage.getItem(visitKey);
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+
+      if (lastVisit && (now - parseInt(lastVisit)) < fiveMinutes) {
+        // تم زيارة الملف مؤخراً، لا نرسل إشعار
         return;
       }
 
@@ -80,6 +92,9 @@ export default function UserProfile() {
         await apiRequest(`/api/users/${userId}/profile-visit`, {
           method: 'POST',
         });
+        
+        // حفظ وقت الزيارة
+        sessionStorage.setItem(visitKey, now.toString());
       } catch (error) {
         // تجاهل الأخطاء - تتبع زيارة اختياري
         console.log('Profile visit tracking error:', error);
@@ -248,9 +263,14 @@ export default function UserProfile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700">
-        <div className="container mx-auto px-4 py-4">
+      {/* TopBar للإشعارات العالمية */}
+      <TopBar title={profileData?.name || "الملف الشخصي"} />
+      
+      {/* محتوى الصفحة مع مسافة من الأعلى لتجنب التداخل مع TopBar */}
+      <div className="pt-14">
+        {/* Header */}
+        <div className="sticky top-14 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700">
+          <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/social-feed">
@@ -696,6 +716,7 @@ export default function UserProfile() {
           </div>
         </DialogContent>
       </Dialog>
+      </div> {/* إغلاق div pt-14 */}
     </div>
   );
 }
