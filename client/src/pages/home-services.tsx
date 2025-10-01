@@ -335,19 +335,9 @@ export default function HomeServices() {
           </button>
         </div>
 
-        {/* Add Service Button */}
-        <div className="mb-16 mt-6">
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button 
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-lg py-6 rounded-2xl shadow-lg"
-                data-testid="button-add-service"
-              >
-                <Plus className="w-6 h-6 mr-2" />
-                انشر خدمتك المنزلية
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
+        {/* Dialog for Adding Service */}
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-right">نشر خدمة منزلية جديدة</DialogTitle>
               </DialogHeader>
@@ -489,9 +479,8 @@ export default function HomeServices() {
                   </Button>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Loading State */}
         {isLoading && (
@@ -623,6 +612,24 @@ export default function HomeServices() {
           </div>
         )}
       </div>
+
+      {/* Floating Action Button (FAB) لنشر خدمة */}
+      <button
+        onClick={() => setShowAddDialog(true)}
+        className="fixed bottom-24 left-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-full w-16 h-16 shadow-2xl flex items-center justify-center transform hover:scale-110 transition-all duration-300 animate-pulse hover:animate-none group"
+        data-testid="button-fab-add-service"
+        aria-label="انشر خدمة"
+      >
+        <Plus className="w-8 h-8 group-hover:rotate-90 transition-transform duration-300" />
+        
+        {/* Tooltip */}
+        <span className="absolute left-20 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-xl">
+          انشر خدمة منزلية
+        </span>
+        
+        {/* Glow effect */}
+        <span className="absolute inset-0 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 opacity-75 blur-md animate-pulse"></span>
+      </button>
 
       {/* Image Preview Dialog */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
