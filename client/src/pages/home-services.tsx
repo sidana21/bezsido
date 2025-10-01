@@ -341,9 +341,9 @@ export default function HomeServices() {
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-right">نشر خدمة منزلية جديدة</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 mt-4">
+              <div className="space-y-3 mt-3">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 text-right">
                     اسم الخدمة
                   </label>
                   <Input
@@ -356,7 +356,7 @@ export default function HomeServices() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 text-right">
                     نوع الخدمة
                   </label>
                   <select
@@ -371,21 +371,21 @@ export default function HomeServices() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 text-right">
                     الوصف
                   </label>
                   <Textarea
                     placeholder="وصف تفصيلي للخدمة..."
                     value={newService.description}
                     onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                    rows={4}
+                    rows={3}
                     className="text-right"
                     data-testid="textarea-service-description"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 text-right">
                     السعر (دج)
                   </label>
                   <Input
@@ -400,7 +400,7 @@ export default function HomeServices() {
 
                 {/* صور الخدمة */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 text-right">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 text-right">
                     صور الخدمة (اختياري)
                   </label>
                   
@@ -418,7 +418,7 @@ export default function HomeServices() {
                     variant="outline"
                     onClick={handleImageUploadClick}
                     disabled={isUploading}
-                    className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-500 h-24"
+                    className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-500 h-20"
                     data-testid="button-upload-image"
                   >
                     {isUploading ? (
@@ -436,13 +436,13 @@ export default function HomeServices() {
 
                   {/* عرض الصور المرفوعة */}
                   {uploadedImages.length > 0 && (
-                    <div className="mt-4 grid grid-cols-3 gap-2">
+                    <div className="mt-2 grid grid-cols-3 gap-2">
                       {uploadedImages.map((imageUrl, index) => (
                         <div key={index} className="relative group">
                           <img
                             src={imageUrl}
                             alt={`صورة ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg"
+                            className="w-full h-20 object-cover rounded-lg"
                           />
                           <button
                             type="button"
@@ -458,7 +458,7 @@ export default function HomeServices() {
                   )}
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-3">
                   <Button
                     type="button"
                     onClick={handleAddService}
@@ -509,9 +509,9 @@ export default function HomeServices() {
                   <div className="relative h-48 bg-gray-100 dark:bg-gray-700">
                     {service.images.length === 1 ? (
                       <img
-                        src={service.images[0]}
+                        src={service.images[0]!}
                         alt={service.name}
-                        onClick={() => setSelectedImage(service.images[0])}
+                        onClick={() => setSelectedImage(service.images![0])}
                         className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
                         data-testid={`service-image-${service.id}`}
                       />
