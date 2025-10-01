@@ -151,6 +151,19 @@ Preferred communication style: Simple, everyday language.
 
 ### Recent Bug Fixes
 
+#### Database Schema Sync for Render Deployment (October 1, 2025)
+- **Issue**: Error on Render deployment: `column "verification_type" of relation "users" does not exist`
+- **Root Cause**: Database schema on Render was out of sync with application schema in `shared/schema.ts`
+  - The `verification_type` column exists in code but wasn't created in the database
+  - This prevented admin user creation and application startup
+- **Solution**:
+  1. Created PostgreSQL database in Replit environment
+  2. Ran `npm run db:push` to sync all schema changes to database
+  3. Verified all tables and columns created successfully including `verification_type`
+  4. Confirmed application starts and runs without errors
+- **Result**: ✅ Database schema fully synced, admin user creates successfully, ready for Render deployment
+- **Important**: For Render deployment, ensure you run `npm run db:push` after connecting your DATABASE_URL to sync the schema
+
 #### Admin Announcement Notifications Not Persisting (October 1, 2025)
 - **Issue**: Admin announcements were being sent successfully but not reaching users
 - **Root Cause**: Application was using MemStorage (in-memory) instead of DatabaseStorage (PostgreSQL)
