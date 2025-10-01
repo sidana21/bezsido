@@ -4772,9 +4772,10 @@ export class DatabaseStorage implements IStorage {
       const allUsers = await db.select().from(users).where(ne(users.id, adminUserId));
       let sentCount = 0;
 
-      // Create notification for each user
+      // Create notification and chat message for each user
       for (const user of allUsers) {
         try {
+          // 1. إنشاء إشعار اجتماعي (يظهر في قائمة الإشعارات)
           await this.createSocialNotification({
             userId: user.id,
             fromUserId: adminUserId,
@@ -4786,17 +4787,65 @@ export class DatabaseStorage implements IStorage {
             commentId: null,
             storyId: null
           });
+
+          // 2. إنشاء/العثور على محادثة مع المستخدم
+          let chat = await this.findOrCreateChatBetweenUsers(adminUserId, user.id, 'إشعار من الإدارة');
+          
+          // 3. إرسال رسالة في المحادثة (تظهر كرسالة جديدة)
+          await this.createMessage({
+            chatId: chat.id,
+            senderId: adminUserId,
+            content: `${title}\n\n${message}`,
+            messageType: 'text'
+          });
+
           sentCount++;
         } catch (error) {
           console.error(`Failed to send announcement to user ${user.id}:`, error);
         }
       }
 
-      console.log(`📢 Admin announcement sent to ${sentCount} users`);
+      console.log(`📢 Admin announcement sent to ${sentCount} users as messages`);
       return sentCount;
     } catch (error) {
       console.error('Error sending admin announcement:', error);
       return 0;
+    }
+  }
+
+  // دالة مساعدة لإنشاء أو العثور على محادثة بين مستخدمين
+  private async findOrCreateChatBetweenUsers(user1Id: string, user2Id: string, chatName?: string): Promise<Chat> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      // البحث عن محادثة موجودة بين المستخدمين
+      const existingChats = await db.select().from(chats);
+      
+      for (const chat of existingChats) {
+        if (chat.participants && chat.participants.length === 2) {
+          if (
+            (chat.participants.includes(user1Id) && chat.participants.includes(user2Id))
+          ) {
+            return chat;
+          }
+        }
+      }
+
+      // إنشاء محادثة جديدة إذا لم تكن موجودة
+      const newChat = await this.createChat({
+        participants: [user1Id, user2Id],
+        name: chatName || null,
+        avatar: null,
+        isGroup: false
+      });
+
+      return newChat;
+    } catch (error) {
+      console.error('Error finding or creating chat:', error);
+      throw error;
     }
   }
 }
