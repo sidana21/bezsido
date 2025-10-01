@@ -45,7 +45,7 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
   }>({
     queryKey: ["/api/notifications/social"],
     enabled: open,
-    refetchInterval: open ? 5000 : false,
+    refetchInterval: open ? 2000 : false, // تحديث كل 2 ثانية لإشعارات سريعة
   });
 
   // دالة لتحديد نوع الإشعار

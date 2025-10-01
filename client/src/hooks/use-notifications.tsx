@@ -117,7 +117,7 @@ export function useNotifications(options: NotificationOptions = {}) {
   // الحصول على عدد الإشعارات الاجتماعية غير المقروءة
   const { data: socialUnreadCountData } = useQuery<{ unreadCount: number }>({
     queryKey: ['/api/notifications/social/unread-count'],
-    refetchInterval: 3000,
+    refetchInterval: 1500, // تحديث كل 1.5 ثانية لإشعارات سريعة
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
     retry: false, // تجنب إعادة المحاولة عند فشل الطلب
@@ -126,7 +126,7 @@ export function useNotifications(options: NotificationOptions = {}) {
   // الحصول على آخر الإشعارات الاجتماعية لعرض التفاصيل
   const { data: recentSocialNotifications } = useQuery<Array<{id: string, type: string, fromUserId: string, message: string, title: string, createdAt: string}>>({
     queryKey: ['/api/notifications/social'],
-    refetchInterval: 5000, // تحديث كل 5 ثواني للإشعارات الاجتماعية
+    refetchInterval: 2000, // تحديث كل 2 ثانية للإشعارات الاجتماعية - أسرع لتظهر فوراً
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
   });
