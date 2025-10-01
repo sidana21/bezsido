@@ -1,9 +1,22 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
+import fs from "fs";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage, type IStorage } from "./storage";
 import { AdminManager } from "./admin-manager";
+
+// Ensure uploads directory exists (critical for Render deployment)
+try {
+  if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads', { recursive: true });
+    console.log('📁 Created uploads directory');
+  } else {
+    console.log('📁 Uploads directory already exists');
+  }
+} catch (error) {
+  console.error('⚠️ Failed to create uploads directory:', error);
+}
 
 // Fix SSL certificate issues in Replit development environment
 if (process.env.NODE_ENV === 'development') {
