@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/sidebar";
 import { ChatArea } from "@/components/chat-area";
 import { FloatingActionButton } from "@/components/floating-action-button";
 import { ContactsModal } from "@/components/contacts-modal";
+import { TopBar } from "@/components/top-bar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Chat() {
@@ -49,7 +50,9 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-[100dvh] w-full bg-white dark:bg-gray-800 pb-20">
+    <>
+      <TopBar title="BizChat" />
+      <div className="flex h-[100dvh] w-full bg-white dark:bg-gray-800 pb-20 pt-14">
       {/* Mobile overlay */}
       {isMobile && sidebarVisible && selectedChatId && (
         <div 
@@ -104,6 +107,7 @@ export default function Chat() {
           setShowContacts(false);
         }}
       />
-    </div>
+      </div>
+    </>
   );
 }

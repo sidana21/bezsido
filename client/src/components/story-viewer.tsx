@@ -271,17 +271,16 @@ export function StoryViewer({ storyId, onClose, onNext, onPrevious }: StoryViewe
             </div>
           </div>
           
-          <div className="flex items-center space-x-2 space-x-reverse">
+          <div className="flex items-center gap-2">
             {currentUser?.id !== story.userId && (
               <Button
-                variant="ghost"
-                size="icon"
                 onClick={() => startChatMutation.mutate(story.userId)}
                 disabled={startChatMutation.isPending}
-                className="text-white hover:bg-white hover:bg-opacity-20"
+                className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-semibold px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
                 data-testid="button-message-story-owner"
               >
-                <MessageCircle className="h-4 w-4" />
+                <MessageCircle className="h-5 w-5" />
+                <span className="text-sm">راسلني</span>
               </Button>
             )}
             {currentUser?.id === story.userId && (
