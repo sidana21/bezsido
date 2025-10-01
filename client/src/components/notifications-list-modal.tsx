@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Heart, MessageCircle, UserPlus, X, Trash2, Settings, Eye } from "lucide-react";
+import { Bell, Heart, MessageCircle, UserPlus, X, Trash2, Settings, Eye, Megaphone } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import appIconPath from "@/assets/app-icon.png";
 
 interface NotificationsListModalProps {
   open: boolean;
@@ -26,6 +27,8 @@ interface SocialNotification {
   fromUserAvatar?: string;
   postId?: string;
   postContent?: string;
+  title?: string;
+  message?: string;
   createdAt: string;
   isRead: boolean;
 }
@@ -48,6 +51,8 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
   // دالة لتحديد نوع الإشعار
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case 'admin_announcement':
+        return <Megaphone className="w-4 h-4 text-yellow-500 animate-pulse" />;
       case 'like':
         return <Heart className="w-4 h-4 text-red-500" />;
       case 'comment':
@@ -67,6 +72,10 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
 
   // دالة لتحديد نص الإشعار
   const getNotificationText = (notification: SocialNotification) => {
+    if (notification.type === 'admin_announcement') {
+      return notification.title || 'إشعار من الإدارة';
+    }
+    
     const userName = notification.fromUserName || "مستخدم";
     switch (notification.type) {
       case 'like':
@@ -125,6 +134,11 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
     // تمييز الإشعار كمقروء
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
+    }
+
+    // إذا كان إشعاراً إدارياً، لا تنتقل لأي مكان
+    if (notification.type === 'admin_announcement') {
+      return;
     }
 
     // الانتقال حسب نوع الإشعار
@@ -210,11 +224,16 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
               </div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {notifications.map((notification) => (
+                {notifications.map((notification) => {
+                  const isAdminAnnouncement = notification.type === 'admin_announcement';
+                  
+                  return (
                   <div 
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
-                      !notification.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
+                    className={`p-4 transition-colors ${
+                      isAdminAnnouncement 
+                        ? 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 border-r-4 border-yellow-500 animate-pulse' 
+                        : `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${!notification.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -223,18 +242,24 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
                         {getNotificationIcon(notification.type)}
                       </div>
                       
-                      {/* صورة المستخدم */}
+                      {/* صورة المستخدم أو شعار التطبيق للإشعارات الإدارية */}
                       <button
                         onClick={() => handleNotificationClick(notification)}
-                        className="flex-shrink-0 hover:scale-105 transition-transform"
+                        className={`flex-shrink-0 transition-transform ${!isAdminAnnouncement ? 'hover:scale-105' : ''}`}
                         data-testid={`avatar-${notification.fromUserId}`}
                       >
-                        <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-700 shadow-sm">
-                          <AvatarImage src={notification.fromUserAvatar} />
-                          <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-blue-500 text-white font-semibold">
-                            {notification.fromUserName?.charAt(0) || 'م'}
-                          </AvatarFallback>
-                        </Avatar>
+                        {isAdminAnnouncement ? (
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center border-2 border-yellow-300 shadow-lg animate-pulse">
+                            <img src={appIconPath} alt="إشعار من الإدارة" className="h-8 w-8 rounded-full" />
+                          </div>
+                        ) : (
+                          <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-700 shadow-sm">
+                            <AvatarImage src={notification.fromUserAvatar} />
+                            <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-blue-500 text-white font-semibold">
+                              {notification.fromUserName?.charAt(0) || 'م'}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </button>
                       
                       {/* محتوى الإشعار */}
@@ -245,10 +270,24 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
                             className="text-right flex-1 hover:opacity-80 transition-opacity"
                             data-testid={`notification-${notification.id}`}
                           >
-                            <p className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
+                            {isAdminAnnouncement && (
+                              <p className="text-xs font-bold text-yellow-600 dark:text-yellow-400 mb-1 animate-pulse">
+                                إشعار من الإدارة
+                              </p>
+                            )}
+                            <p className={`text-sm leading-relaxed ${
+                              isAdminAnnouncement 
+                                ? 'text-gray-900 dark:text-gray-100 font-semibold' 
+                                : 'text-gray-900 dark:text-gray-100'
+                            }`}>
                               {getNotificationText(notification)}
                             </p>
-                            {notification.postContent && (
+                            {isAdminAnnouncement && notification.message && (
+                              <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 bg-white/50 dark:bg-gray-800/50 p-2 rounded">
+                                {notification.message}
+                              </p>
+                            )}
+                            {!isAdminAnnouncement && notification.postContent && (
                               <p className="text-xs text-gray-500 mt-1 line-clamp-2 bg-gray-50 dark:bg-gray-800 p-2 rounded">
                                 {notification.postContent}
                               </p>
@@ -285,7 +324,8 @@ export function NotificationsListModal({ open, onOpenChange, onOpenSettings }: N
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

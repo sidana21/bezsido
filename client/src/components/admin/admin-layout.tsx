@@ -12,7 +12,8 @@ import {
   LogOut,
   Menu,
   X,
-  Mail
+  Mail,
+  Megaphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       title: 'لوحة التحكم',
       icon: LayoutDashboard,
       href: '/admin',
+    },
+    {
+      title: 'إرسال إشعار',
+      icon: Megaphone,
+      href: '/admin/send-announcement',
     },
     {
       title: 'طلبات التوثيق',

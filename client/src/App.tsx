@@ -42,6 +42,7 @@ import { StoresManagement } from "@/pages/admin/stores-management";
 import { OrdersManagement } from "@/pages/admin/orders-management";
 import { FeaturesManagement } from "@/pages/admin/features-management";
 import EmailSettings from "@/pages/admin/email-settings";
+import { SendAnnouncement } from "@/pages/admin/send-announcement";
 import { AdminProtectedRoute } from "@/components/admin/admin-protected-route";
 
 // Error Boundary Component للتعامل مع الأخطاء ومنع الشاشة السوداء
@@ -122,6 +123,11 @@ function Router() {
         <Route path="/admin/login" component={AdminLogin} />
         
         {/* Admin Routes - Protected */}
+        <Route path="/admin/send-announcement">
+          <AdminProtectedRoute>
+            <SendAnnouncement />
+          </AdminProtectedRoute>
+        </Route>
         <Route path="/admin/verification-requests">
           <AdminProtectedRoute>
             <VerificationRequests />
