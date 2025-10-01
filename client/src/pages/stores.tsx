@@ -388,21 +388,6 @@ export default function Stores() {
             ))}
           </div>
 
-          {/* Slide Indicators */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentSlide 
-                    ? 'w-8 bg-white shadow-lg' 
-                    : 'w-2 bg-white/40 hover:bg-white/60'
-                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
 
           {/* Navigation Arrows */}
           <button
