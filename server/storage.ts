@@ -145,6 +145,7 @@ export interface IStorage {
   createStory(story: InsertStory): Promise<Story>;
   viewStory(storyId: string, viewerId: string): Promise<void>;
   getStory(storyId: string): Promise<Story | undefined>;
+  deleteStory(storyId: string): Promise<boolean>;
   
   // Story interactions
   likeStory(storyId: string, userId: string, reactionType: string): Promise<StoryLike>;
@@ -993,6 +994,21 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting story:', error);
       return undefined;
+    }
+  }
+
+  async deleteStory(storyId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(stories).where(eq(stories.id, storyId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting story:', error);
+      return false;
     }
   }
 
@@ -5323,6 +5339,10 @@ export class MemStorage implements IStorage {
 
   async getStory(storyId: string): Promise<Story | undefined> {
     return this.stories.get(storyId);
+  }
+
+  async deleteStory(storyId: string): Promise<boolean> {
+    return this.stories.delete(storyId);
   }
 
   // Story interactions for MemStorage
