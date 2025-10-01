@@ -1449,12 +1449,14 @@ export class DatabaseStorage implements IStorage {
       const defaultFeatures: InsertAppFeature[] = [
         { id: "messaging", name: "المراسلة", description: "إرسال واستقبال الرسائل الفورية", isEnabled: true, category: "messaging", priority: 1 },
         { id: "stories", name: "الحالات", description: "مشاركة الحالات والقصص", isEnabled: true, category: "social", priority: 2 },
-        { id: "marketplace", name: "السوق", description: "بيع وشراء المنتجات", isEnabled: true, category: "marketplace", priority: 3 },
-        { id: "vendors", name: "المتاجر", description: "إنشاء وإدارة المتاجر", isEnabled: true, category: "marketplace", priority: 4 },
-        { id: "social_feed", name: "المنشورات", description: "مشاركة المحتوى والمنشورات الاجتماعية", isEnabled: true, category: "social", priority: 5 },
-        { id: "neighborhoods", name: "مجتمع الحي", description: "التواصل مع الجيران وطلب المساعدة", isEnabled: true, category: "social", priority: 6 },
-        { id: "affiliate", name: "التسويق بالعمولة", description: "كسب المال من خلال التسويق", isEnabled: true, category: "marketplace", priority: 7 },
-        { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 8 },
+        { id: "voice_calls", name: "المكالمات", description: "إجراء مكالمات صوتية ومرئية", isEnabled: true, category: "messaging", priority: 3 },
+        { id: "marketplace", name: "السوق", description: "بيع وشراء المنتجات", isEnabled: true, category: "marketplace", priority: 4 },
+        { id: "vendors", name: "المتاجر", description: "إنشاء وإدارة المتاجر", isEnabled: true, category: "marketplace", priority: 5 },
+        { id: "cart", name: "السلة", description: "إدارة سلة التسوق والمشتريات", isEnabled: true, category: "marketplace", priority: 6 },
+        { id: "social_feed", name: "المنشورات", description: "مشاركة المحتوى والمنشورات الاجتماعية", isEnabled: true, category: "social", priority: 7 },
+        { id: "neighborhoods", name: "مجتمع الحي", description: "التواصل مع الجيران وطلب المساعدة", isEnabled: true, category: "social", priority: 8 },
+        { id: "affiliate", name: "التسويق بالعمولة", description: "كسب المال من خلال التسويق", isEnabled: true, category: "marketplace", priority: 9 },
+        { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 10 },
       ];
 
       for (const feature of defaultFeatures) {
