@@ -160,6 +160,9 @@ app.use((req, res, next) => {
     }
   });
 
+  // Serve uploaded files statically (before Vite but after API routes)
+  app.use('/uploads', express.static('uploads'));
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes

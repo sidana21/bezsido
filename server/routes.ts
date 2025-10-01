@@ -283,9 +283,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trust proxy for accurate IP addresses behind load balancers
   app.set('trust proxy', 1);
   
-  // Serve uploaded files statically
-  app.use('/uploads', express.static('uploads'));
-  
   // File upload endpoint for images and videos
   app.post("/api/upload/media", requireAuth, upload.single('media'), async (req: any, res) => {
     try {
