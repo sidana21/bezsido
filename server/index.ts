@@ -87,6 +87,22 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Auto-sync database schema on production startup (for Render/Neon)
+  if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
+    try {
+      console.log('🔄 Syncing database schema with Drizzle...');
+      const { execSync } = await import('child_process');
+      execSync('npm run db:push --force', { 
+        stdio: 'inherit',
+        env: { ...process.env }
+      });
+      console.log('✅ Database schema synced successfully');
+    } catch (syncError) {
+      console.error('⚠️ Database schema sync failed:', syncError);
+      console.log('ℹ️ Continuing anyway - schema might already be synced');
+    }
+  }
+
   // Initialize default features on startup
   try {
     console.log('Initializing default app features...');
