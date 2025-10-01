@@ -2,6 +2,6 @@
   "note": "رابط قاعدة البيانات الخارجية المحفوظ تلقائياً",
   "warning": "هذا الملف للتطوير المحلي فقط ولن يؤثر على النشر على Render",
   "production_note": "في بيئة الإنتاج، يتم استخدام متغير البيئة DATABASE_URL فقط",
-  "lastUpdated": "2025-10-01T17:19:20.621Z",
-  "DATABASE_URL": "postgresql://neondb_owner:npg_IUunKO51FiPg@ep-steep-sound-agvi2hh7.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+  "lastUpdated": "2025-10-01T17:53:21.009Z",
+  "DATABASE_URL": "postgresql://neondb_owner:npg_irWtkmY23Eyg@ep-green-recipe-a5s07fxc.us-east-2.aws.neon.tech/neondb?sslmode=require"
 }
