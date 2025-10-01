@@ -489,6 +489,7 @@ export class DatabaseStorage implements IStorage {
         isOnline: user.isOnline ?? true,
         isVerified: false,
         verifiedAt: null,
+        verificationType: null, // Add verification type column
         isAdmin: user.isAdmin ?? false,
         points: 0,
         streak: 0,
