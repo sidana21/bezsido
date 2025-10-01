@@ -14,7 +14,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertVendorSchema, insertProductSchema } from "@shared/schema";
 import { z } from "zod";
-import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings, Upload, ImageIcon, X } from "lucide-react";
+import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings, Upload, ImageIcon, X, Trash2 } from "lucide-react";
 
 interface VendorWithOwner extends Vendor {
   owner: User;
@@ -533,6 +533,29 @@ export default function MyStore() {
       toast({
         title: "خطأ",
         description: error.message || "فشل في تحديث المنتج",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      return apiRequest(`/api/products/${productId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/products"] });
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف المنتج بنجاح",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في حذف المنتج",
         variant: "destructive",
       });
     },
@@ -1162,6 +1185,19 @@ export default function MyStore() {
                               data-testid={`button-toggle-product-${product.id}`}
                             >
                               {product.isActive ? "إيقاف" : "تفعيل"}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => {
+                                if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+                                  deleteProductMutation.mutate(product.id);
+                                }
+                              }}
+                              disabled={deleteProductMutation.isPending}
+                              data-testid={`button-delete-product-${product.id}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>
                         </CardContent>
