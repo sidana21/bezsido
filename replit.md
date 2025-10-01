@@ -110,8 +110,8 @@ Preferred communication style: Simple, everyday language.
 - **Host**: 0.0.0.0 (configured for Replit proxy)
 - **Workflow**: "Start application" runs `npm run dev` with webview output
 - **Output Type**: webview for frontend preview
-- **Database**: Not provisioned (using MemStorage for development)
-- **Storage Mode**: In-memory (MemStorage) for development - data persists during session
+- **Database**: PostgreSQL database (Neon-backed) - provisioned and active
+- **Storage Mode**: DatabaseStorage (PostgreSQL) for persistent data storage
 - **Build Scripts**: Updated to use `npx tsx` and `npx esbuild` for compatibility
 
 ### Deployment Configuration
@@ -149,7 +149,26 @@ Preferred communication style: Simple, everyday language.
 - ✅ Application fully operational in Replit environment
 - ✅ Fresh GitHub import completed successfully
 
-### Recent Bug Fixes (September 30, 2025)
+### Recent Bug Fixes
+
+#### Admin Announcement Notifications Not Persisting (October 1, 2025)
+- **Issue**: Admin announcements were being sent successfully but not reaching users
+- **Root Cause**: Application was using MemStorage (in-memory) instead of DatabaseStorage (PostgreSQL)
+  - Notifications were saved in temporary memory and lost on server restart
+  - Users couldn't receive notifications that were sent while they were offline
+- **Solution**:
+  1. Created PostgreSQL database for persistent storage
+  2. Implemented social notification methods in DatabaseStorage class:
+     - createSocialNotification, getUserSocialNotifications
+     - getUnreadSocialNotificationsCount, markSocialNotificationAsRead
+     - markAllSocialNotificationsAsRead, deleteSocialNotification
+     - sendAdminAnnouncement (broadcasts to all users)
+  3. Updated initializeStorage() to use DatabaseStorage instead of MemStorage
+  4. Added missing drizzle-orm imports (desc, ne) for proper query ordering
+  5. Pushed schema changes to database using `npm run db:push`
+- **Result**: ✅ Admin announcements now persist in PostgreSQL database and reach all users successfully
+
+#### Previous Fixes (September 30, 2025)
 - **Service Publishing Bug**: Fixed critical bug where publishing services failed due to missing `categoryId` field
   - Root cause: Frontend forms (beauty-services.tsx, home-services.tsx) weren't sending categoryId required by backend
   - Solution: Added API query to fetch service categories dynamically and include categoryId in service submission
