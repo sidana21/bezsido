@@ -40,6 +40,27 @@ Preferred communication style: Simple, everyday language.
 - Services page: Horizontal scrolling category cards with snap behavior, gradient designs, and smooth animations. Categories include: تاكسي (Taxi), توصيل (Delivery), خدمات منزلية (Home Services), تجميل (Beauty) - integrated within /stores page (September 30, 2025).
 - Service categories redesigned with circular pulsing design: Perfect circles with animated outer glow, inner pulsing effects, and interactive hover animations (scale, rotate, shadow). Includes continuous color pulse animations to attract user attention (September 30, 2025).
 
+### Admin Panel Features (October 1, 2025)
+- **Comprehensive Dashboard Statistics**: Real-time monitoring of users, stores, orders, revenue, and verification requests with accurate counting logic
+- **User Management System**: 
+  * Block/unblock functionality for user accounts
+  * Post count tracking for each user
+  * Detailed user information display with status indicators
+- **Real-time Notification System**:
+  * Visual indicators with pulsing badges showing pending verification request counts
+  * Sidebar badge displaying unread verification requests
+  * Dashboard card with prominent golden pulsing border, gradient animated bar, and "جديد" badge when pending requests exist
+  * Recent activities feed showing last 20 actions (new users, orders, verifications, posts)
+- **Sound Alert System**: 
+  * Automatic audio notification when new verification requests arrive
+  * Debouncing mechanism (5s cooldown) to prevent notification spam
+  * Base64 encoded beep sound with fallback for browser autoplay restrictions
+- **API Endpoints**:
+  * `/api/admin/dashboard-stats` - Comprehensive statistics endpoint
+  * `/api/admin/recent-activities` - Latest system activities
+  * `/api/admin/users` - User management with block/unblock capabilities
+  * 30-second polling intervals for real-time updates
+
 ## External Dependencies
 
 ### Core Framework & Database
