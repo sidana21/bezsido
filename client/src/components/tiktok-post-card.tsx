@@ -11,7 +11,7 @@ import {
   Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, 
   Play, Pause, Volume2, VolumeX, MapPin, Verified, Crown,
   Send, Smile, Camera, Tag, ShoppingBag, Eye, ChevronLeft, ChevronRight,
-  User as UserIcon, ExternalLink, X, UserPlus, Plus
+  User as UserIcon, ExternalLink, X, UserPlus, Plus, Trash2
 } from "lucide-react";
 import type { User, BizChatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -112,6 +112,52 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
     queryKey: [`/api/posts/${post.id}/comments`],
     queryFn: () => apiRequest(`/api/posts/${post.id}/comments`),
     enabled: showComments,
+  });
+
+  // حذف المنشور
+  const deletePostMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/posts/${post.id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social-feed"] });
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف المنشور بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف المنشور",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // حذف التعليق
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      return apiRequest(`/api/posts/${post.id}/comments/${commentId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/posts/${post.id}/comments`] });
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف التعليق بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف التعليق",
+        variant: "destructive",
+      });
+    },
   });
 
   // إضافة تعليق
@@ -708,6 +754,23 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
             </Button>
           )}
           
+          {post.userId === currentUser?.id && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="w-10 h-10 bg-red-500/70 hover:bg-red-600/80 backdrop-blur-md text-white"
+              onClick={() => {
+                if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
+                  deletePostMutation.mutate();
+                }
+              }}
+              disabled={deletePostMutation.isPending}
+              data-testid={`button-delete-post-${post.id}`}
+            >
+              <Trash2 className="w-5 h-5" />
+            </Button>
+          )}
+          
           <Button variant="ghost" size="icon" className="w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white">
             <MoreHorizontal className="w-6 h-6" />
           </Button>
@@ -778,7 +841,7 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
                 </div>
               ) : (
                 commentsData.map((comment: any) => (
-                  <div key={comment.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={comment.id} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <Avatar className="w-8 h-8 flex-shrink-0">
                       <AvatarImage src={comment.user?.avatar} />
                       <AvatarFallback>
@@ -786,21 +849,39 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm">
-                          {comment.user?.name || 'مستخدم'}
-                        </span>
-                        {comment.user?.isVerified && (
-                          <Verified className="w-3 h-3 text-blue-500 fill-current" />
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">
+                            {comment.user?.name || 'مستخدم'}
+                          </span>
+                          {comment.user?.isVerified && (
+                            <Verified className="w-3 h-3 text-blue-500 fill-current" />
+                          )}
+                          <span className="text-xs text-gray-500">
+                            {new Date(comment.createdAt).toLocaleDateString('ar-DZ', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        {(comment.userId === currentUser?.id || post.userId === currentUser?.id) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                              if (confirm('هل أنت متأكد من حذف هذا التعليق؟')) {
+                                deleteCommentMutation.mutate(comment.id);
+                              }
+                            }}
+                            disabled={deleteCommentMutation.isPending}
+                            data-testid={`button-delete-comment-${comment.id}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         )}
-                        <span className="text-xs text-gray-500">
-                          {new Date(comment.createdAt).toLocaleDateString('ar-DZ', {
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </span>
                       </div>
-                      <p className="text-sm text-gray-700 break-words">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 break-words">
                         {comment.content}
                       </p>
                     </div>
