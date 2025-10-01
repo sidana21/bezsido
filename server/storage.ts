@@ -91,7 +91,7 @@ import {
 import { randomUUID } from "crypto";
 import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, storyViews, socialNotifications } from '@shared/schema';
 import { sql } from 'drizzle-orm';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc, ne } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
 let db: any = null;
@@ -4658,6 +4658,147 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // Social Notifications Methods - وظائف الإشعارات الاجتماعية
+  async createSocialNotification(notification: InsertSocialNotification): Promise<SocialNotification> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const result = await db.insert(socialNotifications).values(notification).returning();
+      console.log(`🔔 إشعار اجتماعي جديد: ${notification.type} من ${notification.fromUserId} إلى ${notification.userId}`);
+      return result[0];
+    } catch (error) {
+      console.error('Error creating social notification:', error);
+      throw error;
+    }
+  }
+
+  async getUserSocialNotifications(userId: string, limit: number = 20, offset: number = 0): Promise<SocialNotification[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const notifications = await db.select()
+        .from(socialNotifications)
+        .where(eq(socialNotifications.userId, userId))
+        .orderBy(desc(socialNotifications.createdAt))
+        .limit(limit)
+        .offset(offset);
+      return notifications;
+    } catch (error) {
+      console.error('Error getting user social notifications:', error);
+      return [];
+    }
+  }
+
+  async getUnreadSocialNotificationsCount(userId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      const result = await db.select({ count: sql<number>`count(*)::int` })
+        .from(socialNotifications)
+        .where(
+          and(
+            eq(socialNotifications.userId, userId),
+            eq(socialNotifications.isRead, false)
+          )
+        );
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Error getting unread social notifications count:', error);
+      return 0;
+    }
+  }
+
+  async markSocialNotificationAsRead(notificationId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      await db.update(socialNotifications)
+        .set({ isRead: true })
+        .where(eq(socialNotifications.id, notificationId));
+    } catch (error) {
+      console.error('Error marking social notification as read:', error);
+    }
+  }
+
+  async markAllSocialNotificationsAsRead(userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      await db.update(socialNotifications)
+        .set({ isRead: true })
+        .where(
+          and(
+            eq(socialNotifications.userId, userId),
+            eq(socialNotifications.isRead, false)
+          )
+        );
+    } catch (error) {
+      console.error('Error marking all social notifications as read:', error);
+    }
+  }
+
+  async deleteSocialNotification(notificationId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      await db.delete(socialNotifications)
+        .where(eq(socialNotifications.id, notificationId));
+    } catch (error) {
+      console.error('Error deleting social notification:', error);
+    }
+  }
+
+  async sendAdminAnnouncement(title: string, message: string, adminUserId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      // Get all users except the admin
+      const allUsers = await db.select().from(users).where(ne(users.id, adminUserId));
+      let sentCount = 0;
+
+      // Create notification for each user
+      for (const user of allUsers) {
+        try {
+          await this.createSocialNotification({
+            userId: user.id,
+            fromUserId: adminUserId,
+            type: 'admin_announcement',
+            title: title,
+            message: message,
+            isRead: false,
+            postId: null,
+            commentId: null,
+            storyId: null
+          });
+          sentCount++;
+        } catch (error) {
+          console.error(`Failed to send announcement to user ${user.id}:`, error);
+        }
+      }
+
+      console.log(`📢 Admin announcement sent to ${sentCount} users`);
+      return sentCount;
+    } catch (error) {
+      console.error('Error sending admin announcement:', error);
+      return 0;
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database
@@ -7746,11 +7887,23 @@ export class MemStorage implements IStorage {
 
 }
 
-// Initialize storage with proper error handling - use memory storage for now
+// Initialize storage with proper error handling
 async function initializeStorage(): Promise<IStorage> {
-  // Temporarily using MemStorage until DatabaseStorage is fully implemented
-  console.log('ℹ️ Using MemStorage - data will persist during the session');
-  return new MemStorage();
+  try {
+    // Try to use DatabaseStorage first
+    console.log('🔄 Initializing DatabaseStorage with PostgreSQL...');
+    const storage = new DatabaseStorage();
+    
+    // Test the connection
+    await storage.getAllUsers();
+    
+    console.log('✅ DatabaseStorage initialized successfully');
+    return storage;
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize DatabaseStorage, using MemStorage fallback:', error);
+    console.log('ℹ️ Using MemStorage - data will persist during the session only');
+    return new MemStorage();
+  }
 }
 
 // Initialize storage instance
