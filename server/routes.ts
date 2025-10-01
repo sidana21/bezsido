@@ -4105,16 +4105,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         users = users.filter(user => user.isAdmin === isAdminBool);
       }
       
+      // Enrich users with blocked status and posts count
+      const enrichedUsers = await Promise.all(
+        users.map(async (user) => {
+          const isBlocked = await storage.isUserBlocked(user.id);
+          const postsCount = await storage.getUserPostsCount(user.id);
+          return {
+            ...user,
+            isBlocked,
+            postsCount,
+            phoneNumber: user.email // Temporary mapping for UI compatibility
+          };
+        })
+      );
+      
       // Simple pagination
       const startIndex = (Number(page) - 1) * Number(limit);
       const endIndex = startIndex + Number(limit);
-      const paginatedUsers = users.slice(startIndex, endIndex);
+      const paginatedUsers = enrichedUsers.slice(startIndex, endIndex);
       
       res.json({
         users: paginatedUsers,
-        total: users.length,
+        total: enrichedUsers.length,
         page: Number(page),
-        totalPages: Math.ceil(users.length / Number(limit))
+        totalPages: Math.ceil(enrichedUsers.length / Number(limit))
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to get users" });
@@ -4162,6 +4176,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedUser);
     } catch (error) {
       res.status(500).json({ message: "Failed to update user verification status" });
+    }
+  });
+
+  // Block User
+  app.put("/api/admin/users/:userId/block", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      await storage.blockUser(userId);
+      
+      res.json({ success: true, message: "تم حظر المستخدم بنجاح" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to block user" });
+    }
+  });
+
+  // Unblock User
+  app.put("/api/admin/users/:userId/unblock", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      await storage.unblockUser(userId);
+      
+      res.json({ success: true, message: "تم إلغاء حظر المستخدم بنجاح" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to unblock user" });
+    }
+  });
+
+  // Get User Posts Count
+  app.get("/api/admin/users/:userId/posts-count", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const count = await storage.getUserPostsCount(userId);
+      
+      res.json({ count });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user posts count" });
     }
   });
 

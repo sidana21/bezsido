@@ -10,7 +10,9 @@ import {
   User,
   MapPin,
   Phone,
-  Calendar
+  Calendar,
+  Ban,
+  FileText
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -30,6 +32,8 @@ interface User {
   isVerified: boolean;
   isAdmin: boolean;
   isOnline: boolean;
+  isBlocked?: boolean;
+  postsCount?: number;
   avatar?: string;
   createdAt: string;
   lastSeen: string;
@@ -110,6 +114,27 @@ export function UsersManagement() {
     },
   });
 
+  const toggleBlockMutation = useMutation({
+    mutationFn: ({ userId, isBlocked }: { userId: string; isBlocked: boolean }) => 
+      apiRequest(`/api/admin/users/${userId}/${isBlocked ? 'unblock' : 'block'}`, {
+        method: 'PUT',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: 'تم التحديث',
+        description: 'تم تحديث حالة حظر المستخدم بنجاح',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'خطأ',
+        description: 'فشل في تحديث حالة الحظر',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleToggleAdmin = (user: User) => {
     toggleAdminMutation.mutate({ 
       userId: user.id, 
@@ -121,6 +146,13 @@ export function UsersManagement() {
     toggleVerificationMutation.mutate({ 
       userId: user.id, 
       isVerified: !user.isVerified 
+    });
+  };
+
+  const handleToggleBlock = (user: User) => {
+    toggleBlockMutation.mutate({ 
+      userId: user.id, 
+      isBlocked: user.isBlocked || false
     });
   };
 
@@ -311,7 +343,7 @@ export function UsersManagement() {
                         {getOnlineStatus(user)}
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
                           <span>{user.phoneNumber}</span>
@@ -321,53 +353,87 @@ export function UsersManagement() {
                           <span>{user.location}</span>
                         </div>
                         <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>المنشورات: {user.postsCount || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           <span>انضم: {new Date(user.createdAt).toLocaleDateString('ar-DZ')}</span>
                         </div>
                       </div>
+                      
+                      {user.isBlocked && (
+                        <div className="flex items-center gap-2 text-red-600 font-semibold text-sm mt-2">
+                          <Ban className="h-4 w-4" />
+                          <span>محظور</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex flex-col gap-2 ml-4">
+                    <div className="flex gap-2">
+                      <Button
+                        variant={user.isVerified ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => handleToggleVerification(user)}
+                        disabled={toggleVerificationMutation.isPending}
+                        className={user.isVerified ? "text-red-600 hover:text-red-700" : "bg-green-600 hover:bg-green-700"}
+                        data-testid={`toggle-verification-${user.id}`}
+                      >
+                        {user.isVerified ? (
+                          <>
+                            <XCircle className="h-4 w-4 ml-1" />
+                            إلغاء التوثيق
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 ml-1" />
+                            توثيق
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant={user.isAdmin ? "outline" : "secondary"}
+                        size="sm"
+                        onClick={() => handleToggleAdmin(user)}
+                        disabled={toggleAdminMutation.isPending}
+                        className={user.isAdmin ? "text-orange-600 hover:text-orange-700" : ""}
+                        data-testid={`toggle-admin-${user.id}`}
+                      >
+                        {user.isAdmin ? (
+                          <>
+                            <Shield className="h-4 w-4 ml-1" />
+                            إزالة إدارة
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="h-4 w-4 ml-1" />
+                            جعل مدير
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
                     <Button
-                      variant={user.isVerified ? "outline" : "default"}
+                      variant={user.isBlocked ? "default" : "destructive"}
                       size="sm"
-                      onClick={() => handleToggleVerification(user)}
-                      disabled={toggleVerificationMutation.isPending}
-                      className={user.isVerified ? "text-red-600 hover:text-red-700" : "bg-green-600 hover:bg-green-700"}
-                      data-testid={`toggle-verification-${user.id}`}
+                      onClick={() => handleToggleBlock(user)}
+                      disabled={toggleBlockMutation.isPending}
+                      className={user.isBlocked ? "bg-green-600 hover:bg-green-700" : ""}
+                      data-testid={`toggle-block-${user.id}`}
                     >
-                      {user.isVerified ? (
-                        <>
-                          <XCircle className="h-4 w-4 ml-1" />
-                          إلغاء التوثيق
-                        </>
-                      ) : (
+                      {user.isBlocked ? (
                         <>
                           <CheckCircle className="h-4 w-4 ml-1" />
-                          توثيق
-                        </>
-                      )}
-                    </Button>
-
-                    <Button
-                      variant={user.isAdmin ? "outline" : "secondary"}
-                      size="sm"
-                      onClick={() => handleToggleAdmin(user)}
-                      disabled={toggleAdminMutation.isPending}
-                      className={user.isAdmin ? "text-orange-600 hover:text-orange-700" : ""}
-                      data-testid={`toggle-admin-${user.id}`}
-                    >
-                      {user.isAdmin ? (
-                        <>
-                          <Shield className="h-4 w-4 ml-1" />
-                          إزالة إدارة
+                          إلغاء الحظر
                         </>
                       ) : (
                         <>
-                          <ShieldCheck className="h-4 w-4 ml-1" />
-                          جعل مدير
+                          <Ban className="h-4 w-4 ml-1" />
+                          حظر المستخدم
                         </>
                       )}
                     </Button>

@@ -113,6 +113,10 @@ export interface IStorage {
   updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined>;
   updateUserOnlineStatus(id: string, isOnline: boolean): Promise<void>;
   deleteUser(id: string): Promise<boolean>;
+  blockUser(userId: string): Promise<void>;
+  unblockUser(userId: string): Promise<void>;
+  isUserBlocked(userId: string): Promise<boolean>;
+  getUserPostsCount(userId: string): Promise<number>;
   
   // Authentication
   createSession(session: InsertSession): Promise<Session>;
@@ -4667,6 +4671,7 @@ export class MemStorage implements IStorage {
   private calls = new Map<string, Call>();
   private stickers: any[] = [];
   private vendors = new Map<string, Vendor>();
+  private blockedUsers = new Set<string>(); // Track blocked user IDs
   
   // Business Posts
   private businessPosts = new Map<string, BusinessPost>();
@@ -4765,6 +4770,30 @@ export class MemStorage implements IStorage {
 
   async deleteUser(id: string): Promise<boolean> {
     return this.users.delete(id);
+  }
+
+  async blockUser(userId: string): Promise<void> {
+    this.blockedUsers.add(userId);
+    console.log(`🚫 تم حظر المستخدم: ${userId}`);
+  }
+
+  async unblockUser(userId: string): Promise<void> {
+    this.blockedUsers.delete(userId);
+    console.log(`✅ تم إلغاء حظر المستخدم: ${userId}`);
+  }
+
+  async isUserBlocked(userId: string): Promise<boolean> {
+    return this.blockedUsers.has(userId);
+  }
+
+  async getUserPostsCount(userId: string): Promise<number> {
+    let count = 0;
+    for (const post of this.businessPosts.values()) {
+      if (post.userId === userId) {
+        count++;
+      }
+    }
+    return count;
   }
 
   async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
@@ -6493,13 +6522,48 @@ export class MemStorage implements IStorage {
 
   // Admin dashboard stats for MemStorage
   async getAdminDashboardStats(): Promise<any> {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Count active users (online or logged in within last 24 hours)
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    let activeUsers = 0;
+    let verifiedUsers = 0;
+    
+    for (const user of this.users.values()) {
+      if (user.isOnline || (user.lastSeen && new Date(user.lastSeen) > dayAgo)) {
+        activeUsers++;
+      }
+      if (user.verifiedAt) {
+        verifiedUsers++;
+      }
+    }
+    
+    // Count pending verification requests
+    const pendingVerifications = Array.from(this.verificationRequests.values())
+      .filter(req => req.status === 'pending').length;
+    
+    // Count orders from today
+    const todayOrders = Array.from(this.orders.values())
+      .filter(order => new Date(order.createdAt) >= today).length;
+    
+    // Calculate total revenue from completed orders
+    let totalRevenue = 0;
+    for (const order of this.orders.values()) {
+      if (order.status === 'delivered') {
+        totalRevenue += order.totalAmount;
+      }
+    }
+    
     return {
-      pendingVerificationRequests: 0,
-      totalVerificationRequests: 0,
       totalUsers: this.users.size,
-      totalStores: 0,
-      todayRequests: 0,
-      totalRevenue: 0
+      activeUsers,
+      verifiedUsers,
+      totalStores: this.vendors.size,
+      totalOrders: this.orders.size,
+      recentOrders: todayOrders,
+      pendingVerifications,
+      totalRevenue: totalRevenue.toFixed(2)
     };
   }
 
