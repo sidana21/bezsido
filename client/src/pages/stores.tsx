@@ -10,6 +10,7 @@ import { ArrowLeft, Search, Store, MapPin, Phone, Clock, Star, ShoppingCart, Plu
 import { Link, useLocation } from "wouter";
 import type { User, Vendor, Product, Service, ServiceCategory } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { TopBar } from "@/components/top-bar";
 
 interface VendorWithOwner extends Vendor {
   owner: User;
@@ -106,16 +107,18 @@ export default function Stores() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 pb-20 relative overflow-hidden">
-      {/* Premium Background Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-2xl animate-pulse delay-2000"></div>
-      </div>
+    <>
+      <TopBar title="المتاجر" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 pb-20 pt-14 relative overflow-hidden">
+        {/* Premium Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-2xl animate-pulse delay-2000"></div>
+        </div>
 
-      {/* Header - Premium Glass Style */}
-      <div className="relative bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 text-white backdrop-blur-xl shadow-2xl p-6">
+        {/* Header - Premium Glass Style */}
+        <div className="relative bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 text-white backdrop-blur-xl shadow-2xl p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
@@ -556,6 +559,7 @@ export default function Stores() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   );
 }

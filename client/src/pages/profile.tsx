@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { User, VerificationRequest } from "@shared/schema";
+import { TopBar } from "@/components/top-bar";
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
@@ -338,9 +339,11 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-      {/* Header */}
-      <div className="bg-whatsapp-green text-white p-4">
+    <>
+      <TopBar title="الملف الشخصي" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 pt-14">
+        {/* Header */}
+        <div className="bg-whatsapp-green text-white p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
@@ -822,6 +825,7 @@ export default function Profile() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
