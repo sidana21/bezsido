@@ -110,6 +110,7 @@ Preferred communication style: Simple, everyday language.
 - **Host**: 0.0.0.0 (configured for Replit proxy)
 - **Workflow**: "Start application" runs `npm run dev` with webview output
 - **Output Type**: webview for frontend preview
+- **Deployment**: Configured for autoscale deployment with `npm run build` and `npm run start`
 - **Database**: PostgreSQL database (Neon-backed) - provisioned and active
 - **Storage Mode**: DatabaseStorage (PostgreSQL) for persistent data storage
 - **Build Scripts**: Updated to use `npx tsx` and `npx esbuild` for compatibility
