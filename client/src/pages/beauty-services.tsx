@@ -200,8 +200,10 @@ export default function BeautyServices() {
     }
 
     const beautyCategory = serviceCategories.find(cat => 
+      cat.name_ar === "حناييات وتجميل" || 
       cat.nameAr === "حناييات وتجميل" || 
       cat.name === "Henna & Beauty" ||
+      cat.name_ar?.includes("تجميل") ||
       cat.nameAr?.includes("تجميل") ||
       cat.name?.toLowerCase().includes("beauty")
     );

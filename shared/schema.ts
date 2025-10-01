@@ -962,6 +962,8 @@ export const businessPosts = pgTable("business_posts", {
   userId: varchar("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   imageUrl: text("image_url"),
+  images: jsonb("images").default([]),
+  videoUrl: text("video_url"),
   businessName: text("business_name"),
   location: text("location"),
   category: text("category"),

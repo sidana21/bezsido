@@ -46,12 +46,12 @@ export default function HomeServices() {
 
   // Find the labor services category (اليد العاملة)
   const laborCategory = serviceCategories.find(cat => 
-    cat.nameAr === "اليد العاملة" || cat.name === "Labor Services"
+    cat.name_ar === "اليد العاملة" || cat.nameAr === "اليد العاملة" || cat.name === "Labor Services"
   );
 
   // Find the real estate category (كراء وشراء المنازل)
   const realEstateCategory = serviceCategories.find(cat => 
-    cat.nameAr === "كراء وشراء المنازل" || cat.name === "Real Estate"
+    cat.name_ar === "كراء وشراء المنازل" || cat.nameAr === "كراء وشراء المنازل" || cat.name === "Real Estate"
   );
 
   // Get the active category based on selection
