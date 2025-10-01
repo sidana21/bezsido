@@ -2856,6 +2856,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/products/:productId", requireAuth, async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      
+      // Check if user owns this product through their vendor
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({ message: "المنتج غير موجود" });
+      }
+      
+      const userVendor = await storage.getUserVendor(req.userId);
+      if (!userVendor || product.vendorId !== userVendor.id) {
+        return res.status(403).json({ message: "غير مسموح لك بحذف هذا المنتج" });
+      }
+      
+      await storage.deleteProduct(productId);
+      res.json({ message: "تم حذف المنتج بنجاح" });
+    } catch (error) {
+      res.status(500).json({ message: "فشل في حذف المنتج" });
+    }
+  });
+
   app.patch("/api/products/:productId", requireAuth, async (req: any, res) => {
     try {
       const { productId } = req.params;
@@ -3170,6 +3192,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
       }
       res.status(500).json({ message: "فشل في إنشاء الخدمة" });
+    }
+  });
+
+  app.delete("/api/services/:serviceId", requireAuth, async (req: any, res) => {
+    try {
+      const { serviceId } = req.params;
+      const service = await storage.getService(serviceId);
+      
+      if (!service) {
+        return res.status(404).json({ message: "الخدمة غير موجودة" });
+      }
+      
+      if (service.vendorId !== req.userId) {
+        return res.status(403).json({ message: "غير مسموح لك بحذف هذه الخدمة" });
+      }
+      
+      await storage.deleteService(serviceId);
+      res.json({ message: "تم حذف الخدمة بنجاح" });
+    } catch (error) {
+      res.status(500).json({ message: "فشل في حذف الخدمة" });
     }
   });
 
@@ -5655,6 +5697,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/posts/:postId", requireAuth, async (req: any, res) => {
+    try {
+      const { postId } = req.params;
+      const userId = req.userId;
+      
+      const post = await storage.getBusinessPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "المنشور غير موجود" });
+      }
+      
+      if (post.userId !== userId) {
+        return res.status(403).json({ message: "غير مسموح لك بحذف هذا المنشور" });
+      }
+      
+      await storage.deleteBusinessPost(postId);
+      res.json({ message: "تم حذف المنشور بنجاح" });
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      res.status(500).json({ message: "خطأ في حذف المنشور" });
+    }
+  });
+
   // تفاعل مع المنشور (إعجاب/حفظ)
   app.post("/api/posts/:postId/interactions", requireAuth, async (req: any, res) => {
     try {
@@ -6115,6 +6179,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating comment:', error);
       res.status(500).json({ message: "خطأ في إضافة التعليق" });
+    }
+  });
+
+  app.delete("/api/posts/:postId/comments/:commentId", requireAuth, async (req: any, res) => {
+    try {
+      const { postId, commentId } = req.params;
+      const userId = req.userId;
+      
+      const comment = await storage.getCommentById(commentId);
+      if (!comment) {
+        return res.status(404).json({ message: "التعليق غير موجود" });
+      }
+      
+      const post = await storage.getBusinessPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "المنشور غير موجود" });
+      }
+      
+      // Allow deletion if user owns the comment OR owns the post
+      if (comment.userId !== userId && post.userId !== userId) {
+        return res.status(403).json({ message: "غير مسموح لك بحذف هذا التعليق" });
+      }
+      
+      await storage.deleteComment(commentId);
+      res.json({ message: "تم حذف التعليق بنجاح" });
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      res.status(500).json({ message: "خطأ في حذف التعليق" });
+    }
+  });
+
+  app.patch("/api/orders/:orderId/cancel", requireAuth, async (req: any, res) => {
+    try {
+      const { orderId } = req.params;
+      const order = await storage.getOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+      
+      if (order.buyerId !== req.userId) {
+        return res.status(403).json({ message: "غير مسموح لك بإلغاء هذا الطلب" });
+      }
+      
+      if (order.status !== 'pending') {
+        return res.status(400).json({ message: "لا يمكن إلغاء الطلب بعد بدء التنفيذ" });
+      }
+      
+      const updatedOrder = await storage.updateOrderStatus(orderId, 'cancelled');
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      res.status(500).json({ message: "خطأ في إلغاء الطلب" });
+    }
+  });
+
+  app.delete("/api/user/account", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      
+      await storage.deleteUser(userId);
+      res.json({ message: "تم حذف الحساب بنجاح" });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      res.status(500).json({ message: "خطأ في حذف الحساب" });
     }
   });
 

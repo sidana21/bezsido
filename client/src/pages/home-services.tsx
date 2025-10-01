@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, Home, MapPin, Star, MessageCircle, Plus, ImageIcon, X } from "lucide-react";
+import { ArrowLeft, Search, Home, MapPin, Star, MessageCircle, Plus, ImageIcon, X, Trash2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { User, Service } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -158,6 +158,28 @@ export default function HomeServices() {
       toast({
         title: "خطأ",
         description: "فشل في الاتصال بمقدم الخدمة",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteServiceMutation = useMutation({
+    mutationFn: async (serviceId: string) => {
+      return apiRequest(`/api/services/${serviceId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف الخدمة بنجاح",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف الخدمة",
         variant: "destructive",
       });
     },
@@ -556,15 +578,34 @@ export default function HomeServices() {
                     <div className="text-2xl font-bold text-green-600">
                       {parseInt(service?.basePrice || '0').toLocaleString()} دج
                     </div>
-                    <Button
-                      className="bg-whatsapp-green hover:bg-green-600 text-white"
-                      onClick={() => requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId })}
-                      disabled={requestServiceMutation.isPending}
-                      data-testid={`button-request-${service.id}`}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      اطلب الخدمة
-                    </Button>
+                    <div className="flex gap-2">
+                      {service.vendorId === currentUser?.id ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('هل أنت متأكد من حذف هذه الخدمة؟')) {
+                              deleteServiceMutation.mutate(service.id);
+                            }
+                          }}
+                          disabled={deleteServiceMutation.isPending}
+                          data-testid={`button-delete-${service.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          حذف
+                        </Button>
+                      ) : (
+                        <Button
+                          className="bg-whatsapp-green hover:bg-green-600 text-white"
+                          onClick={() => requestServiceMutation.mutate({ serviceId: service.id, vendorId: service.vendorId })}
+                          disabled={requestServiceMutation.isPending}
+                          data-testid={`button-request-${service.id}`}
+                        >
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          اطلب الخدمة
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
