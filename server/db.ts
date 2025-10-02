@@ -501,6 +501,24 @@ async function ensureTablesExist() {
         viewers JSONB DEFAULT '[]'
       )
     `);
+
+    // Create verification_requests table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS verification_requests (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL REFERENCES users(id),
+        vendor_id VARCHAR REFERENCES vendors(id),
+        request_type TEXT NOT NULL,
+        verification_type TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        documents JSONB DEFAULT '[]',
+        reason TEXT,
+        admin_note TEXT,
+        submitted_at TIMESTAMP DEFAULT NOW(),
+        reviewed_at TIMESTAMP,
+        reviewed_by VARCHAR REFERENCES users(id)
+      )
+    `);
     
     // Add password column to existing users table if it doesn't exist
     try {
