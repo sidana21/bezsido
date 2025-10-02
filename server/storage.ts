@@ -2467,37 +2467,34 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Database connection not available');
       }
       
+      console.log('📊 Calculating admin dashboard stats...');
+      
       const now = new Date();
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      // Use raw SQL with safe table checks - compatible with Neon HTTP driver
-      const statsQuery = await db.execute(sql`
-        SELECT 
-          (SELECT COUNT(*) FROM users) as total_users,
-          (SELECT COUNT(*) FROM users WHERE is_online = true OR last_seen > ${dayAgo}) as active_users,
-          (SELECT COUNT(*) FROM users WHERE verified_at IS NOT NULL) as verified_users,
-          (SELECT COUNT(*) FROM vendors) as total_stores,
-          (SELECT COUNT(*) FROM verification_requests WHERE status = 'pending') as pending_verifications,
-          0 as total_orders,
-          0 as recent_orders,
-          0 as total_revenue
-      `);
+      // Use simple counts - works with all drivers including Neon HTTP
+      const allUsers = await db.select().from(users);
+      const allVendors = await db.select().from(vendors);
+      const allVerificationRequests = await db.select().from(verificationRequests);
       
-      const result = statsQuery.rows[0];
+      const totalUsers = allUsers.length;
+      const activeUsers = allUsers.filter(u => u.isOnline === true || (u.lastSeen && new Date(u.lastSeen) > dayAgo)).length;
+      const verifiedUsers = allUsers.filter(u => u.verifiedAt !== null).length;
+      const totalStores = allVendors.length;
+      const pendingVerifications = allVerificationRequests.filter(r => r.status === 'pending').length;
       
       const stats = {
-        totalUsers: Number(result.total_users || 0),
-        activeUsers: Number(result.active_users || 0),
-        verifiedUsers: Number(result.verified_users || 0),
-        totalStores: Number(result.total_stores || 0),
-        totalOrders: Number(result.total_orders || 0),
-        pendingVerifications: Number(result.pending_verifications || 0),
-        recentOrders: Number(result.recent_orders || 0),
-        totalRevenue: Number(result.total_revenue || 0).toFixed(2)
+        totalUsers,
+        activeUsers,
+        verifiedUsers,
+        totalStores,
+        totalOrders: 0, // No orders table on Render
+        pendingVerifications,
+        recentOrders: 0, // No orders table on Render
+        totalRevenue: '0.00' // No orders table on Render
       };
       
-      console.log('📊 Admin dashboard stats calculated:', stats);
+      console.log('✅ Admin dashboard stats calculated successfully:', stats);
       return stats;
     } catch (error: any) {
       console.error('❌ Error getting admin dashboard stats:', error);
