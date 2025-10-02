@@ -5233,7 +5233,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async viewPost(postId: string, userId: string): Promise<void> {
-    console.log(`👁️ User ${userId} viewing post ${postId} (stub implementation)`);
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`👁️ User ${userId} viewing post ${postId}`);
+
+      // Check if user has already viewed this post
+      const existingViews = await db.select()
+        .from(postViews)
+        .where(and(eq(postViews.postId, postId), eq(postViews.userId, userId)));
+
+      // Only add view if user hasn't viewed this post before
+      if (existingViews.length === 0) {
+        await db.insert(postViews).values({
+          postId,
+          userId,
+        });
+        console.log(`✅ View recorded for post ${postId} by user ${userId}`);
+      } else {
+        console.log(`ℹ️ User ${userId} has already viewed post ${postId}`);
+      }
+    } catch (error) {
+      console.error('Error tracking post view:', error);
+      throw error;
+    }
   }
 
   async hasUserLikedPost(postId: string, userId: string): Promise<boolean> {
