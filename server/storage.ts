@@ -570,52 +570,52 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log(`✓ User found, proceeding with deletion: ${existingUser[0].name}`);
-      console.log(`🗑️ Deleting all related data for user: ${id}`);
       
-      // Use sequential deletes with proper error handling for Render compatibility
-      // Get user's vendors first
-      const userVendors = await db.select().from(vendors).where(eq(vendors.userId, id));
+      // Use transaction for atomic deletion - works with both Pool and Neon HTTP
+      await db.transaction(async (tx) => {
+        console.log(`🗑️ Starting transaction to delete user: ${id}`);
+        
+        // Get user's vendors first
+        const userVendors = await tx.select().from(vendors).where(eq(vendors.userId, id));
+        
+        // Delete vendor products and services
+        for (const vendor of userVendors) {
+          await tx.delete(products).where(eq(products.vendorId, vendor.id));
+          await tx.delete(services).where(eq(services.vendorId, vendor.id));
+        }
+        console.log(`   ✓ Deleted vendor products and services`);
+        
+        // Delete all user-related data
+        await tx.delete(businessPosts).where(eq(businessPosts.userId, id));
+        await tx.delete(vendors).where(eq(vendors.userId, id));
+        await tx.delete(messages).where(eq(messages.senderId, id));
+        await tx.delete(verificationRequests).where(eq(verificationRequests.userId, id));
+        await tx.delete(orders).where(eq(orders.buyerId, id));
+        await tx.delete(stories).where(eq(stories.userId, id));
+        console.log(`   ✓ Deleted user content`);
+        
+        await tx.delete(socialNotifications).where(eq(socialNotifications.userId, id));
+        await tx.delete(socialNotifications).where(eq(socialNotifications.fromUserId, id));
+        await tx.delete(follows).where(eq(follows.followerId, id));
+        await tx.delete(follows).where(eq(follows.followingId, id));
+        console.log(`   ✓ Deleted social relationships`);
+        
+        await tx.delete(cartItems).where(eq(cartItems.userId, id));
+        await tx.delete(contacts).where(eq(contacts.userId, id));
+        await tx.delete(contacts).where(eq(contacts.contactUserId, id));
+        await tx.delete(calls).where(eq(calls.callerId, id));
+        await tx.delete(calls).where(eq(calls.receiverId, id));
+        console.log(`   ✓ Deleted cart, contacts and calls`);
+        
+        await tx.delete(sessions).where(eq(sessions.userId, id));
+        console.log(`   ✓ Deleted sessions`);
+        
+        await tx.delete(users).where(eq(users.id, id));
+        console.log(`   ✓ Deleted user`);
+      });
       
-      // Delete all related data in proper order
-      for (const vendor of userVendors) {
-        await db.delete(products).where(eq(products.vendorId, vendor.id));
-        await db.delete(services).where(eq(services.vendorId, vendor.id));
-      }
-      console.log(`   ✓ Deleted vendor products and services`);
-      
-      await db.delete(businessPosts).where(eq(businessPosts.userId, id));
-      await db.delete(vendors).where(eq(vendors.userId, id));
-      await db.delete(messages).where(eq(messages.senderId, id));
-      await db.delete(verificationRequests).where(eq(verificationRequests.userId, id));
-      await db.delete(orders).where(eq(orders.buyerId, id));
-      await db.delete(stories).where(eq(stories.userId, id));
-      console.log(`   ✓ Deleted user content`);
-      
-      await db.delete(socialNotifications).where(eq(socialNotifications.userId, id));
-      await db.delete(socialNotifications).where(eq(socialNotifications.fromUserId, id));
-      await db.delete(follows).where(eq(follows.followerId, id));
-      await db.delete(follows).where(eq(follows.followingId, id));
-      console.log(`   ✓ Deleted social relationships`);
-      
-      await db.delete(cartItems).where(eq(cartItems.userId, id));
-      await db.delete(contacts).where(eq(contacts.userId, id));
-      await db.delete(contacts).where(eq(contacts.contactUserId, id));
-      await db.delete(calls).where(eq(calls.callerId, id));
-      await db.delete(calls).where(eq(calls.receiverId, id));
-      console.log(`   ✓ Deleted cart, contacts and calls`);
-      
-      await db.delete(sessions).where(eq(sessions.userId, id));
-      console.log(`   ✓ Deleted sessions`);
-      
-      const result = await db.delete(users).where(eq(users.id, id)).returning();
-      
-      if (result && result.length > 0) {
-        console.log(`✅ User and all related data deleted successfully: ${id}`);
-        return true;
-      } else {
-        console.error(`❌ Delete operation failed for user: ${id}`);
-        return false;
-      }
+      console.log(`✅ User and all related data deleted successfully: ${id}`);
+      return true;
     } catch (error: any) {
       console.error('❌ Error deleting user:', error);
       console.error('Error details:', error.message);
