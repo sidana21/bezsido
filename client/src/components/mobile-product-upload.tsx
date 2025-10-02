@@ -552,27 +552,24 @@ export default function MobileProductUpload({ onSuccess, onCancel }: MobileProdu
 
                 <div>
                   <Label htmlFor="categoryId">فئة المنتج *</Label>
-                  <Select
-                    value={form.watch('categoryId')}
-                    onValueChange={(value) => form.setValue('categoryId', value)}
+                  <select
+                    id="categoryId"
+                    value={form.watch('categoryId') || ''}
+                    onChange={(e) => form.setValue('categoryId', e.target.value)}
+                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    data-testid="select-product-category"
                   >
-                    <SelectTrigger data-testid="select-product-category">
-                      <SelectValue placeholder="اختر فئة المنتج" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" sideOffset={5} className="max-h-[300px] overflow-y-auto">
-                      {categories.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          لا توجد فئات متاحة
-                        </div>
-                      ) : (
-                        categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id} data-testid={`category-${category.id}`}>
-                            {category.icon} {category.nameAr}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    <option value="" disabled>اختر فئة المنتج</option>
+                    {categories.length === 0 ? (
+                      <option disabled>لا توجد فئات متاحة</option>
+                    ) : (
+                      categories.map((category) => (
+                        <option key={category.id} value={category.id} data-testid={`category-${category.id}`}>
+                          {category.icon} {category.nameAr}
+                        </option>
+                      ))
+                    )}
+                  </select>
                   {form.formState.errors.categoryId && (
                     <p className="text-sm text-red-600 mt-1">
                       {form.formState.errors.categoryId.message}
