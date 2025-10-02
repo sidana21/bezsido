@@ -570,12 +570,69 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log(`✓ User found, proceeding with deletion: ${existingUser[0].name}`);
+      console.log(`🗑️ Deleting all related data for user: ${id}`);
       
-      // Delete the user
+      // Delete all related data first (in order to avoid foreign key constraints)
+      
+      // 1. Delete user's posts and related data
+      await db.delete(businessPosts).where(eq(businessPosts.userId, id));
+      console.log(`   ✓ Deleted business posts`);
+      
+      // 2. Get user's vendors and delete their products/services
+      const userVendors = await db.select().from(vendors).where(eq(vendors.userId, id));
+      for (const vendor of userVendors) {
+        await db.delete(products).where(eq(products.vendorId, vendor.id));
+        await db.delete(services).where(eq(services.vendorId, vendor.id));
+      }
+      // Delete vendors
+      await db.delete(vendors).where(eq(vendors.userId, id));
+      console.log(`   ✓ Deleted vendors, products, and services`);
+      
+      // 3. Delete messages sent by user
+      await db.delete(messages).where(eq(messages.senderId, id));
+      console.log(`   ✓ Deleted messages`);
+      
+      // 4. Delete verification requests
+      await db.delete(verificationRequests).where(eq(verificationRequests.userId, id));
+      console.log(`   ✓ Deleted verification requests`);
+      
+      // 5. Delete orders (as buyer)
+      await db.delete(orders).where(eq(orders.buyerId, id));
+      console.log(`   ✓ Deleted orders`);
+      
+      // 6. Delete user's stories
+      await db.delete(stories).where(eq(stories.userId, id));
+      console.log(`   ✓ Deleted stories`);
+      
+      // 7. Delete notifications (sent to or from user)
+      await db.delete(socialNotifications).where(eq(socialNotifications.userId, id));
+      await db.delete(socialNotifications).where(eq(socialNotifications.fromUserId, id));
+      console.log(`   ✓ Deleted notifications`);
+      
+      // 8. Delete follower/following relationships
+      await db.delete(follows).where(eq(follows.followerId, id));
+      await db.delete(follows).where(eq(follows.followingId, id));
+      console.log(`   ✓ Deleted follower relationships`);
+      
+      // 9. Delete cart items
+      await db.delete(cartItems).where(eq(cartItems.userId, id));
+      console.log(`   ✓ Deleted cart`);
+      
+      // 10. Delete contacts
+      await db.delete(contacts).where(eq(contacts.userId, id));
+      await db.delete(contacts).where(eq(contacts.contactUserId, id));
+      console.log(`   ✓ Deleted contacts`);
+      
+      // 11. Delete calls
+      await db.delete(calls).where(eq(calls.callerId, id));
+      await db.delete(calls).where(eq(calls.receiverId, id));
+      console.log(`   ✓ Deleted calls`);
+      
+      // Finally, delete the user
       const result = await db.delete(users).where(eq(users.id, id)).returning();
       
       if (result && result.length > 0) {
-        console.log(`✅ User deleted successfully: ${id}`);
+        console.log(`✅ User and all related data deleted successfully: ${id}`);
         return true;
       } else {
         console.error(`❌ Delete operation failed for user: ${id}`);
