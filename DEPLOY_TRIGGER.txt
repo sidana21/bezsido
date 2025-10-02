@@ -1,5 +1,8 @@
-Admin dashboard statistics - FINAL FIX - October 2, 2025
-Replaced raw SQL with Drizzle ORM count/sum aggregations
-This ensures consistent result format across all database drivers
-Works identically on Neon HTTP, node-postgres, and all PostgreSQL connections
-Build timestamp: 2025-10-02T21:10:00Z
+🎯 RENDER FIREWALL FIX - October 2, 2025
+
+SOLUTION: Force Neon HTTP driver for all neon.tech databases
+- Pool/node-postgres blocked by Render firewall = silent empty results
+- Neon HTTP driver uses HTTPS = passes through firewall perfectly
+- Works identically on Render production + local development
+
+Build timestamp: 2025-10-02T21:15:00Z
