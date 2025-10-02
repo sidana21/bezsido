@@ -4391,6 +4391,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete User
+  app.delete("/api/admin/users/:userId", requireAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // التحقق من أن المستخدم المراد حذفه ليس أدمن
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+      
+      if (user.isAdmin) {
+        return res.status(403).json({ message: "لا يمكن حذف حساب أدمن" });
+      }
+      
+      const deleted = await storage.deleteUser(userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "فشل في حذف المستخدم" });
+      }
+      
+      res.json({ success: true, message: "تم حذف المستخدم بنجاح" });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: "فشل في حذف المستخدم" });
+    }
+  });
+
   // Get User Posts Count
   app.get("/api/admin/users/:userId/posts-count", requireAdmin, async (req: any, res) => {
     try {
