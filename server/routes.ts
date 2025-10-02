@@ -3208,12 +3208,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sanitizedBody = sanitizeTimestampFields(req.body);
       
       const serviceData = insertServiceSchema.parse(sanitizedBody);
-      const service = await storage.createService(serviceData);
+      
+      // Check if user has a vendor profile, create one if not
+      let vendor = await storage.getUserStore(req.userId);
+      if (!vendor) {
+        const user = await storage.getUser(req.userId);
+        if (!user) {
+          return res.status(404).json({ message: "المستخدم غير موجود" });
+        }
+        
+        vendor = await storage.createStore({
+          userId: req.userId,
+          businessName: user.name,
+          displayName: user.name,
+          category: "services",
+          description: "متجر خدمات",
+          location: user.location || "الجزائر",
+          status: "approved",
+        });
+      }
+      
+      // Use the vendor's ID
+      const finalServiceData = {
+        ...serviceData,
+        vendorId: vendor.id,
+      };
+      
+      const service = await storage.createService(finalServiceData);
       res.json(service);
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
       }
+      console.error("Error creating service:", error);
       res.status(500).json({ message: "فشل في إنشاء الخدمة" });
     }
   });

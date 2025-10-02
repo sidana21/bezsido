@@ -5382,6 +5382,205 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+
+  async getServices(location?: string, categoryId?: string, serviceType?: string, availability?: string): Promise<Service[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      let query = db.select().from(services);
+      const conditions = [];
+
+      if (location) {
+        conditions.push(sql`${services.location} LIKE ${`%${location}%`}`);
+      }
+      if (categoryId) {
+        conditions.push(eq(services.categoryId, categoryId));
+      }
+      if (serviceType) {
+        conditions.push(eq(services.serviceType, serviceType));
+      }
+      if (availability) {
+        conditions.push(eq(services.availability, availability));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+      }
+
+      const result = await query;
+      return result;
+    } catch (error) {
+      console.error('Error getting services:', error);
+      return [];
+    }
+  }
+
+  async getService(serviceId: string): Promise<Service | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting service:', error);
+      return undefined;
+    }
+  }
+
+  async getUserServices(vendorId: string): Promise<Service[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.select().from(services).where(eq(services.vendorId, vendorId));
+      return result;
+    } catch (error) {
+      console.error('Error getting user services:', error);
+      return [];
+    }
+  }
+
+  async getServicesByCategory(categoryId: string): Promise<Service[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.select().from(services).where(eq(services.categoryId, categoryId));
+      return result;
+    } catch (error) {
+      console.error('Error getting services by category:', error);
+      return [];
+    }
+  }
+
+  async createService(service: InsertService): Promise<Service> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const newService = {
+        id: randomUUID(),
+        ...service,
+        isActive: service.isActive ?? true,
+        status: service.status ?? 'active',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const result = await db.insert(services).values(newService).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating service:', error);
+      throw error;
+    }
+  }
+
+  async updateService(serviceId: string, updates: Partial<InsertService>): Promise<Service | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.update(services)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(services.id, serviceId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating service:', error);
+      return undefined;
+    }
+  }
+
+  async updateServiceAvailability(serviceId: string, availability: string): Promise<Service | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.update(services)
+        .set({ availability, updatedAt: new Date() })
+        .where(eq(services.id, serviceId))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating service availability:', error);
+      return undefined;
+    }
+  }
+
+  async deleteService(serviceId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      await db.delete(services).where(eq(services.id, serviceId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      return false;
+    }
+  }
+
+  async getFeaturedServices(location?: string): Promise<Service[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      let query = db.select().from(services).where(eq(services.featured, true));
+      
+      if (location) {
+        query = query.where(and(eq(services.featured, true), sql`${services.location} LIKE ${`%${location}%`}`)) as any;
+      }
+
+      const result = await query;
+      return result;
+    } catch (error) {
+      console.error('Error getting featured services:', error);
+      return [];
+    }
+  }
+
+  async searchServices(query: string, location?: string): Promise<Service[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const conditions = [
+        sql`(${services.title} ILIKE ${`%${query}%`} OR ${services.description} ILIKE ${`%${query}%`})`
+      ];
+
+      if (location) {
+        conditions.push(sql`${services.location} LIKE ${`%${location}%`}`);
+      }
+
+      const result = await db.select().from(services).where(and(...conditions));
+      return result;
+    } catch (error) {
+      console.error('Error searching services:', error);
+      return [];
+    }
+  }
 }
 
 // Memory Storage Implementation - fallback when no database
