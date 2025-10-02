@@ -3416,6 +3416,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { requestType, reason, documents, storeId } = req.body;
       
+      if (!requestType) {
+        return res.status(400).json({ message: "نوع الطلب مطلوب" });
+      }
+      
       const verificationRequestData = {
         userId: req.userId,
         requestType: requestType,
@@ -3430,7 +3434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const verificationRequest = await storage.createVerificationRequest(verificationRequestData);
       res.json(verificationRequest);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create verification request" });
+      console.error('Error creating verification request:', error);
+      res.status(500).json({ message: "فشل في إرسال طلب التوثيق. يرجى المحاولة مرة أخرى" });
     }
   });
 
