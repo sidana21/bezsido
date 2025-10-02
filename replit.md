@@ -41,6 +41,9 @@ Preferred communication style: Simple, everyday language.
 - Redesigned service categories with circular pulsing designs and interactive hover animations.
 - Auto-initialization system for product categories (8 default categories: Electronics, Fashion, Home & Garden, Food & Beverages, Beauty & Health, Sports, Books, Toys) - similar to vendor categories initialization.
 - Product and service delete functionality with owner-only access control and confirmation dialogs.
+- **Mobile product upload**: Native HTML select elements provide reliable mobile compatibility for category selection (replacing Radix UI Select).
+- **Video views tracking**: Automatic view tracking via Intersection Observer (70% visibility for 1 second), views badge always displays including "0 مشاهدة" for new posts.
+- **Verification requests**: Enhanced error handling with Arabic error messages and requestType field validation.
 
 ### Admin Panel Features
 - **Comprehensive Dashboard Statistics**: Real-time monitoring of users, stores, orders, revenue, and verification requests.
