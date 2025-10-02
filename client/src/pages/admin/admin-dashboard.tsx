@@ -101,7 +101,8 @@ export function AdminDashboard() {
       icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50 dark:bg-blue-950',
-      testId: 'stat-total-users'
+      testId: 'stat-total-users',
+      link: '/admin/users'
     },
     {
       title: 'المستخدمون النشطون',
@@ -109,7 +110,8 @@ export function AdminDashboard() {
       icon: UserCheck,
       color: 'text-green-600',
       bgColor: 'bg-green-50 dark:bg-green-950',
-      testId: 'stat-active-users'
+      testId: 'stat-active-users',
+      link: '/admin/users'
     },
     {
       title: 'المستخدمون الموثقون',
@@ -117,7 +119,8 @@ export function AdminDashboard() {
       icon: CheckCircle,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50 dark:bg-emerald-950',
-      testId: 'stat-verified-users'
+      testId: 'stat-verified-users',
+      link: '/admin/users'
     },
     {
       title: 'إجمالي المتاجر',
@@ -125,7 +128,8 @@ export function AdminDashboard() {
       icon: Store,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50 dark:bg-purple-950',
-      testId: 'stat-total-stores'
+      testId: 'stat-total-stores',
+      link: '/admin/users'
     },
     {
       title: 'إجمالي الطلبات',
@@ -133,7 +137,8 @@ export function AdminDashboard() {
       icon: ShoppingCart,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50 dark:bg-orange-950',
-      testId: 'stat-total-orders'
+      testId: 'stat-total-orders',
+      link: '/admin/users'
     },
     {
       title: 'طلبات اليوم',
@@ -141,7 +146,8 @@ export function AdminDashboard() {
       icon: Clock,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50 dark:bg-indigo-950',
-      testId: 'stat-recent-orders'
+      testId: 'stat-recent-orders',
+      link: '/admin/users'
     },
     {
       title: 'طلبات التوثيق المعلقة',
@@ -149,7 +155,8 @@ export function AdminDashboard() {
       icon: CheckCircle,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50 dark:bg-yellow-950',
-      testId: 'stat-pending-verifications'
+      testId: 'stat-pending-verifications',
+      link: '/admin/verification-requests'
     },
     {
       title: 'إجمالي الإيرادات',
@@ -157,7 +164,8 @@ export function AdminDashboard() {
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-50 dark:bg-green-950',
-      testId: 'stat-total-revenue'
+      testId: 'stat-total-revenue',
+      link: '/admin/users'
     },
   ];
 
@@ -197,24 +205,27 @@ export function AdminDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((card, index) => (
-            <Card key={index} className="relative overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {card.title}
-                </CardTitle>
-                <div className={`p-2 rounded-full ${card.bgColor}`}>
-                  <card.icon className={`h-4 w-4 ${card.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  className={`text-2xl font-bold ${card.color}`}
-                  data-testid={card.testId}
-                >
-                  {typeof card.value === 'string' ? card.value : card.value.toLocaleString('ar-DZ')}
-                </div>
-              </CardContent>
-            </Card>
+            <Link key={index} href={card.link}>
+              <Card className="relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:ring-2 hover:ring-offset-2 hover:ring-primary group">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                    {card.title}
+                  </CardTitle>
+                  <div className={`p-2 rounded-full ${card.bgColor} transition-transform group-hover:scale-110`}>
+                    <card.icon className={`h-4 w-4 ${card.color}`} />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div 
+                    className={`text-2xl font-bold ${card.color} transition-all`}
+                    data-testid={card.testId}
+                  >
+                    {typeof card.value === 'string' ? card.value : card.value.toLocaleString('ar-DZ')}
+                  </div>
+                </CardContent>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </Card>
+            </Link>
           ))}
         </div>
 
