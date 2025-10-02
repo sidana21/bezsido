@@ -1,9 +1,10 @@
 import { Message, User } from "@shared/schema";
-import { Check, CheckCheck, Clock, Reply, MoreVertical, Play, Pause } from "lucide-react";
+import { Check, CheckCheck, Clock, Reply, MoreVertical, Play, Pause, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { useState, useRef, useEffect } from "react";
+import appIconPath from "@/assets/app-icon.png";
 
 interface MessageBubbleProps {
   message: Message & { sender?: User; replyTo?: Message & { sender?: User } };
@@ -76,12 +77,16 @@ export function MessageBubble({ message, isOwn, onReply, onEdit, onDelete }: Mes
     }
   };
 
+  const isAdminAnnouncement = message.messageType === 'admin_announcement';
+
   return (
     <div className={`mb-4 flex message-bubble group ${isOwn ? 'justify-end' : ''}`}>
       <div className="max-w-xs lg:max-w-md relative">
         <div
           className={`rounded-lg p-3 shadow-md ${
-            isOwn
+            isAdminAnnouncement
+              ? 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 border-r-4 border-yellow-500 animate-pulse'
+              : isOwn
               ? 'bg-[var(--whatsapp-light)] dark:bg-[var(--whatsapp-secondary)] rounded-tl-none'
               : 'bg-white dark:bg-gray-700 rounded-tr-none'
           }`}
@@ -98,6 +103,31 @@ export function MessageBubble({ message, isOwn, onReply, onEdit, onDelete }: Mes
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
                 {message.replyTo.content}
+              </div>
+            </div>
+          )}
+
+          {/* Admin Announcement - تصميم خاص لإشعارات الإدارة */}
+          {isAdminAnnouncement && (
+            <div className="space-y-2">
+              {/* Header with icon and app logo */}
+              <div className="flex items-center gap-3 mb-3">
+                <Megaphone className="w-5 h-5 text-yellow-500 animate-pulse" />
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center border-2 border-yellow-300 shadow-lg">
+                  <img src={appIconPath} alt="إشعار من الإدارة" className="h-8 w-8 rounded-full" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-yellow-600 dark:text-yellow-400 animate-pulse">
+                    🔔 إشعار من الإدارة
+                  </p>
+                </div>
+              </div>
+              
+              {/* Content */}
+              <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
+                <p className="text-gray-900 dark:text-gray-100 font-semibold leading-relaxed whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
               </div>
             </div>
           )}
@@ -153,7 +183,7 @@ export function MessageBubble({ message, isOwn, onReply, onEdit, onDelete }: Mes
             </div>
           )}
           
-          {message.messageType === 'text' && message.content && (
+          {message.messageType === 'text' && message.content && !isAdminAnnouncement && (
             <p className="text-gray-800 dark:text-gray-200 break-words" data-testid="message-content">
               {message.content}
             </p>
