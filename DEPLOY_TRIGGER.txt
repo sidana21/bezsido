@@ -1,6 +1,5 @@
-Admin dashboard statistics fix - October 2, 2025
-Fixed db.execute() result access pattern to use result.rows[0] instead of result[0]
-Added production database connection enforcement - app will now stop if DB fails
-Added comprehensive DEBUG logging to diagnose Render deployment issue
-This will show exactly what's happening with database connection and queries
-Build timestamp: 2025-10-02T20:45:00Z
+Admin dashboard statistics - FINAL FIX - October 2, 2025
+Replaced raw SQL with Drizzle ORM count/sum aggregations
+This ensures consistent result format across all database drivers
+Works identically on Neon HTTP, node-postgres, and all PostgreSQL connections
+Build timestamp: 2025-10-02T21:10:00Z

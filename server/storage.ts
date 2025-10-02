@@ -90,7 +90,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows } from '@shared/schema';
-import { sql, or, gt, gte } from 'drizzle-orm';
+import { sql, or, gt, gte, count, sum, isNotNull } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
@@ -2420,60 +2420,51 @@ export class DatabaseStorage implements IStorage {
   // Admin dashboard stats for DatabaseStorage
   async getAdminDashboardStats(): Promise<any> {
     try {
-      console.log('🔍 [DEBUG] Starting getAdminDashboardStats...');
-      console.log('🔍 [DEBUG] db object exists:', !!db);
-      console.log('🔍 [DEBUG] NODE_ENV:', process.env.NODE_ENV);
-      console.log('🔍 [DEBUG] RENDER:', process.env.RENDER);
-      
       if (!db) {
-        console.log('🔍 [DEBUG] db is null, importing db module...');
         const dbModule = await import('./db');
         db = dbModule.db;
-        console.log('🔍 [DEBUG] After import, db exists:', !!db);
       }
       
       if (!db) {
-        console.error('🚨 [CRITICAL] db is still null after import - using in-memory storage!');
         throw new Error('Database connection not available');
       }
       
       const now = new Date();
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const dayAgoISO = dayAgo.toISOString();
+      
+      // Use Drizzle ORM aggregation - works consistently across all drivers
+      const [totalUsersData] = await db.select({ count: count() }).from(users);
+      const [activeUsersData] = await db.select({ count: count() })
+        .from(users)
+        .where(or(eq(users.isOnline, true), gt(users.lastSeen, dayAgo)));
+      const [verifiedUsersData] = await db.select({ count: count() })
+        .from(users)
+        .where(isNotNull(users.verifiedAt));
+      const [totalStoresData] = await db.select({ count: count() }).from(vendors);
+      const [totalOrdersData] = await db.select({ count: count() }).from(orders);
+      
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const todayISO = today.toISOString();
+      const [recentOrdersData] = await db.select({ count: count() })
+        .from(orders)
+        .where(gte(orders.orderDate, today));
       
-      console.log('🔍 [DEBUG] Executing SQL queries...');
+      const [pendingRequestsData] = await db.select({ count: count() })
+        .from(verificationRequests)
+        .where(eq(verificationRequests.status, 'pending'));
       
-      // Use raw SQL for all queries to avoid Drizzle template issues
-      const totalUsersResult = await db.execute(sql`SELECT COUNT(*) as count FROM users`);
-      console.log('🔍 [DEBUG] totalUsersResult:', JSON.stringify(totalUsersResult, null, 2));
-      
-      const activeUsersResult = await db.execute(
-        sql`SELECT COUNT(*) as count FROM users WHERE is_online = true OR last_seen > ${dayAgoISO}`
-      );
-      const verifiedUsersResult = await db.execute(sql`SELECT COUNT(*) as count FROM users WHERE verified_at IS NOT NULL`);
-      const totalStoresResult = await db.execute(sql`SELECT COUNT(*) as count FROM vendors`);
-      const totalOrdersResult = await db.execute(sql`SELECT COUNT(*) as count FROM orders`);
-      const recentOrdersResult = await db.execute(sql`SELECT COUNT(*) as count FROM orders WHERE order_date >= ${todayISO}`);
-      const pendingRequestsResult = await db.execute(sql`SELECT COUNT(*) as count FROM verification_requests WHERE status = 'pending'`);
-      const revenueResult = await db.execute(sql`SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status = 'completed'`);
-      
-      console.log('🔍 [DEBUG] Raw query results:');
-      console.log('  - totalUsers rows:', totalUsersResult.rows);
-      console.log('  - activeUsers rows:', activeUsersResult.rows);
-      console.log('  - verifiedUsers rows:', verifiedUsersResult.rows);
-      console.log('  - totalStores rows:', totalStoresResult.rows);
+      const [revenueData] = await db.select({ total: sum(orders.totalAmount) })
+        .from(orders)
+        .where(eq(orders.status, 'completed'));
       
       const stats = {
-        totalUsers: Number(totalUsersResult.rows?.[0]?.count || 0),
-        activeUsers: Number(activeUsersResult.rows?.[0]?.count || 0),
-        verifiedUsers: Number(verifiedUsersResult.rows?.[0]?.count || 0),
-        totalStores: Number(totalStoresResult.rows?.[0]?.count || 0),
-        totalOrders: Number(totalOrdersResult.rows?.[0]?.count || 0),
-        pendingVerifications: Number(pendingRequestsResult.rows?.[0]?.count || 0),
-        recentOrders: Number(recentOrdersResult.rows?.[0]?.count || 0),
-        totalRevenue: revenueResult.rows?.[0]?.total ? Number(revenueResult.rows[0].total).toFixed(2) : '0.00'
+        totalUsers: Number(totalUsersData?.count || 0),
+        activeUsers: Number(activeUsersData?.count || 0),
+        verifiedUsers: Number(verifiedUsersData?.count || 0),
+        totalStores: Number(totalStoresData?.count || 0),
+        totalOrders: Number(totalOrdersData?.count || 0),
+        pendingVerifications: Number(pendingRequestsData?.count || 0),
+        recentOrders: Number(recentOrdersData?.count || 0),
+        totalRevenue: revenueData?.total ? Number(revenueData.total).toFixed(2) : '0.00'
       };
       
       console.log('📊 Admin dashboard stats:', stats);
