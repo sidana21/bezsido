@@ -3414,9 +3414,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verification Requests routes
   app.post("/api/verification-requests", requireAuth, async (req: any, res) => {
     try {
+      console.log('📝 Creating verification request:', req.body);
       const { requestType, reason, documents, storeId, verificationType } = req.body;
       
       if (!requestType) {
+        console.log('❌ Missing requestType');
         return res.status(400).json({ message: "نوع الطلب مطلوب" });
       }
       
@@ -3432,10 +3434,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reviewedBy: null,
       };
       
+      console.log('✅ Verification request data:', verificationRequestData);
       const verificationRequest = await storage.createVerificationRequest(verificationRequestData);
+      console.log('✅ Verification request created successfully:', verificationRequest.id);
       res.json(verificationRequest);
     } catch (error: any) {
-      console.error('Error creating verification request:', error);
+      console.error('❌ Error creating verification request:', error);
+      console.error('❌ Error message:', error?.message);
+      console.error('❌ Error stack:', error?.stack);
       res.status(500).json({ message: error?.message || "فشل في إرسال طلب التوثيق. يرجى المحاولة مرة أخرى" });
     }
   });
