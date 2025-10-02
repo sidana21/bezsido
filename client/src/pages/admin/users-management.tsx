@@ -162,6 +162,7 @@ export function UsersManagement() {
       });
     },
     onError: (error: any) => {
+      console.error('Delete user error:', error);
       toast({
         title: 'خطأ',
         description: error?.message || 'فشل في حذف المستخدم',
