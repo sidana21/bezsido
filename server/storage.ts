@@ -2471,44 +2471,34 @@ export class DatabaseStorage implements IStorage {
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      // Use sql.raw for better compatibility with Neon HTTP driver
-      const [totalUsersData] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
+      // Use simple select and manual counting - works with all drivers
+      const allUsers = await db.select().from(users);
+      const totalUsers = allUsers.length;
+      const activeUsers = allUsers.filter(u => u.isOnline === true || (u.lastSeen && new Date(u.lastSeen) > dayAgo)).length;
+      const verifiedUsers = allUsers.filter(u => u.verifiedAt !== null).length;
       
-      const [activeUsersData] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(users)
-        .where(or(eq(users.isOnline, true), gt(users.lastSeen, dayAgo)));
+      const allVendors = await db.select().from(vendors);
+      const totalStores = allVendors.length;
       
-      const [verifiedUsersData] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(users)
-        .where(isNotNull(users.verifiedAt));
+      const allOrders = await db.select().from(orders);
+      const totalOrders = allOrders.length;
+      const recentOrders = allOrders.filter(o => new Date(o.orderDate) >= today).length;
       
-      const [totalStoresData] = await db.select({ count: sql<number>`count(*)::int` }).from(vendors);
+      const allVerificationRequests = await db.select().from(verificationRequests);
+      const pendingVerifications = allVerificationRequests.filter(r => r.status === 'pending').length;
       
-      const [totalOrdersData] = await db.select({ count: sql<number>`count(*)::int` }).from(orders);
-      
-      const [recentOrdersData] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(orders)
-        .where(gte(orders.orderDate, today));
-      
-      const [pendingRequestsData] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(verificationRequests)
-        .where(eq(verificationRequests.status, 'pending'));
-      
-      const [revenueData] = await db.select({ 
-        total: sql<string>`COALESCE(SUM(${orders.totalAmount})::text, '0')` 
-      })
-        .from(orders)
-        .where(eq(orders.status, 'completed'));
+      const completedOrders = allOrders.filter(o => o.status === 'completed');
+      const totalRevenue = completedOrders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
       
       const stats = {
-        totalUsers: Number(totalUsersData?.count || 0),
-        activeUsers: Number(activeUsersData?.count || 0),
-        verifiedUsers: Number(verifiedUsersData?.count || 0),
-        totalStores: Number(totalStoresData?.count || 0),
-        totalOrders: Number(totalOrdersData?.count || 0),
-        pendingVerifications: Number(pendingRequestsData?.count || 0),
-        recentOrders: Number(recentOrdersData?.count || 0),
-        totalRevenue: revenueData?.total ? Number(revenueData.total).toFixed(2) : '0.00'
+        totalUsers,
+        activeUsers,
+        verifiedUsers,
+        totalStores,
+        totalOrders,
+        pendingVerifications,
+        recentOrders,
+        totalRevenue: totalRevenue.toFixed(2)
       };
       
       console.log('📊 Admin dashboard stats calculated:', stats);
