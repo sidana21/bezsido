@@ -560,11 +560,31 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
-      await db.delete(users).where(eq(users.id, id));
-      return true;
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      return false;
+      console.log(`🗑️ Attempting to delete user: ${id}`);
+      
+      // First check if user exists
+      const existingUser = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!existingUser || existingUser.length === 0) {
+        console.error(`❌ User not found: ${id}`);
+        return false;
+      }
+      
+      console.log(`✓ User found, proceeding with deletion: ${existingUser[0].name}`);
+      
+      // Delete the user
+      const result = await db.delete(users).where(eq(users.id, id)).returning();
+      
+      if (result && result.length > 0) {
+        console.log(`✅ User deleted successfully: ${id}`);
+        return true;
+      } else {
+        console.error(`❌ Delete operation failed for user: ${id}`);
+        return false;
+      }
+    } catch (error: any) {
+      console.error('❌ Error deleting user:', error);
+      console.error('Error details:', error.message);
+      throw error;
     }
   }
 
