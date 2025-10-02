@@ -218,10 +218,10 @@ export default function Profile() {
         description: "تم إرسال طلب التوثيق بنجاح، سيتم مراجعته قريباً",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "خطأ",
-        description: "فشل في إرسال طلب التوثيق",
+        description: error?.message || "فشل في إرسال طلب التوثيق",
         variant: "destructive",
       });
     },
