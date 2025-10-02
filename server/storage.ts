@@ -628,6 +628,10 @@ export class DatabaseStorage implements IStorage {
       await db.delete(calls).where(eq(calls.receiverId, id));
       console.log(`   ✓ Deleted calls`);
       
+      // 12. Delete user sessions (CRITICAL - must be done before deleting user)
+      await db.delete(sessions).where(eq(sessions.userId, id));
+      console.log(`   ✓ Deleted sessions`);
+      
       // Finally, delete the user
       const result = await db.delete(users).where(eq(users.id, id)).returning();
       
