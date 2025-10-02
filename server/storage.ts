@@ -2469,28 +2469,34 @@ export class DatabaseStorage implements IStorage {
       
       const now = new Date();
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      // Use Drizzle ORM aggregation - works consistently across all drivers
-      const [totalUsersData] = await db.select({ count: count() }).from(users);
-      const [activeUsersData] = await db.select({ count: count() })
+      // Use sql.raw for better compatibility with Neon HTTP driver
+      const [totalUsersData] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
+      
+      const [activeUsersData] = await db.select({ count: sql<number>`count(*)::int` })
         .from(users)
         .where(or(eq(users.isOnline, true), gt(users.lastSeen, dayAgo)));
-      const [verifiedUsersData] = await db.select({ count: count() })
+      
+      const [verifiedUsersData] = await db.select({ count: sql<number>`count(*)::int` })
         .from(users)
         .where(isNotNull(users.verifiedAt));
-      const [totalStoresData] = await db.select({ count: count() }).from(vendors);
-      const [totalOrdersData] = await db.select({ count: count() }).from(orders);
       
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const [recentOrdersData] = await db.select({ count: count() })
+      const [totalStoresData] = await db.select({ count: sql<number>`count(*)::int` }).from(vendors);
+      
+      const [totalOrdersData] = await db.select({ count: sql<number>`count(*)::int` }).from(orders);
+      
+      const [recentOrdersData] = await db.select({ count: sql<number>`count(*)::int` })
         .from(orders)
         .where(gte(orders.orderDate, today));
       
-      const [pendingRequestsData] = await db.select({ count: count() })
+      const [pendingRequestsData] = await db.select({ count: sql<number>`count(*)::int` })
         .from(verificationRequests)
         .where(eq(verificationRequests.status, 'pending'));
       
-      const [revenueData] = await db.select({ total: sum(orders.totalAmount) })
+      const [revenueData] = await db.select({ 
+        total: sql<string>`COALESCE(SUM(${orders.totalAmount})::text, '0')` 
+      })
         .from(orders)
         .where(eq(orders.status, 'completed'));
       
@@ -2505,10 +2511,12 @@ export class DatabaseStorage implements IStorage {
         totalRevenue: revenueData?.total ? Number(revenueData.total).toFixed(2) : '0.00'
       };
       
-      console.log('📊 Admin dashboard stats:', stats);
+      console.log('📊 Admin dashboard stats calculated:', stats);
       return stats;
-    } catch (error) {
-      console.error('Error getting admin dashboard stats:', error);
+    } catch (error: any) {
+      console.error('❌ Error getting admin dashboard stats:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
       return {
         totalUsers: 0,
         activeUsers: 0,
