@@ -6004,9 +6004,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (post.userId !== userId) {
             await storage.createSocialNotification({
               userId: post.userId,
-              triggeredByUserId: userId,
-              notificationType: 'like',
+              fromUserId: userId,
+              type: 'like',
               postId: postId,
+              title: 'إعجاب جديد',
               message: 'أعجب بمنشورك',
               isRead: false
             });
@@ -6074,8 +6075,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create notification for the followed user
       await storage.createSocialNotification({
         userId: targetUserId,
-        triggeredByUserId: followerId,
-        notificationType: 'follow',
+        fromUserId: followerId,
+        type: 'follow',
+        title: 'متابع جديد',
         message: 'بدأ بمتابعتك',
         isRead: false
       });
@@ -6173,8 +6175,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // إنشاء إشعار زيارة الملف
       await storage.createSocialNotification({
         userId: targetUserId,
-        triggeredByUserId: visitorId,
-        notificationType: 'profile_visit',
+        fromUserId: visitorId,
+        type: 'profile_visit',
+        title: 'زائر جديد',
         message: 'زار ملفك الشخصي',
         isRead: false
       });
@@ -6443,9 +6446,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (post.userId !== userId) {
         await storage.createSocialNotification({
           userId: post.userId,
-          triggeredByUserId: userId,
-          notificationType: 'comment',
+          fromUserId: userId,
+          type: 'comment',
           postId: postId,
+          title: 'تعليق جديد',
           message: 'علق على منشورك',
           isRead: false
         });
