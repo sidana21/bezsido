@@ -135,6 +135,19 @@ app.use((req, res, next) => {
     console.error('Warning: Failed to initialize daily missions:', error);
   }
 
+  // Initialize vendor categories on startup
+  try {
+    console.log('Initializing vendor categories...');
+    if (typeof (storage as any).initializeVendorCategories === 'function') {
+      await (storage as any).initializeVendorCategories();
+      console.log('Vendor categories initialized successfully');
+    } else {
+      console.log('Vendor categories initialization not available in current storage type');
+    }
+  } catch (error) {
+    console.error('Warning: Failed to initialize vendor categories:', error);
+  }
+
   // Initialize admin user (with data protection)
   try {
     console.log('Initializing admin user...');

@@ -2264,6 +2264,53 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async initializeVendorCategories(): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log('Initializing vendor categories in database...');
+      
+      // Check if vendor categories already exist
+      const existingCategories = await db.select().from(vendorCategories).limit(1);
+      if (existingCategories.length > 0) {
+        console.log('Vendor categories already initialized, skipping...');
+        return;
+      }
+
+      // Add default vendor categories
+      const defaultCategories = [
+        { name: 'Services', nameAr: 'خدمات', description: 'Service providers', icon: '🛠️', sortOrder: 1 },
+        { name: 'Retail', nameAr: 'تجزئة', description: 'Retail stores', icon: '🏪', sortOrder: 2 },
+        { name: 'Food & Beverage', nameAr: 'مأكولات ومشروبات', description: 'Food and beverage businesses', icon: '🍽️', sortOrder: 3 },
+        { name: 'Technology', nameAr: 'تكنولوجيا', description: 'Technology businesses', icon: '💻', sortOrder: 4 },
+        { name: 'Healthcare', nameAr: 'الرعاية الصحية', description: 'Healthcare providers', icon: '🏥', sortOrder: 5 }
+      ];
+
+      for (const category of defaultCategories) {
+        await db.insert(vendorCategories)
+          .values({
+            id: randomUUID(),
+            name: category.name,
+            nameAr: category.nameAr,
+            description: category.description,
+            icon: category.icon,
+            sortOrder: category.sortOrder,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .onConflictDoNothing();
+      }
+
+      console.log(`📦 تم تحميل ${defaultCategories.length} فئة متاجر في قاعدة البيانات`);
+    } catch (error) {
+      console.error('Error initializing vendor categories:', error);
+      // Don't throw - this is not critical
+    }
+  }
+
   // Admin dashboard stats for DatabaseStorage
   async getAdminDashboardStats(): Promise<any> {
     try {

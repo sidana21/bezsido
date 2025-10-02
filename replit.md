@@ -103,7 +103,7 @@ Preferred communication style: Simple, everyday language.
 ## Replit Environment Setup
 
 ### Date
-- **Latest Setup: October 1, 2025** (Fresh GitHub Clone - Successfully configured and running in Replit environment)
+- **Latest Setup: October 2, 2025** (Auto-initialization system implemented for vendor categories)
 
 ### Development Configuration
 - **Port**: 5000 (frontend and backend on same port)
@@ -151,6 +151,24 @@ Preferred communication style: Simple, everyday language.
 - ✅ Fresh GitHub import completed successfully
 
 ### Recent Bug Fixes
+
+#### Auto-Initialization System for Vendor Categories (October 2, 2025)
+- **Issue**: Service publishing failed with `null value in column "category_id"` error
+  - Users had to manually run SQL commands to insert vendor categories after deployment
+  - This created complexity and friction during Render deployment
+- **Root Cause**: Missing vendor categories in database - vendors table requires valid category_id foreign key
+- **Solution**:
+  1. Added `initializeVendorCategories()` method in DatabaseStorage class (server/storage.ts line 2270)
+  2. Auto-initialization runs on server startup (server/index.ts line 141-152)
+  3. Creates 5 default vendor categories automatically: Services, Retail, Food & Beverage, Technology, Healthcare
+  4. Smart detection: Checks if categories exist before inserting (prevents duplicates)
+  5. Updated service creation route to fetch and use "Services" category automatically
+- **Result**: 
+  - ✅ Zero-configuration deployment - works out of the box on Render and all environments
+  - ✅ No manual SQL commands required
+  - ✅ Service publishing works immediately after deployment
+  - ✅ Fully compatible with existing databases (skips initialization if data exists)
+- **Deployment Note**: Simply push code and deploy - everything initializes automatically on first run
 
 #### Database Schema Sync for Render Deployment (October 1, 2025)
 - **Issue**: Error on Render deployment: `column "verification_type" of relation "users" does not exist`
