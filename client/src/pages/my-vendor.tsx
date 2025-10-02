@@ -1006,7 +1006,7 @@ export default function MyVendorPage() {
 
       {/* Mobile Product Upload Modal */}
       {showMobileUpload && (
-        <div className="fixed inset-0 z-50 bg-white">
+        <div className="fixed inset-0 z-[9999] bg-white dark:bg-gray-900 overflow-auto">
           <MobileProductUpload
             onSuccess={() => {
               setShowMobileUpload(false);
