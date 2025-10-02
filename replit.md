@@ -2,7 +2,7 @@
 
 ## Overview
 
-BizChat is a full-stack business messaging application built with React, TypeScript, and Express. Its core purpose is to integrate messaging with commerce features, providing a responsive UI for business communication and trade. Key capabilities include individual and group chats, product promotion via stories/status updates, message status tracking (sent, delivered, read), and robust Arabic language support for Middle Eastern markets. The project aims to offer a complete TikTok-like social media experience integrated with business functionalities.
+BizChat is a full-stack business messaging application built with React, TypeScript, and Express. It integrates messaging with commerce features, offering a responsive UI for business communication and trade. Key capabilities include individual and group chats, product promotion via stories/status updates, message status tracking, and robust Arabic language support. The project aims to provide a social media experience similar to TikTok, integrated with business functionalities.
 
 ## User Preferences
 
@@ -16,12 +16,12 @@ Preferred communication style: Simple, everyday language.
 - **State Management**: TanStack Query for server state, React hooks for local state.
 - **Styling**: Tailwind CSS for responsive design, Shadcn/ui for accessible components.
 - **Theming**: Dark/light mode support.
-- **UI/UX**: Mobile-first, modular design with reusable components, accessibility features. WhatsApp-inspired chat interface and TikTok-style social feed with snap scrolling, auto-playing videos, and interactive elements (likes, comments, shares).
+- **UI/UX**: Mobile-first, modular design. WhatsApp-inspired chat interface and TikTok-style social feed with snap scrolling, auto-playing videos, and interactive elements.
 
 ### Backend
 - **Framework**: Express.js with TypeScript.
 - **Database Interaction**: Drizzle ORM for PostgreSQL.
-- **Storage**: In-memory for development; PostgreSQL for production.
+- **Storage**: PostgreSQL for production, in-memory for development.
 - **Session Management**: Express session handling with PostgreSQL session store.
 
 ### Database Design
@@ -29,45 +29,24 @@ Preferred communication style: Simple, everyday language.
 
 ### API Design
 - **Approach**: RESTful endpoints using standard HTTP methods.
-- **Data Format**: JSON for requests and responses.
+- **Data Format**: JSON.
 
 ### Technical Implementations
-- Full TikTok-style social media interface for posts, including vertical snap scrolling, auto-playing videos, pulsing interaction buttons, flying hearts animation, and enhanced share functionality.
-- Comprehensive notification system with settings modal, unread counts, and granular controls.
-- Real-time follower count updates with robust cache invalidation.
+- Full TikTok-style social media interface with vertical snap scrolling, auto-playing videos, and interactive animations.
+- Comprehensive notification system with settings, unread counts, and granular controls.
+- Real-time follower count updates with cache invalidation.
 - Arabic UI and RTL layout support across all components.
-- Profile page displays real user posts: fetches from `/api/users/:userId/posts` and `/api/user/products`, merges both into unified grid with proper video/image rendering and empty state handling (September 30, 2025).
-- Services page: Horizontal scrolling category cards with snap behavior, gradient designs, and smooth animations. Categories include: تاكسي (Taxi), توصيل (Delivery), خدمات منزلية (Home Services), تجميل (Beauty) - integrated within /stores page (September 30, 2025).
-- Service categories redesigned with circular pulsing design: Perfect circles with animated outer glow, inner pulsing effects, and interactive hover animations (scale, rotate, shadow). Includes continuous color pulse animations to attract user attention (September 30, 2025).
+- Profile page displays unified grid of user posts and products.
+- Services page features horizontal scrolling category cards with gradient designs and animations.
+- Redesigned service categories with circular pulsing designs and interactive hover animations.
 
-### Admin Panel Features (October 1, 2025)
-- **Comprehensive Dashboard Statistics**: Real-time monitoring of users, stores, orders, revenue, and verification requests with accurate counting logic
-- **User Management System**: 
-  * Block/unblock functionality for user accounts
-  * Post count tracking for each user
-  * Detailed user information display with status indicators
-- **Real-time Notification System**:
-  * Visual indicators with pulsing badges showing pending verification request counts
-  * Sidebar badge displaying unread verification requests
-  * Dashboard card with prominent golden pulsing border, gradient animated bar, and "جديد" badge when pending requests exist
-  * Recent activities feed showing last 20 actions (new users, orders, verifications, posts)
-- **Sound Alert System**: 
-  * Automatic audio notification when new verification requests arrive
-  * Debouncing mechanism (5s cooldown) to prevent notification spam
-  * Base64 encoded beep sound with fallback for browser autoplay restrictions
-- **Admin Announcements System**:
-  * Dedicated admin page for sending announcements to all users
-  * Announcements appear in user notifications with distinctive pulsing golden gradient background
-  * Special app logo icon displayed as announcement sender (not admin user avatar)
-  * Non-clickable notification style with "إشعار من الإدارة" badge
-  * Form includes title and message fields with validation
-  * Immediate notification delivery to all active users
-- **API Endpoints**:
-  * `/api/admin/dashboard-stats` - Comprehensive statistics endpoint
-  * `/api/admin/recent-activities` - Latest system activities
-  * `/api/admin/users` - User management with block/unblock capabilities
-  * `/api/admin/send-announcement` - Send announcement to all users
-  * 30-second polling intervals for real-time updates
+### Admin Panel Features
+- **Comprehensive Dashboard Statistics**: Real-time monitoring of users, stores, orders, revenue, and verification requests.
+- **User Management System**: Block/unblock functionality, post count tracking, detailed user information.
+- **Real-time Notification System**: Visual indicators, pulsing badges for pending verification requests, recent activities feed.
+- **Sound Alert System**: Automatic audio notifications for new verification requests with debouncing.
+- **Admin Announcements System**: Dedicated page for sending announcements to all users, displayed with distinctive styling in user notifications.
+- **API Endpoints**: Dedicated endpoints for dashboard stats, activities, user management, and announcements.
 
 ## External Dependencies
 
@@ -75,8 +54,8 @@ Preferred communication style: Simple, everyday language.
 - `@neondatabase/serverless`: PostgreSQL serverless driver.
 - `drizzle-orm`: Type-safe ORM.
 - `drizzle-kit`: Database migration and schema management.
-- `connect-pg-simple`: PostgreSQL session store for Express.
-- `express-session`: Server-side session management middleware.
+- `connect-pg-simple`: PostgreSQL session store.
+- `express-session`: Server-side session management.
 
 ### UI & State Management
 - `@radix-ui/*`: Accessible UI primitives.
@@ -84,11 +63,6 @@ Preferred communication style: Simple, everyday language.
 - `class-variance-authority`: Component variant styling.
 - `cmdk`: Command palette and search.
 - `embla-carousel-react`: Touch-friendly carousel.
-
-### Development Tools (Replit Specific)
-- `@replit/vite-plugin-runtime-error-modal`: Development error overlay.
-- `@replit/vite-plugin-cartographer`: Replit-specific tooling.
-- `tsx`: TypeScript execution for Node.js.
 
 ### Styling, Icons & Utilities
 - `tailwindcss`: Utility-first CSS framework.
@@ -99,128 +73,3 @@ Preferred communication style: Simple, everyday language.
 - `@hookform/resolvers`: Integration with validation libraries.
 - `react-hook-form`: Performant form library.
 - `zod`: TypeScript-first schema validation.
-
-## Replit Environment Setup
-
-### Date
-- **Latest Setup: October 2, 2025** (Auto-initialization system implemented for vendor categories)
-
-### Development Configuration
-- **Port**: 5000 (frontend and backend on same port)
-- **Host**: 0.0.0.0 (configured for Replit proxy)
-- **Workflow**: "Start application" runs `npm run dev` with webview output
-- **Output Type**: webview for frontend preview
-- **Deployment**: Configured for autoscale deployment with `npm run build` and `npm run start`
-- **Database**: PostgreSQL database (Neon-backed) - provisioned and active
-- **Storage Mode**: DatabaseStorage (PostgreSQL) for persistent data storage
-- **Build Scripts**: Updated to use `npx tsx` and `npx esbuild` for compatibility
-
-### Deployment Configuration
-- **Type**: Autoscale (stateless web app)
-- **Build**: `npm run build`
-- **Run**: `npm run start`
-- **Production Mode**: Serves static files from dist/public
-- **Configuration**: Defined in `.replit` file
-
-### Key Files
-- **Server Entry**: `server/index.ts` - Express server with Vite integration
-- **Vite Config**: `vite.config.ts` - Configured with `allowedHosts: true` for Replit proxy
-- **Vite Server**: `server/vite.ts` - Middleware setup with `allowedHosts: true`
-- **Schema**: `shared/schema.ts` - Drizzle ORM schema definitions
-- **Storage**: `server/storage.ts` - Storage interface (MemStorage/DatabaseStorage)
-- **Routes**: `server/routes.ts` - API endpoint definitions
-
-### Project Status (October 1, 2025 - Fresh Clone Setup Complete)
-- ✅ Node.js 20 runtime configured
-- ✅ All npm dependencies installed and verified
-- ✅ Package.json scripts compatible with Replit (npx tsx, npx esbuild)
-- ✅ Development server running successfully on port 5000
-- ✅ Frontend loads correctly with Arabic RTL login interface
-- ✅ Backend API responding properly
-- ✅ Vite HMR (Hot Module Replacement) active and working
-- ✅ Admin user auto-created on startup (admin@bizchat.com)
-- ✅ Default stickers (870 items), features, and missions initialized
-- ✅ Deployment configuration verified and ready for production
-- ✅ Build process tested and working (npm run build)
-- ✅ Production build artifacts generated in dist/ directory
-- ✅ Workflow configured with webview output on port 5000
-- ✅ Vite dev server configured with allowedHosts: true for Replit proxy
-- ✅ All Replit environment requirements met
-- ✅ TypeScript LSP errors resolved
-- ✅ Application fully operational in Replit environment
-- ✅ Fresh GitHub import completed successfully
-
-### Recent Bug Fixes
-
-#### Auto-Initialization System for Vendor Categories (October 2, 2025)
-- **Issue**: Service publishing failed with `null value in column "category_id"` error
-  - Users had to manually run SQL commands to insert vendor categories after deployment
-  - This created complexity and friction during Render deployment
-- **Root Cause**: Missing vendor categories in database - vendors table requires valid category_id foreign key
-- **Solution**:
-  1. Added `initializeVendorCategories()` method in DatabaseStorage class (server/storage.ts line 2270)
-  2. Auto-initialization runs on server startup (server/index.ts line 141-152)
-  3. Creates 5 default vendor categories automatically: Services, Retail, Food & Beverage, Technology, Healthcare
-  4. Smart detection: Checks if categories exist before inserting (prevents duplicates)
-  5. Updated service creation route to fetch and use "Services" category automatically
-- **Result**: 
-  - ✅ Zero-configuration deployment - works out of the box on Render and all environments
-  - ✅ No manual SQL commands required
-  - ✅ Service publishing works immediately after deployment
-  - ✅ Fully compatible with existing databases (skips initialization if data exists)
-- **Deployment Note**: Simply push code and deploy - everything initializes automatically on first run
-
-#### Database Schema Sync for Render Deployment (October 1, 2025)
-- **Issue**: Error on Render deployment: `column "verification_type" of relation "users" does not exist`
-- **Root Cause**: Database schema on Render was out of sync with application schema in `shared/schema.ts`
-  - The `verification_type` column exists in code but wasn't created in the database
-  - This prevented admin user creation and application startup
-- **Solution**:
-  1. Created PostgreSQL database in Replit environment
-  2. Ran `npm run db:push` to sync all schema changes to database
-  3. Verified all tables and columns created successfully including `verification_type`
-  4. Confirmed application starts and runs without errors
-- **Result**: ✅ Database schema fully synced, admin user creates successfully, ready for Render deployment
-- **Important**: For Render deployment, ensure you run `npm run db:push` after connecting your DATABASE_URL to sync the schema
-
-#### Admin Announcement Notifications Not Persisting (October 1, 2025)
-- **Issue**: Admin announcements were being sent successfully but not reaching users
-- **Root Cause**: Application was using MemStorage (in-memory) instead of DatabaseStorage (PostgreSQL)
-  - Notifications were saved in temporary memory and lost on server restart
-  - Users couldn't receive notifications that were sent while they were offline
-- **Solution**:
-  1. Created PostgreSQL database for persistent storage
-  2. Implemented social notification methods in DatabaseStorage class:
-     - createSocialNotification, getUserSocialNotifications
-     - getUnreadSocialNotificationsCount, markSocialNotificationAsRead
-     - markAllSocialNotificationsAsRead, deleteSocialNotification
-     - sendAdminAnnouncement (broadcasts to all users)
-  3. Updated initializeStorage() to use DatabaseStorage instead of MemStorage
-  4. Added missing drizzle-orm imports (desc, ne) for proper query ordering
-  5. Pushed schema changes to database using `npm run db:push`
-- **Result**: ✅ Admin announcements now persist in PostgreSQL database and reach all users successfully
-
-#### Previous Fixes (September 30, 2025)
-- **Service Publishing Bug**: Fixed critical bug where publishing services failed due to missing `categoryId` field
-  - Root cause: Frontend forms (beauty-services.tsx, home-services.tsx) weren't sending categoryId required by backend
-  - Solution: Added API query to fetch service categories dynamically and include categoryId in service submission
-  - Implementation: Flexible category lookup matching both Arabic (nameAr) and English (name) fields with partial matching fallback
-  - Categories: "حناييات وتجميل" (Henna & Beauty) for beauty services, "اليد العاملة" (Labor Services) for home services
-
-- **Service Images Display**: Added image rendering to service cards
-  - Added comprehensive image display to both beauty-services.tsx and home-services.tsx
-  - Single image displays full width at top of service card
-  - Multiple images (2-3) display side by side with responsive widths
-  - More than 3 images show first 3 with "+X" overflow indicator
-  - Used optional chaining to prevent null/undefined errors
-  - Images appear at top of service card before service information
-
-### Known Items
-- **Duplicate Class Members in storage.ts** (October 1, 2025):
-  - 6 duplicate methods detected during build: searchUserByEmail, initializeDailyMissions, getUserProducts, getUserInvoices, createInvoice, getInvoice
-  - Build warnings appear but don't prevent runtime execution
-  - Application functions normally in both development and production modes
-  - These duplicates should be removed in future refactoring to improve code maintainability
-- Notification sound loading error (uses fallback ringtone) - cosmetic only
-- 401 errors for unauthenticated requests are expected behavior
-- App successfully loads with Arabic RTL support and login screen

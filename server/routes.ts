@@ -5882,6 +5882,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isSaved = await storage.hasUserSavedPost(post.id, currentUserId);
         const isFollowing = await storage.isUserFollowing(currentUserId, post.userId);
         
+        // حساب الإحصائيات الحقيقية للمنشور
+        const likesCount = await storage.getPostLikesCount(post.id);
+        const commentsCount = await storage.getPostCommentsCount(post.id);
+        const viewsCount = await storage.getPostViewsCount(post.id);
+        
         // Sanitize user data - only include safe public fields
         const safeUser = user ? {
           id: user.id,
@@ -5894,6 +5899,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           ...post,
+          likesCount,
+          commentsCount,
+          viewsCount,
           user: safeUser,
           isLiked,
           isSaved,
@@ -6291,12 +6299,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userPosts = [];
       }
       
-      // تحسين المنشورات بإضافة بيانات المستخدم الآمنة
-      const enhancedPosts = userPosts.map(post => ({
-        ...post,
-        user: toPublicUser(user), // استخدام الدالة الآمنة لإزالة البيانات الحساسة
-        isLiked: false, // يمكن تحسين هذا لاحقاً للتحقق من الإعجابات
-        isSaved: false  // يمكن تحسين هذا لاحقاً للتحقق من المحفوظات
+      // تحسين المنشورات بإضافة بيانات المستخدم الآمنة والإحصائيات
+      const enhancedPosts = await Promise.all(userPosts.map(async (post) => {
+        const isLiked = await storage.hasUserLikedPost(post.id, currentUserId);
+        const isSaved = await storage.hasUserSavedPost(post.id, currentUserId);
+        
+        // حساب الإحصائيات الحقيقية للمنشور
+        const likesCount = await storage.getPostLikesCount(post.id);
+        const commentsCount = await storage.getPostCommentsCount(post.id);
+        const viewsCount = await storage.getPostViewsCount(post.id);
+        
+        return {
+          ...post,
+          likesCount,
+          commentsCount,
+          viewsCount,
+          user: toPublicUser(user),
+          isLiked,
+          isSaved
+        };
       }));
       
       res.json(enhancedPosts);

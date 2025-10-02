@@ -89,7 +89,7 @@ import {
   type InsertSocialNotification
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, storyViews, socialNotifications, follows } from '@shared/schema';
+import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
@@ -5241,8 +5241,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPostViewsCount(postId: string): Promise<number> {
-    console.log(`📊 Getting views count for post ${postId} (stub - returning 0)`);
-    return 0;
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const views = await db.select()
+        .from(postViews)
+        .where(eq(postViews.postId, postId));
+
+      return views.length;
+    } catch (error) {
+      console.error('Error getting post views count:', error);
+      return 0;
+    }
   }
 
   async getPostCommentsCount(postId: string): Promise<number> {

@@ -1020,6 +1020,14 @@ export const postComments = pgTable("post_comments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Post Views
+export const postViews = pgTable("post_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => businessPosts.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Story Views
 export const storyViews = pgTable("story_views", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
