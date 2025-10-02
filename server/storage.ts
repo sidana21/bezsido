@@ -399,6 +399,8 @@ export interface IStorage {
   getPostCommentsCount(postId: string): Promise<number>;
   getPostComments(postId: string, limit?: number, offset?: number): Promise<any[]>;
   createPostComment(comment: any): Promise<any>;
+  getCommentById(commentId: string): Promise<any | undefined>;
+  deleteComment(commentId: string): Promise<boolean>;
   getPostById(postId: string): Promise<BusinessPost | undefined>;
   
   // User Following
@@ -5271,6 +5273,45 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getCommentById(commentId: string): Promise<any | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const result = await db.select()
+        .from(postComments)
+        .where(eq(postComments.id, commentId))
+        .limit(1);
+
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting comment:', error);
+      return undefined;
+    }
+  }
+
+  async deleteComment(commentId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log(`🗑️ Deleting comment: ${commentId}`);
+
+      await db.delete(postComments)
+        .where(eq(postComments.id, commentId));
+
+      console.log(`✅ Comment deleted`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      return false;
+    }
+  }
+
   // User Following Implementation
   async followUser(followerId: string, followingId: string): Promise<void> {
     try {
@@ -6054,6 +6095,28 @@ export class MemStorage implements IStorage {
     
     console.log(`💬 Comment created: ${comment.id} on post ${commentData.postId}`);
     return comment;
+  }
+
+  async getCommentById(commentId: string): Promise<any | undefined> {
+    return this.postComments.get(commentId);
+  }
+
+  async deleteComment(commentId: string): Promise<boolean> {
+    const comment = this.postComments.get(commentId);
+    if (!comment) return false;
+
+    this.postComments.delete(commentId);
+
+    // تحديث عداد التعليقات في المنشور
+    const post = this.businessPosts.get(comment.postId);
+    if (post) {
+      const currentCommentsCount = await this.getPostCommentsCount(comment.postId);
+      const updatedPost = { ...post, commentsCount: currentCommentsCount };
+      this.businessPosts.set(comment.postId, updatedPost);
+    }
+
+    console.log(`🗑️ Comment deleted: ${commentId}`);
+    return true;
   }
 
   async getPostById(postId: string): Promise<BusinessPost | undefined> {
