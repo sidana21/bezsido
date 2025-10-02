@@ -2471,34 +2471,30 @@ export class DatabaseStorage implements IStorage {
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      // Use simple select and manual counting - works with all drivers
-      const allUsers = await db.select().from(users);
-      const totalUsers = allUsers.length;
-      const activeUsers = allUsers.filter(u => u.isOnline === true || (u.lastSeen && new Date(u.lastSeen) > dayAgo)).length;
-      const verifiedUsers = allUsers.filter(u => u.verifiedAt !== null).length;
+      // Use raw SQL for maximum compatibility with Neon HTTP driver
+      const statsQuery = await db.execute(sql`
+        SELECT 
+          (SELECT COUNT(*) FROM users) as total_users,
+          (SELECT COUNT(*) FROM users WHERE is_online = true OR last_seen > ${dayAgo}) as active_users,
+          (SELECT COUNT(*) FROM users WHERE verified_at IS NOT NULL) as verified_users,
+          (SELECT COUNT(*) FROM vendors) as total_stores,
+          (SELECT COUNT(*) FROM orders) as total_orders,
+          (SELECT COUNT(*) FROM orders WHERE order_date >= ${today}) as recent_orders,
+          (SELECT COUNT(*) FROM verification_requests WHERE status = 'pending') as pending_verifications,
+          (SELECT COALESCE(SUM(total_amount::decimal), 0) FROM orders WHERE status = 'completed') as total_revenue
+      `);
       
-      const allVendors = await db.select().from(vendors);
-      const totalStores = allVendors.length;
-      
-      const allOrders = await db.select().from(orders);
-      const totalOrders = allOrders.length;
-      const recentOrders = allOrders.filter(o => new Date(o.orderDate) >= today).length;
-      
-      const allVerificationRequests = await db.select().from(verificationRequests);
-      const pendingVerifications = allVerificationRequests.filter(r => r.status === 'pending').length;
-      
-      const completedOrders = allOrders.filter(o => o.status === 'completed');
-      const totalRevenue = completedOrders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
+      const result = statsQuery.rows[0];
       
       const stats = {
-        totalUsers,
-        activeUsers,
-        verifiedUsers,
-        totalStores,
-        totalOrders,
-        pendingVerifications,
-        recentOrders,
-        totalRevenue: totalRevenue.toFixed(2)
+        totalUsers: Number(result.total_users || 0),
+        activeUsers: Number(result.active_users || 0),
+        verifiedUsers: Number(result.verified_users || 0),
+        totalStores: Number(result.total_stores || 0),
+        totalOrders: Number(result.total_orders || 0),
+        pendingVerifications: Number(result.pending_verifications || 0),
+        recentOrders: Number(result.recent_orders || 0),
+        totalRevenue: Number(result.total_revenue || 0).toFixed(2)
       };
       
       console.log('📊 Admin dashboard stats calculated:', stats);
