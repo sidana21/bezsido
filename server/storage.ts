@@ -4935,12 +4935,12 @@ export class DatabaseStorage implements IStorage {
           // 2. إنشاء/العثور على محادثة مع المستخدم
           let chat = await this.findOrCreateChatBetweenUsers(adminUserId, user.id, 'إشعار من الإدارة');
           
-          // 3. إرسال رسالة في المحادثة (تظهر كرسالة جديدة)
+          // 3. إرسال رسالة في المحادثة (تظهر كرسالة جديدة بتصميم خاص)
           await this.createMessage({
             chatId: chat.id,
             senderId: adminUserId,
             content: `${title}\n\n${message}`,
-            messageType: 'text'
+            messageType: 'admin_announcement'
           });
 
           sentCount++;
