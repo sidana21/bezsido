@@ -39,6 +39,8 @@ Preferred communication style: Simple, everyday language.
 - Profile page displays unified grid of user posts and products.
 - Services page features horizontal scrolling category cards with gradient designs and animations.
 - Redesigned service categories with circular pulsing designs and interactive hover animations.
+- Auto-initialization system for product categories (8 default categories: Electronics, Fashion, Home & Garden, Food & Beverages, Beauty & Health, Sports, Books, Toys) - similar to vendor categories initialization.
+- Product and service delete functionality with owner-only access control and confirmation dialogs.
 
 ### Admin Panel Features
 - **Comprehensive Dashboard Statistics**: Real-time monitoring of users, stores, orders, revenue, and verification requests.

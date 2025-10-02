@@ -148,6 +148,19 @@ app.use((req, res, next) => {
     console.error('Warning: Failed to initialize vendor categories:', error);
   }
 
+  // Initialize product categories on startup
+  try {
+    console.log('Initializing product categories...');
+    if (typeof (storage as any).initializeProductCategories === 'function') {
+      await (storage as any).initializeProductCategories();
+      console.log('Product categories initialized successfully');
+    } else {
+      console.log('Product categories initialization not available in current storage type');
+    }
+  } catch (error) {
+    console.error('Warning: Failed to initialize product categories:', error);
+  }
+
   // Initialize admin user (with data protection)
   try {
     console.log('Initializing admin user...');

@@ -2313,6 +2313,56 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async initializeProductCategories(): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      console.log('Initializing product categories in database...');
+      
+      // Check if product categories already exist
+      const existingCategories = await db.select().from(productCategories).limit(1);
+      if (existingCategories.length > 0) {
+        console.log('Product categories already initialized, skipping...');
+        return;
+      }
+
+      // Add default product categories
+      const defaultCategories = [
+        { name: 'Electronics', nameAr: 'إلكترونيات', description: 'Electronics and gadgets', icon: '📱', sortOrder: 1 },
+        { name: 'Fashion', nameAr: 'أزياء', description: 'Clothing and accessories', icon: '👗', sortOrder: 2 },
+        { name: 'Home & Garden', nameAr: 'منزل وحديقة', description: 'Home and garden items', icon: '🏠', sortOrder: 3 },
+        { name: 'Food & Beverages', nameAr: 'أطعمة ومشروبات', description: 'Food and beverage products', icon: '🍔', sortOrder: 4 },
+        { name: 'Beauty & Health', nameAr: 'جمال وصحة', description: 'Beauty and health products', icon: '💄', sortOrder: 5 },
+        { name: 'Sports', nameAr: 'رياضة', description: 'Sports equipment', icon: '⚽', sortOrder: 6 },
+        { name: 'Books', nameAr: 'كتب', description: 'Books and educational materials', icon: '📚', sortOrder: 7 },
+        { name: 'Toys', nameAr: 'ألعاب', description: 'Toys and games', icon: '🧸', sortOrder: 8 }
+      ];
+
+      for (const category of defaultCategories) {
+        await db.insert(productCategories)
+          .values({
+            id: randomUUID(),
+            name: category.name,
+            nameAr: category.nameAr,
+            description: category.description,
+            icon: category.icon,
+            sortOrder: category.sortOrder,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .onConflictDoNothing();
+      }
+
+      console.log(`📦 تم تحميل ${defaultCategories.length} فئة منتجات في قاعدة البيانات`);
+    } catch (error) {
+      console.error('Error initializing product categories:', error);
+      // Don't throw - this is not critical
+    }
+  }
+
   // Admin dashboard stats for DatabaseStorage
   async getAdminDashboardStats(): Promise<any> {
     try {
