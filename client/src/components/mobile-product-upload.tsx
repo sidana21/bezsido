@@ -556,15 +556,21 @@ export default function MobileProductUpload({ onSuccess, onCancel }: MobileProdu
                     value={form.watch('categoryId')}
                     onValueChange={(value) => form.setValue('categoryId', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="select-product-category">
                       <SelectValue placeholder="اختر فئة المنتج" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.icon} {category.nameAr}
-                        </SelectItem>
-                      ))}
+                    <SelectContent position="popper" sideOffset={5} className="max-h-[300px] overflow-y-auto">
+                      {categories.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          لا توجد فئات متاحة
+                        </div>
+                      ) : (
+                        categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id} data-testid={`category-${category.id}`}>
+                            {category.icon} {category.nameAr}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {form.formState.errors.categoryId && (
