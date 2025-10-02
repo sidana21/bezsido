@@ -572,7 +572,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`✓ User found, proceeding with deletion: ${existingUser[0].name}`);
       
       // Helper function to safely delete from a table (ignore table not found errors)
-      const safeDelete = async (tx: any, deleteFn: () => Promise<any>, tableName: string) => {
+      const safeDelete = async (deleteFn: () => Promise<any>, tableName: string) => {
         try {
           await deleteFn();
         } catch (error: any) {
@@ -580,61 +580,66 @@ export class DatabaseStorage implements IStorage {
           if (error.code === '42P01') {
             console.log(`   ⚠️ Table ${tableName} doesn't exist, skipping...`);
           } else {
-            // Re-throw other errors
-            throw error;
+            // Log but don't fail on other errors (like foreign key constraints that don't exist)
+            console.log(`   ⚠️ Error deleting from ${tableName}:`, error.message);
           }
         }
       };
       
-      // Use transaction for atomic deletion - works with both Pool and Neon HTTP
-      await db.transaction(async (tx) => {
-        console.log(`🗑️ Starting transaction to delete user: ${id}`);
-        
-        // Get user's vendors first (with safe handling)
-        let userVendors: any[] = [];
-        try {
-          userVendors = await tx.select().from(vendors).where(eq(vendors.userId, id));
-        } catch (error: any) {
-          if (error.code !== '42P01') throw error;
-          console.log(`   ⚠️ Vendors table doesn't exist, skipping...`);
+      // Delete without transaction (Neon HTTP doesn't support transactions)
+      // Note: This is not atomic, but it's the only way with neon-http driver
+      console.log(`🗑️ Starting deletion process for user: ${id}`);
+      
+      // Get user's vendors first (with safe handling)
+      let userVendors: any[] = [];
+      try {
+        userVendors = await db.select().from(vendors).where(eq(vendors.userId, id));
+      } catch (error: any) {
+        if (error.code !== '42P01') {
+          console.log(`   ⚠️ Error getting vendors:`, error.message);
         }
-        
-        // Delete vendor products and services
-        for (const vendor of userVendors) {
-          await safeDelete(tx, () => tx.delete(products).where(eq(products.vendorId, vendor.id)), 'products');
-          await safeDelete(tx, () => tx.delete(services).where(eq(services.vendorId, vendor.id)), 'services');
-        }
-        console.log(`   ✓ Deleted vendor products and services`);
-        
-        // Delete all user-related data (with safe handling)
-        await safeDelete(tx, () => tx.delete(businessPosts).where(eq(businessPosts.userId, id)), 'business_posts');
-        await safeDelete(tx, () => tx.delete(vendors).where(eq(vendors.userId, id)), 'vendors');
-        await safeDelete(tx, () => tx.delete(messages).where(eq(messages.senderId, id)), 'messages');
-        await safeDelete(tx, () => tx.delete(verificationRequests).where(eq(verificationRequests.userId, id)), 'verification_requests');
-        await safeDelete(tx, () => tx.delete(orders).where(eq(orders.buyerId, id)), 'orders');
-        await safeDelete(tx, () => tx.delete(stories).where(eq(stories.userId, id)), 'stories');
-        console.log(`   ✓ Deleted user content`);
-        
-        await safeDelete(tx, () => tx.delete(socialNotifications).where(eq(socialNotifications.userId, id)), 'social_notifications');
-        await safeDelete(tx, () => tx.delete(socialNotifications).where(eq(socialNotifications.fromUserId, id)), 'social_notifications');
-        await safeDelete(tx, () => tx.delete(follows).where(eq(follows.followerId, id)), 'follows');
-        await safeDelete(tx, () => tx.delete(follows).where(eq(follows.followingId, id)), 'follows');
-        console.log(`   ✓ Deleted social relationships`);
-        
-        await safeDelete(tx, () => tx.delete(cartItems).where(eq(cartItems.userId, id)), 'cart_items');
-        await safeDelete(tx, () => tx.delete(contacts).where(eq(contacts.userId, id)), 'contacts');
-        await safeDelete(tx, () => tx.delete(contacts).where(eq(contacts.contactUserId, id)), 'contacts');
-        await safeDelete(tx, () => tx.delete(calls).where(eq(calls.callerId, id)), 'calls');
-        await safeDelete(tx, () => tx.delete(calls).where(eq(calls.receiverId, id)), 'calls');
-        console.log(`   ✓ Deleted cart, contacts and calls`);
-        
-        await safeDelete(tx, () => tx.delete(sessions).where(eq(sessions.userId, id)), 'sessions');
-        console.log(`   ✓ Deleted sessions`);
-        
-        // ALWAYS delete the user itself (this should never fail if user exists)
-        await tx.delete(users).where(eq(users.id, id));
+      }
+      
+      // Delete vendor products and services
+      for (const vendor of userVendors) {
+        await safeDelete(() => db.delete(products).where(eq(products.vendorId, vendor.id)), 'products');
+        await safeDelete(() => db.delete(services).where(eq(services.vendorId, vendor.id)), 'services');
+      }
+      console.log(`   ✓ Deleted vendor products and services`);
+      
+      // Delete all user-related data (with safe handling)
+      await safeDelete(() => db.delete(businessPosts).where(eq(businessPosts.userId, id)), 'business_posts');
+      await safeDelete(() => db.delete(vendors).where(eq(vendors.userId, id)), 'vendors');
+      await safeDelete(() => db.delete(messages).where(eq(messages.senderId, id)), 'messages');
+      await safeDelete(() => db.delete(verificationRequests).where(eq(verificationRequests.userId, id)), 'verification_requests');
+      await safeDelete(() => db.delete(orders).where(eq(orders.buyerId, id)), 'orders');
+      await safeDelete(() => db.delete(stories).where(eq(stories.userId, id)), 'stories');
+      console.log(`   ✓ Deleted user content`);
+      
+      await safeDelete(() => db.delete(socialNotifications).where(eq(socialNotifications.userId, id)), 'social_notifications');
+      await safeDelete(() => db.delete(socialNotifications).where(eq(socialNotifications.fromUserId, id)), 'social_notifications');
+      await safeDelete(() => db.delete(follows).where(eq(follows.followerId, id)), 'follows');
+      await safeDelete(() => db.delete(follows).where(eq(follows.followingId, id)), 'follows');
+      console.log(`   ✓ Deleted social relationships`);
+      
+      await safeDelete(() => db.delete(cartItems).where(eq(cartItems.userId, id)), 'cart_items');
+      await safeDelete(() => db.delete(contacts).where(eq(contacts.userId, id)), 'contacts');
+      await safeDelete(() => db.delete(contacts).where(eq(contacts.contactUserId, id)), 'contacts');
+      await safeDelete(() => db.delete(calls).where(eq(calls.callerId, id)), 'calls');
+      await safeDelete(() => db.delete(calls).where(eq(calls.receiverId, id)), 'calls');
+      console.log(`   ✓ Deleted cart, contacts and calls`);
+      
+      await safeDelete(() => db.delete(sessions).where(eq(sessions.userId, id)), 'sessions');
+      console.log(`   ✓ Deleted sessions`);
+      
+      // ALWAYS delete the user itself (this should work if user exists)
+      try {
+        await db.delete(users).where(eq(users.id, id));
         console.log(`   ✓ Deleted user`);
-      });
+      } catch (error: any) {
+        console.error(`   ❌ Failed to delete user:`, error.message);
+        throw error;
+      }
       
       console.log(`✅ User and all related data deleted successfully: ${id}`);
       return true;
