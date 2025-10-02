@@ -588,6 +588,79 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async blockUser(userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.update(users)
+        .set({ isBlocked: true, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+      
+      console.log(`🚫 تم حظر المستخدم: ${userId}`);
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      throw error;
+    }
+  }
+
+  async unblockUser(userId: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.update(users)
+        .set({ isBlocked: false, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+      
+      console.log(`✅ تم إلغاء حظر المستخدم: ${userId}`);
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      throw error;
+    }
+  }
+
+  async isUserBlocked(userId: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({ isBlocked: users.isBlocked })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      
+      return result[0]?.isBlocked || false;
+    } catch (error) {
+      console.error('Error checking if user is blocked:', error);
+      return false;
+    }
+  }
+
+  async getUserPostsCount(userId: string): Promise<number> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(businessPosts)
+        .where(eq(businessPosts.userId, userId));
+      
+      return Number(result[0]?.count || 0);
+    } catch (error) {
+      console.error('Error getting user posts count:', error);
+      return 0;
+    }
+  }
+
   // Authentication methods
 
   async createSession(session: InsertSession): Promise<Session> {
