@@ -2321,39 +2321,73 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
+      const now = new Date();
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
       // Get verification requests count
       const pendingRequests = await db.select({ count: sql`count(*)` })
         .from(verificationRequests)
         .where(eq(verificationRequests.status, 'pending'));
       
-      const totalRequests = await db.select({ count: sql`count(*)` })
-        .from(verificationRequests);
-      
-      // Get users count
-      const totalUsers = await db.select({ count: sql`count(*)` })
+      // Get total users count
+      const totalUsersResult = await db.select({ count: sql`count(*)` })
         .from(users);
       
-      // Get vendors count  
-      const totalStores = await db.select({ count: sql`count(*)` })
+      // Get active users (online or logged in within last 24 hours)
+      const activeUsersResult = await db.select({ count: sql`count(*)` })
+        .from(users)
+        .where(sql`${users.isOnline} = true OR ${users.lastSeen} > ${dayAgo}`);
+      
+      // Get verified users count
+      const verifiedUsersResult = await db.select({ count: sql`count(*)` })
+        .from(users)
+        .where(sql`${users.verifiedAt} IS NOT NULL`);
+      
+      // Get vendors/stores count  
+      const totalStoresResult = await db.select({ count: sql`count(*)` })
         .from(vendors);
       
-      return {
-        pendingVerificationRequests: Number(pendingRequests[0]?.count || 0),
-        totalVerificationRequests: Number(totalRequests[0]?.count || 0),
-        totalUsers: Number(totalUsers[0]?.count || 0),
-        totalStores: Number(totalStores[0]?.count || 0),
-        todayRequests: 0, 
-        totalRevenue: 0
+      // Get orders count
+      const totalOrdersResult = await db.select({ count: sql`count(*)` })
+        .from(orders);
+      
+      // Get recent orders (today)
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const recentOrdersResult = await db.select({ count: sql`count(*)` })
+        .from(orders)
+        .where(sql`${orders.createdAt} >= ${today}`);
+      
+      // Calculate total revenue from completed orders
+      const revenueResult = await db.select({ 
+        total: sql`COALESCE(SUM(${orders.totalAmount}), 0)` 
+      })
+        .from(orders)
+        .where(eq(orders.status, 'completed'));
+      
+      const stats = {
+        totalUsers: Number(totalUsersResult[0]?.count || 0),
+        activeUsers: Number(activeUsersResult[0]?.count || 0),
+        verifiedUsers: Number(verifiedUsersResult[0]?.count || 0),
+        totalStores: Number(totalStoresResult[0]?.count || 0),
+        totalOrders: Number(totalOrdersResult[0]?.count || 0),
+        pendingVerifications: Number(pendingRequests[0]?.count || 0),
+        recentOrders: Number(recentOrdersResult[0]?.count || 0),
+        totalRevenue: revenueResult[0]?.total ? Number(revenueResult[0].total).toFixed(2) : '0.00'
       };
+      
+      console.log('📊 Admin dashboard stats:', stats);
+      return stats;
     } catch (error) {
       console.error('Error getting admin dashboard stats:', error);
       return {
-        pendingVerificationRequests: 0,
-        totalVerificationRequests: 0,
         totalUsers: 0,
+        activeUsers: 0,
+        verifiedUsers: 0,
         totalStores: 0,
-        todayRequests: 0,
-        totalRevenue: 0
+        totalOrders: 0,
+        pendingVerifications: 0,
+        recentOrders: 0,
+        totalRevenue: '0.00'
       };
     }
   }
