@@ -2420,9 +2420,21 @@ export class DatabaseStorage implements IStorage {
   // Admin dashboard stats for DatabaseStorage
   async getAdminDashboardStats(): Promise<any> {
     try {
+      console.log('🔍 [DEBUG] Starting getAdminDashboardStats...');
+      console.log('🔍 [DEBUG] db object exists:', !!db);
+      console.log('🔍 [DEBUG] NODE_ENV:', process.env.NODE_ENV);
+      console.log('🔍 [DEBUG] RENDER:', process.env.RENDER);
+      
       if (!db) {
+        console.log('🔍 [DEBUG] db is null, importing db module...');
         const dbModule = await import('./db');
         db = dbModule.db;
+        console.log('🔍 [DEBUG] After import, db exists:', !!db);
+      }
+      
+      if (!db) {
+        console.error('🚨 [CRITICAL] db is still null after import - using in-memory storage!');
+        throw new Error('Database connection not available');
       }
       
       const now = new Date();
@@ -2431,8 +2443,12 @@ export class DatabaseStorage implements IStorage {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const todayISO = today.toISOString();
       
+      console.log('🔍 [DEBUG] Executing SQL queries...');
+      
       // Use raw SQL for all queries to avoid Drizzle template issues
       const totalUsersResult = await db.execute(sql`SELECT COUNT(*) as count FROM users`);
+      console.log('🔍 [DEBUG] totalUsersResult:', JSON.stringify(totalUsersResult, null, 2));
+      
       const activeUsersResult = await db.execute(
         sql`SELECT COUNT(*) as count FROM users WHERE is_online = true OR last_seen > ${dayAgoISO}`
       );
@@ -2442,6 +2458,12 @@ export class DatabaseStorage implements IStorage {
       const recentOrdersResult = await db.execute(sql`SELECT COUNT(*) as count FROM orders WHERE order_date >= ${todayISO}`);
       const pendingRequestsResult = await db.execute(sql`SELECT COUNT(*) as count FROM verification_requests WHERE status = 'pending'`);
       const revenueResult = await db.execute(sql`SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status = 'completed'`);
+      
+      console.log('🔍 [DEBUG] Raw query results:');
+      console.log('  - totalUsers rows:', totalUsersResult.rows);
+      console.log('  - activeUsers rows:', activeUsersResult.rows);
+      console.log('  - verifiedUsers rows:', verifiedUsersResult.rows);
+      console.log('  - totalStores rows:', totalStoresResult.rows);
       
       const stats = {
         totalUsers: Number(totalUsersResult.rows?.[0]?.count || 0),
