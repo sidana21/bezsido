@@ -416,28 +416,6 @@ export default function Profile() {
             </div>
           )}
           
-          {/* Social Stats */}
-          <div className="flex justify-center gap-8 py-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-posts-count">
-                {userStats?.posts || 0}
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">منشور</div>
-            </div>
-            <div className="text-center cursor-pointer hover:opacity-75 transition-opacity">
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-followers-count">
-                {userStats?.followers || 0}
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">متابع</div>
-            </div>
-            <div className="text-center cursor-pointer hover:opacity-75 transition-opacity">
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-following-count">
-                {userStats?.following || 0}
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">متابعة</div>
-            </div>
-          </div>
-          
           {/* Follow/Unfollow Button for other users */}
           {currentUser && false && ( /* Show for other users' profiles */
             <div className="flex gap-3">
