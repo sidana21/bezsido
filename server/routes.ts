@@ -3217,10 +3217,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "المستخدم غير موجود" });
         }
         
+        // Get the Services category
+        const categories = await storage.getVendorCategories();
+        const servicesCategory = categories.find(c => c.name === "Services" || c.nameAr === "خدمات");
+        
+        if (!servicesCategory) {
+          return res.status(500).json({ message: "فئة الخدمات غير موجودة" });
+        }
+        
         vendor = await storage.createStore({
           userId: req.userId,
           businessName: user.name,
           displayName: user.name,
+          categoryId: servicesCategory.id,
           category: "services",
           description: "متجر خدمات",
           location: user.location || "الجزائر",
