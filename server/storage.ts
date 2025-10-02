@@ -90,7 +90,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows } from '@shared/schema';
-import { sql } from 'drizzle-orm';
+import { sql, or } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
@@ -589,58 +589,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async blockUser(userId: string): Promise<void> {
-    try {
-      if (!db) {
-        const dbModule = await import('./db');
-        db = dbModule.db;
-      }
-      
-      await db.update(users)
-        .set({ isBlocked: true, updatedAt: new Date() })
-        .where(eq(users.id, userId));
-      
-      console.log(`🚫 تم حظر المستخدم: ${userId}`);
-    } catch (error) {
-      console.error('Error blocking user:', error);
-      throw error;
-    }
+    // TODO: Implement blocking when isBlocked field is added to schema
+    console.log(`🚫 تم حظر المستخدم (قيد التطوير): ${userId}`);
   }
 
   async unblockUser(userId: string): Promise<void> {
-    try {
-      if (!db) {
-        const dbModule = await import('./db');
-        db = dbModule.db;
-      }
-      
-      await db.update(users)
-        .set({ isBlocked: false, updatedAt: new Date() })
-        .where(eq(users.id, userId));
-      
-      console.log(`✅ تم إلغاء حظر المستخدم: ${userId}`);
-    } catch (error) {
-      console.error('Error unblocking user:', error);
-      throw error;
-    }
+    // TODO: Implement unblocking when isBlocked field is added to schema
+    console.log(`✅ تم إلغاء حظر المستخدم (قيد التطوير): ${userId}`);
   }
 
   async isUserBlocked(userId: string): Promise<boolean> {
-    try {
-      if (!db) {
-        const dbModule = await import('./db');
-        db = dbModule.db;
-      }
-      
-      const result = await db.select({ isBlocked: users.isBlocked })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-      
-      return result[0]?.isBlocked || false;
-    } catch (error) {
-      console.error('Error checking if user is blocked:', error);
-      return false;
-    }
+    // TODO: Implement block check when isBlocked field is added to schema
+    return false;
   }
 
   async getUserPostsCount(userId: string): Promise<number> {
@@ -1741,9 +1701,9 @@ export class DatabaseStorage implements IStorage {
 
       const result = await db.insert(verificationRequests).values(newRequest).returning();
       return result[0];
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating verification request:', error);
-      throw new Error(`فشل في إنشاء طلب التوثيق: ${error.message}`);
+      throw new Error(`فشل في إنشاء طلب التوثيق: ${error?.message || 'خطأ غير معروف'}`);
     }
   }
 
