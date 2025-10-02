@@ -12,7 +12,8 @@ import {
   Phone,
   Calendar,
   Ban,
-  FileText
+  FileText,
+  Trash2
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,16 @@ import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { AdminLayout } from '@/components/admin/admin-layout';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface User {
   id: string;
@@ -50,6 +61,7 @@ export function UsersManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [verifiedFilter, setVerifiedFilter] = useState<string>('all');
   const [adminFilter, setAdminFilter] = useState<string>('all');
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -135,6 +147,29 @@ export function UsersManagement() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => 
+      apiRequest(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-stats'] });
+      setUserToDelete(null);
+      toast({
+        title: 'تم الحذف',
+        description: 'تم حذف المستخدم بنجاح',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: error?.message || 'فشل في حذف المستخدم',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleToggleAdmin = (user: User) => {
     toggleAdminMutation.mutate({ 
       userId: user.id, 
@@ -154,6 +189,24 @@ export function UsersManagement() {
       userId: user.id, 
       isBlocked: user.isBlocked || false
     });
+  };
+
+  const handleDeleteUser = (user: User) => {
+    if (user.isAdmin) {
+      toast({
+        title: 'تحذير',
+        description: 'لا يمكن حذف حساب مدير',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setUserToDelete(user);
+  };
+
+  const confirmDeleteUser = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
+    }
   };
 
   const getStatusBadge = (user: User) => {
@@ -437,6 +490,18 @@ export function UsersManagement() {
                         </>
                       )}
                     </Button>
+                    
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteUser(user)}
+                      disabled={deleteUserMutation.isPending || user.isAdmin}
+                      className="bg-red-600 hover:bg-red-700"
+                      data-testid={`delete-user-${user.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 ml-1" />
+                      حذف الحساب
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -457,6 +522,45 @@ export function UsersManagement() {
             </Card>
           )}
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-red-600">
+                تأكيد حذف المستخدم
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-right">
+                هل أنت متأكد من حذف المستخدم <strong>{userToDelete?.name}</strong>؟
+                <br />
+                <br />
+                سيتم حذف جميع بيانات المستخدم بشكل نهائي بما في ذلك:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>المنشورات والتعليقات</li>
+                  <li>المنتجات والخدمات</li>
+                  <li>الرسائل والمحادثات</li>
+                  <li>الطلبات والمشتريات</li>
+                </ul>
+                <br />
+                <span className="text-red-600 font-bold">
+                  هذا الإجراء لا يمكن التراجع عنه!
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="cancel-delete-user">
+                إلغاء
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteUser}
+                className="bg-red-600 hover:bg-red-700"
+                data-testid="confirm-delete-user"
+              >
+                نعم، حذف الحساب
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );
