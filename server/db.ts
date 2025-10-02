@@ -68,31 +68,31 @@ async function initializeDatabase() {
         console.log('🔧 Cleaned DATABASE_URL by removing psql prefix');
       }
       
-      // For external databases, use traditional pg driver with SSL for better reliability
-      // Check if this is an external database connection
-      const isExternalDatabase = cleanDatabaseUrl.startsWith('postgresql://') || 
-                                  cleanDatabaseUrl.startsWith('postgres://') ||
-                                  process.env.RENDER || 
-                                  process.env.NODE_ENV === 'production' ||
-                                  cleanDatabaseUrl.includes('neon.tech') ||
-                                  cleanDatabaseUrl.includes('render.com') ||
-                                  cleanDatabaseUrl.includes('amazonaws.com');
+      // CRITICAL: Always use Neon HTTP driver for neon.tech databases
+      // Pool/node-postgres fails on Render due to firewall restrictions
+      const isNeonDatabase = cleanDatabaseUrl.includes('neon.tech');
       
-      if (isExternalDatabase) {
-        console.log('📡 Using traditional PostgreSQL connection for production/Render...');
+      if (isNeonDatabase) {
+        console.log('🚀 Using Neon HTTP driver (works on Render + local)...');
+        const connection = neon(cleanDatabaseUrl, {
+          fetchOptions: {
+            cache: 'no-store',
+          },
+        });
+        db = drizzle({ client: connection, schema });
+      } else {
+        // For non-Neon databases (Render Postgres, AWS RDS, etc), use Pool
+        console.log('📡 Using traditional PostgreSQL Pool connection...');
         
-        // Configure SSL first based on DATABASE_URL requirements
-        let sslConfig: boolean | { rejectUnauthorized: boolean } = false; // Default no SSL
-        let sslMode = 'disable'; // Default SSL mode
+        let sslConfig: boolean | { rejectUnauthorized: boolean } = false;
+        let sslMode = 'disable';
         
         if (cleanDatabaseUrl.includes('sslmode=require') || 
-            cleanDatabaseUrl.includes('neon.tech') || 
             cleanDatabaseUrl.includes('amazonaws.com')) {
           sslConfig = { rejectUnauthorized: false };
           sslMode = 'require';
         }
         
-        // Build connection string with appropriate SSL mode and timeout parameters
         let connectionString = cleanDatabaseUrl;
         if (!connectionString.includes('connect_timeout')) {
           const separator = connectionString.includes('?') ? '&' : '?';
@@ -104,21 +104,11 @@ async function initializeDatabase() {
           ssl: sslConfig,
           idleTimeoutMillis: 30000,
           connectionTimeoutMillis: 15000,
-          max: 5, // Limit connections for Neon
+          max: 5,
         });
         
-        console.log('🔐 SSL Configuration:', sslConfig ? 'Enabled (rejectUnauthorized: false)' : 'Disabled');
-        
+        console.log('🔐 SSL Configuration:', sslConfig ? 'Enabled' : 'Disabled');
         db = drizzlePg({ client: pool, schema });
-      } else {
-        // Use Neon serverless for development
-        console.log('🚀 Using Neon serverless for development...');
-        const connection = neon(cleanDatabaseUrl, {
-          fetchOptions: {
-            cache: 'no-store',
-          },
-        });
-        db = drizzle({ client: connection, schema });
       }
       
       // Test the connection with retry logic for cold starts
