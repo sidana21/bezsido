@@ -90,7 +90,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows } from '@shared/schema';
-import { sql, or } from 'drizzle-orm';
+import { sql, or, gt, gte } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
@@ -1568,7 +1568,7 @@ export class DatabaseStorage implements IStorage {
         .where(
           or(
             eq(users.isOnline, true),
-            sql`${users.lastSeen} > ${dayAgo}`
+            gt(users.lastSeen, dayAgo)
           )
         );
       const activeUsers = Number(activeUsersResult[0]?.count || 0);
@@ -1596,7 +1596,7 @@ export class DatabaseStorage implements IStorage {
       today.setHours(0, 0, 0, 0);
       const recentOrdersResult = await db.select({ count: sql<number>`count(*)` })
         .from(orders)
-        .where(sql`${orders.createdAt} >= ${today}`);
+        .where(gte(orders.createdAt, today));
       const recentOrders = Number(recentOrdersResult[0]?.count || 0);
       console.log(`📅 Today's orders: ${recentOrders}`);
 
@@ -2524,56 +2524,31 @@ export class DatabaseStorage implements IStorage {
       
       const now = new Date();
       const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      
-      // Get verification requests count
-      const pendingRequests = await db.select({ count: sql`count(*)` })
-        .from(verificationRequests)
-        .where(eq(verificationRequests.status, 'pending'));
-      
-      // Get total users count
-      const totalUsersResult = await db.select({ count: sql`count(*)` })
-        .from(users);
-      
-      // Get active users (online or logged in within last 24 hours)
-      const activeUsersResult = await db.select({ count: sql`count(*)` })
-        .from(users)
-        .where(sql`${users.isOnline} = true OR ${users.lastSeen} > ${dayAgo}`);
-      
-      // Get verified users count
-      const verifiedUsersResult = await db.select({ count: sql`count(*)` })
-        .from(users)
-        .where(sql`${users.verifiedAt} IS NOT NULL`);
-      
-      // Get vendors/stores count  
-      const totalStoresResult = await db.select({ count: sql`count(*)` })
-        .from(vendors);
-      
-      // Get orders count
-      const totalOrdersResult = await db.select({ count: sql`count(*)` })
-        .from(orders);
-      
-      // Get recent orders (today)
+      const dayAgoISO = dayAgo.toISOString();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const recentOrdersResult = await db.select({ count: sql`count(*)` })
-        .from(orders)
-        .where(sql`${orders.createdAt} >= ${today}`);
+      const todayISO = today.toISOString();
       
-      // Calculate total revenue from completed orders
-      const revenueResult = await db.select({ 
-        total: sql`COALESCE(SUM(${orders.totalAmount}), 0)` 
-      })
-        .from(orders)
-        .where(eq(orders.status, 'completed'));
+      // Use raw SQL for all queries to avoid Drizzle template issues
+      const totalUsersResult = await db.execute(sql`SELECT COUNT(*) as count FROM users`);
+      const activeUsersResult = await db.execute(
+        sql`SELECT COUNT(*) as count FROM users WHERE is_online = true OR last_seen > ${dayAgoISO}`
+      );
+      const verifiedUsersResult = await db.execute(sql`SELECT COUNT(*) as count FROM users WHERE verified_at IS NOT NULL`);
+      const totalStoresResult = await db.execute(sql`SELECT COUNT(*) as count FROM vendors`);
+      const totalOrdersResult = await db.execute(sql`SELECT COUNT(*) as count FROM orders`);
+      const recentOrdersResult = await db.execute(sql`SELECT COUNT(*) as count FROM orders WHERE order_date >= ${todayISO}`);
+      const pendingRequestsResult = await db.execute(sql`SELECT COUNT(*) as count FROM verification_requests WHERE status = 'pending'`);
+      const revenueResult = await db.execute(sql`SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE status = 'completed'`);
       
       const stats = {
-        totalUsers: Number(totalUsersResult[0]?.count || 0),
-        activeUsers: Number(activeUsersResult[0]?.count || 0),
-        verifiedUsers: Number(verifiedUsersResult[0]?.count || 0),
-        totalStores: Number(totalStoresResult[0]?.count || 0),
-        totalOrders: Number(totalOrdersResult[0]?.count || 0),
-        pendingVerifications: Number(pendingRequests[0]?.count || 0),
-        recentOrders: Number(recentOrdersResult[0]?.count || 0),
-        totalRevenue: revenueResult[0]?.total ? Number(revenueResult[0].total).toFixed(2) : '0.00'
+        totalUsers: Number(totalUsersResult.rows?.[0]?.count || 0),
+        activeUsers: Number(activeUsersResult.rows?.[0]?.count || 0),
+        verifiedUsers: Number(verifiedUsersResult.rows?.[0]?.count || 0),
+        totalStores: Number(totalStoresResult.rows?.[0]?.count || 0),
+        totalOrders: Number(totalOrdersResult.rows?.[0]?.count || 0),
+        pendingVerifications: Number(pendingRequestsResult.rows?.[0]?.count || 0),
+        recentOrders: Number(recentOrdersResult.rows?.[0]?.count || 0),
+        totalRevenue: revenueResult.rows?.[0]?.total ? Number(revenueResult.rows[0].total).toFixed(2) : '0.00'
       };
       
       console.log('📊 Admin dashboard stats:', stats);
