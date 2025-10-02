@@ -157,6 +157,26 @@ const ProductCard = ({
     },
   });
 
+  const deleteProductMutation = useMutation({
+    mutationFn: () => apiRequest(`/api/products/${product.id}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/products'] });
+      toast({
+        title: 'تم الحذف',
+        description: 'تم حذف المنتج بنجاح',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'خطأ',
+        description: 'فشل في حذف المنتج',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const price = parseFloat(product.originalPrice);
   const salePrice = product.salePrice ? parseFloat(product.salePrice) : null;
   const finalPrice = salePrice || price;
@@ -231,18 +251,35 @@ const ProductCard = ({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Button
+              variant={product.isActive ? "outline" : "default"}
+              size="sm"
+              className="flex-1"
+              onClick={() => toggleProductStatus.mutate()}
+              disabled={toggleProductStatus.isPending}
+              data-testid={`button-toggle-${product.id}`}
+            >
+              {toggleProductStatus.isPending ? '...' : product.isActive ? 'إخفاء' : 'تفعيل'}
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1" data-testid={`button-edit-${product.id}`}>
+              تعديل
+            </Button>
+          </div>
           <Button
-            variant={product.isActive ? "outline" : "default"}
+            variant="destructive"
             size="sm"
-            className="flex-1"
-            onClick={() => toggleProductStatus.mutate()}
-            disabled={toggleProductStatus.isPending}
+            className="w-full"
+            onClick={() => {
+              if (confirm(`هل أنت متأكد من حذف "${product.name}"؟`)) {
+                deleteProductMutation.mutate();
+              }
+            }}
+            disabled={deleteProductMutation.isPending}
+            data-testid={`button-delete-${product.id}`}
           >
-            {toggleProductStatus.isPending ? '...' : product.isActive ? 'إخفاء' : 'تفعيل'}
-          </Button>
-          <Button variant="outline" size="sm" className="flex-1">
-            تعديل
+            {deleteProductMutation.isPending ? 'جارٍ الحذف...' : 'حذف المنتج'}
           </Button>
         </div>
       </CardContent>

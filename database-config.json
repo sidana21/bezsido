@@ -2,6 +2,6 @@
   "note": "رابط قاعدة البيانات الخارجية المحفوظ تلقائياً",
   "warning": "هذا الملف للتطوير المحلي فقط ولن يؤثر على النشر على Render",
   "production_note": "في بيئة الإنتاج، يتم استخدام متغير البيئة DATABASE_URL فقط",
-  "lastUpdated": "2025-10-02T23:03:14.389Z",
+  "lastUpdated": "2025-10-02T23:38:13.760Z",
   "DATABASE_URL": "postgresql://postgres:password@helium/heliumdb?sslmode=disable"
 }
