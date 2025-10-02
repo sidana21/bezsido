@@ -148,6 +148,17 @@ async function initializeDatabase() {
       
       return true;
     } catch (error) {
+      // In production (Render), FAIL HARD - don't allow fallback to in-memory storage
+      if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+        console.error('🚨 CRITICAL: Failed to connect to PostgreSQL database in production!');
+        console.error('🔍 DATABASE_URL:', databaseUrl ? 'SET (hidden for security)' : 'NOT SET');
+        console.error('❌ Error details:', error);
+        console.error('💡 Check: SSL settings, connection timeout, credentials, network access');
+        console.error('⛔ Application CANNOT start without database in production');
+        throw new Error('PostgreSQL connection failed in production - cannot use in-memory fallback');
+      }
+      
+      // In development, allow fallback to in-memory storage
       console.warn('⚠️ Failed to connect to database, falling back to in-memory storage:', error);
       console.warn('💡 For Render deployment, ensure DATABASE_URL includes connection timeout parameters');
       db = null;
