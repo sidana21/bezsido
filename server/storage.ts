@@ -9049,6 +9049,17 @@ async function initializeStorage(): Promise<IStorage> {
     console.log('✅ DatabaseStorage initialized successfully');
     return storage;
   } catch (error) {
+    // CRITICAL: On Render/production, NEVER fall back to MemStorage
+    // This would cause data loss as memory is wiped on restart
+    if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+      console.error('🚨 CRITICAL ERROR: Failed to connect to PostgreSQL database in production!');
+      console.error('❌ Cannot use MemStorage fallback in production - data would be lost on restart');
+      console.error('💡 Please check your DATABASE_URL environment variable on Render');
+      console.error('Error details:', error);
+      throw new Error('Failed to initialize DatabaseStorage in production - MemStorage fallback not allowed');
+    }
+    
+    // Only allow MemStorage fallback in development
     console.warn('⚠️ Failed to initialize DatabaseStorage, using MemStorage fallback:', error);
     console.log('ℹ️ Using MemStorage - data will persist during the session only');
     return new MemStorage();
@@ -9062,6 +9073,13 @@ const storage = await (async () => {
     console.log('✅ Storage successfully initialized');
     return storageInstance;
   } catch (error) {
+    // CRITICAL: On Render/production, FAIL HARD - don't allow fallback
+    if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+      console.error('🚨 FATAL: Cannot start application without database connection in production');
+      throw error; // This will crash the app on Render, forcing you to fix DATABASE_URL
+    }
+    
+    // Only allow MemStorage fallback in development
     console.warn('⚠️ Failed to initialize storage, using memory fallback:', error);
     return new MemStorage();
   }
