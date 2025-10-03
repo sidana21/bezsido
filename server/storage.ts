@@ -5554,8 +5554,16 @@ export class DatabaseStorage implements IStorage {
         return;
       }
 
+      // Generate ID explicitly for Render compatibility
+      const { randomUUID } = await import('crypto');
+      const followId = randomUUID();
+
       await db.insert(follows)
-        .values({ followerId, followingId });
+        .values({ 
+          id: followId,
+          followerId, 
+          followingId 
+        });
 
       console.log(`✅ User followed`);
     } catch (error) {
