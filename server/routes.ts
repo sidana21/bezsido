@@ -3182,7 +3182,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { location, categoryId, serviceType, availability } = req.query;
       const services = await storage.getServices(location, categoryId, serviceType, availability);
-      res.json(services);
+      
+      // Add userId from vendor to each service for ownership check
+      const servicesWithUserId = await Promise.all(
+        services.map(async (service) => {
+          const vendor = await storage.getStore(service.vendorId);
+          return {
+            ...service,
+            userId: vendor?.userId || null
+          };
+        })
+      );
+      
+      res.json(servicesWithUserId);
     } catch (error) {
       console.error("Error in /api/services:", error);
       res.status(500).json({ message: "فشل في جلب الخدمات", error: error instanceof Error ? error.message : String(error) });
@@ -3263,7 +3275,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "الخدمة غير موجودة" });
       }
       
-      if (service.vendorId !== req.userId) {
+      // Get the vendor to check if it belongs to the current user
+      const vendor = await storage.getStore(service.vendorId);
+      if (!vendor || vendor.userId !== req.userId) {
         return res.status(403).json({ message: "غير مسموح لك بحذف هذه الخدمة" });
       }
       

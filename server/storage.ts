@@ -218,6 +218,7 @@ export interface IStorage {
   createStore(store: InsertVendor): Promise<Vendor>;
   updateStoreStatus(storeId: string, status: string, reviewedBy: string, rejectionReason?: string): Promise<Vendor | undefined>;
   getAllStores(): Promise<Vendor[]>;
+  getStore(storeId: string): Promise<Vendor | undefined>;
   getUserStore(userId: string): Promise<Vendor | undefined>;
   deleteStore(storeId: string): Promise<boolean>;
   getStoreProducts(storeId: string): Promise<Product[]>;

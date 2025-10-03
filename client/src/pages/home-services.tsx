@@ -568,7 +568,7 @@ export default function HomeServices() {
                       {parseInt(service?.basePrice || '0').toLocaleString()} دج
                     </div>
                     <div className="flex gap-2">
-                      {service.vendorId === currentUser?.id ? (
+                      {(service as any).userId === currentUser?.id ? (
                         <Button
                           variant="destructive"
                           size="sm"
