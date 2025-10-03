@@ -29,9 +29,32 @@ Preferred communication style: Simple, everyday language.
 - ✅ Ready for development and deployment
 
 ### Important Notes
-- ⚠️ **Database Protection**: Never modify database schema or run `db:push` - existing data must be preserved
+- ⚠️ **Database Initialization**: Auto-initialization disabled to preserve existing data
 - ✅ **Vite Configuration**: Already optimized for Replit environment with correct host and proxy settings
 - ✅ **SSL Configuration**: Development mode automatically disables SSL verification
+
+## Render Deployment
+
+### Files Created for Render Deployment
+- ✅ `scripts/deploy-render.sh`: Automated deployment script for Render
+- ✅ `scripts/verify-tables.sql`: SQL script to verify all tables exist in production database
+- ✅ `RENDER_DEPLOYMENT_COMPLETE_GUIDE.md`: Complete step-by-step deployment guide in Arabic
+
+### Deployment Process
+1. **Database Setup**: Create Neon PostgreSQL database
+2. **Environment Variables**: Set DATABASE_URL and other required vars in Render
+3. **Build Command**: `chmod +x scripts/deploy-render.sh && ./scripts/deploy-render.sh`
+4. **Start Command**: `npm run start`
+5. **Schema Push**: Run `npm run db:push` in Render Shell to create all tables
+6. **Verify**: Use `scripts/verify-tables.sql` in Neon Console to verify all tables exist
+
+### Required Tables for Social Features
+- `story_likes`: For story reactions/likes
+- `story_comments`: For commenting on stories
+- `follows`: For user following system
+- All other tables defined in `shared/schema.ts`
+
+See `RENDER_DEPLOYMENT_COMPLETE_GUIDE.md` for complete deployment instructions.
 
 ## System Architecture
 

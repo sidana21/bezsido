@@ -100,77 +100,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize default features on startup
-  try {
-    console.log('Initializing default app features...');
-    await storage.initializeDefaultFeatures();
-    console.log('App features initialized successfully');
-  } catch (error) {
-    console.error('Warning: Failed to initialize default features:', error);
-  }
-
-  // Initialize default stickers on startup
-  try {
-    console.log('Initializing default stickers...');
-    if (typeof (storage as any).initializeDefaultStickers === 'function') {
-      await (storage as any).initializeDefaultStickers();
-      console.log('Default stickers initialized successfully');
-    } else {
-      console.log('Stickers initialization not available in current storage type');
-    }
-  } catch (error) {
-    console.error('Warning: Failed to initialize default stickers:', error);
-  }
-
-  // Initialize daily missions on startup
-  try {
-    console.log('Initializing daily missions...');
-    if (typeof (storage as any).initializeDailyMissions === 'function') {
-      await (storage as any).initializeDailyMissions();
-      console.log('Daily missions initialized successfully');
-    } else {
-      console.log('Daily missions initialization not available in current storage type');
-    }
-  } catch (error) {
-    console.error('Warning: Failed to initialize daily missions:', error);
-  }
-
-  // Initialize vendor categories on startup
-  try {
-    console.log('Initializing vendor categories...');
-    if (typeof (storage as any).initializeVendorCategories === 'function') {
-      await (storage as any).initializeVendorCategories();
-      console.log('Vendor categories initialized successfully');
-    } else {
-      console.log('Vendor categories initialization not available in current storage type');
-    }
-  } catch (error) {
-    console.error('Warning: Failed to initialize vendor categories:', error);
-  }
-
-  // Initialize product categories on startup
-  try {
-    console.log('Initializing product categories...');
-    if (typeof (storage as any).initializeProductCategories === 'function') {
-      await (storage as any).initializeProductCategories();
-      console.log('Product categories initialized successfully');
-    } else {
-      console.log('Product categories initialization not available in current storage type');
-    }
-  } catch (error) {
-    console.error('Warning: Failed to initialize product categories:', error);
-  }
-
-  // Initialize admin user (with data protection)
-  try {
-    console.log('Initializing admin user...');
-    console.log('🔒 Data Protection Mode: ON - Real user data will be preserved');
-    const adminManager = new AdminManager(storage as IStorage);
-    await adminManager.ensureAdminUser();
-    console.log('Admin user initialized successfully');
-  } catch (error) {
-    console.error('Warning: Failed to initialize admin user:', error);
-  }
+  // Database initialization disabled to preserve existing data
+  console.log('🔒 Database initialization skipped - preserving existing data');
 
   const server = await registerRoutes(app);
 
