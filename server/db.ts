@@ -132,8 +132,14 @@ async function initializeDatabase() {
         }
       }
       
-      // Create tables if they don't exist
-      await ensureTablesExist();
+      // Create tables if they don't exist - use migration-based initialization
+      try {
+        const { initializeDatabase: initDB } = await import('../scripts/init-db.js');
+        await initDB();
+      } catch (error) {
+        console.warn('⚠️ Migration-based init failed, using fallback method:', error);
+        await ensureTablesExist();
+      }
       console.log('✅ Database tables verified/created');
       
       return true;
