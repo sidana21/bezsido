@@ -6,6 +6,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcrypt";
+import { uploadToCloudinary } from "./cloudinary";
 import { ZodError } from "zod";
 import { 
   insertMessageSchema, 
@@ -129,17 +130,9 @@ class SimpleRateLimiter {
 }
 
 
-// Configure multer for file uploads (images and videos)
+// Configure multer for file uploads (images and videos) using memory storage for Cloudinary
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: 'uploads/',
-    filename: (req, file, cb) => {
-      // Keep original extension for better file handling
-      const fileExtension = path.extname(file.originalname);
-      const fileName = `${randomUUID()}${fileExtension}`;
-      cb(null, fileName);
-    }
-  }),
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB limit for videos
   },
@@ -283,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trust proxy for accurate IP addresses behind load balancers
   app.set('trust proxy', 1);
   
-  // File upload endpoint for images and videos
+  // File upload endpoint for images and videos - uploads to Cloudinary
   app.post("/api/upload/media", requireAuth, upload.single('media'), async (req: any, res) => {
     try {
       if (!req.file) {
@@ -292,16 +285,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Determine file type
       const fileType = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
+      const resourceType = req.file.mimetype.startsWith('video/') ? 'video' : req.file.mimetype.startsWith('audio/') ? 'video' : 'image';
       
-      // The file is already saved by multer, just return the URL
-      const mediaUrl = `/uploads/${req.file.filename}`;
-      
-      res.json({ 
-        mediaUrl,
-        fileType,
-        fileName: req.file.originalname,
-        size: req.file.size
-      });
+      try {
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(req.file.buffer, {
+          folder: 'bizchat',
+          resourceType: resourceType,
+        });
+        
+        // Return Cloudinary URL
+        res.json({ 
+          mediaUrl: result.url,
+          fileType,
+          fileName: req.file.originalname,
+          size: req.file.size,
+          cloudinaryPublicId: result.publicId
+        });
+      } catch (cloudinaryError) {
+        console.error('Cloudinary upload error:', cloudinaryError);
+        
+        // Fallback to local storage if Cloudinary fails
+        const fileExtension = path.extname(req.file.originalname);
+        const fileName = `${randomUUID()}${fileExtension}`;
+        const filePath = path.join('uploads', fileName);
+        
+        fs.writeFileSync(filePath, req.file.buffer);
+        
+        res.json({ 
+          mediaUrl: `/uploads/${fileName}`,
+          fileType,
+          fileName: req.file.originalname,
+          size: req.file.size,
+          note: 'Uploaded to local storage (Cloudinary unavailable)'
+        });
+      }
     } catch (error) {
       console.error('Upload error:', error);
       res.status(500).json({ message: "Failed to upload media file" });
