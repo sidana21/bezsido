@@ -45,7 +45,7 @@ export const chats = pgTable("chats", {
 
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  chatId: varchar("chat_id").notNull().references(() => chats.id),
+  chatId: varchar("chat_id").notNull().references(() => chats.id, { onDelete: 'cascade' }),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   content: text("content"),
   messageType: text("message_type").notNull().default("text"), // text, image, file, audio, location, sticker
