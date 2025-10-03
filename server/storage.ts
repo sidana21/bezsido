@@ -4902,7 +4902,12 @@ export class DatabaseStorage implements IStorage {
         const dbModule = await import('./db');
         db = dbModule.db;
       }
-      const result = await db.insert(socialNotifications).values(notification).returning();
+      // Generate ID explicitly for Render compatibility
+      const notificationWithId = {
+        id: randomUUID(),
+        ...notification
+      };
+      const result = await db.insert(socialNotifications).values(notificationWithId).returning();
       console.log(`🔔 إشعار اجتماعي جديد: ${notification.type} من ${notification.fromUserId} إلى ${notification.userId}`);
       return result[0];
     } catch (error) {
@@ -5250,8 +5255,13 @@ export class DatabaseStorage implements IStorage {
         return existingLike[0];
       }
 
+      // Generate ID explicitly for Render compatibility
       const [newLike] = await db.insert(postLikes)
-        .values({ postId, userId })
+        .values({ 
+          id: randomUUID(),
+          postId, 
+          userId 
+        })
         .returning();
 
       console.log(`✅ Post liked`);
@@ -5300,8 +5310,13 @@ export class DatabaseStorage implements IStorage {
         return existingSave[0];
       }
 
+      // Generate ID explicitly for Render compatibility
       const [newSave] = await db.insert(postSaves)
-        .values({ postId, userId })
+        .values({ 
+          id: randomUUID(),
+          postId, 
+          userId 
+        })
         .returning();
 
       console.log(`✅ Post saved`);
@@ -5347,7 +5362,9 @@ export class DatabaseStorage implements IStorage {
 
       // Only add view if user hasn't viewed this post before
       if (existingViews.length === 0) {
+        // Generate ID explicitly for Render compatibility
         await db.insert(postViews).values({
+          id: randomUUID(),
           postId,
           userId,
         });
@@ -5483,8 +5500,14 @@ export class DatabaseStorage implements IStorage {
 
       console.log(`💬 Creating comment on post ${commentData.postId}`);
 
+      // Generate ID explicitly for Render compatibility
+      const commentWithId = {
+        id: randomUUID(),
+        ...commentData
+      };
+
       const [comment] = await db.insert(postComments)
-        .values(commentData)
+        .values(commentWithId)
         .returning();
 
       console.log(`✅ Comment created: ${comment.id}`);
