@@ -53,31 +53,6 @@ export default function StoreProfile() {
     enabled: !!storeId,
   });
 
-  // Add to cart mutation
-  const addToCartMutation = useMutation({
-    mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
-      return apiRequest("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity }),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "تم الإضافة",
-        description: "تم إضافة المنتج إلى السلة بنجاح",
-      });
-      setSelectedProduct(null);
-    },
-    onError: () => {
-      toast({
-        title: "خطأ",
-        description: "فشل في إضافة المنتج إلى السلة",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Contact seller mutation
   const contactSellerMutation = useMutation({
@@ -304,12 +279,12 @@ export default function StoreProfile() {
                       </Badge>
                     </div>
                     <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      className="w-full bg-whatsapp-green hover:bg-green-600 text-white"
                       onClick={() => setSelectedProduct(product)}
-                      data-testid={`button-buy-${product.id}`}
+                      data-testid={`button-view-${product.id}`}
                     >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      اشتري
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      تواصل مع المتجر
                     </Button>
                   </CardContent>
                 </Card>
@@ -374,20 +349,9 @@ export default function StoreProfile() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className="pt-4">
                 <Button
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => addToCartMutation.mutate({ productId: selectedProduct.id })}
-                  disabled={addToCartMutation.isPending}
-                  data-testid="button-add-to-cart"
-                >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  إضافة إلى السلة
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+                  className="w-full bg-whatsapp-green hover:bg-green-600 text-white"
                   onClick={() => contactSellerMutation.mutate({ 
                     product: selectedProduct, 
                     sellerId: store?.id || '' 

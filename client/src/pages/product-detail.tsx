@@ -125,33 +125,6 @@ export default function ProductDetail() {
     },
   });
 
-  // Add to cart mutation
-  const addToCartMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest(`/api/cart`, {
-        method: "POST",
-        body: JSON.stringify({ 
-          productId: product?.id,
-          quantity: 1 
-        }),
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "تم بنجاح",
-        description: "تم إضافة المنتج إلى السلة",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-    },
-    onError: () => {
-      toast({
-        title: "خطأ",
-        description: "فشل في إضافة المنتج إلى السلة",
-        variant: "destructive",
-      });
-    },
-  });
 
   const formatCurrency = (price: string | number | undefined) => {
     if (price == null || price === '') return '0 دج';
@@ -525,31 +498,18 @@ export default function ProductDetail() {
       {/* Fixed Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 safe-area-pb">
         <div className="container mx-auto">
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => addToCartMutation.mutate()}
-              disabled={addToCartMutation.isPending}
-              data-testid="button-add-to-cart"
-            >
-              <ShoppingCart className="w-4 h-4 ml-2" />
-              {addToCartMutation.isPending ? "جاري الإضافة..." : "أضف للسلة"}
-            </Button>
+          <Button
+            className="w-full bg-whatsapp-green hover:bg-green-600 relative"
+            onClick={handleContactSeller}
+            disabled={startChatMutation.isPending}
+            data-testid="button-contact-seller"
+          >
+            <MessageCircle className="w-5 h-5 ml-2" />
+            {startChatMutation.isPending ? "جاري الاتصال..." : "💬 دردشة مع البائع"}
             
-            <Button
-              className="flex-1 bg-whatsapp-green hover:bg-green-600 relative"
-              onClick={handleContactSeller}
-              disabled={startChatMutation.isPending}
-              data-testid="button-contact-seller"
-            >
-              <MessageCircle className="w-5 h-5 ml-2" />
-              {startChatMutation.isPending ? "جاري الاتصال..." : "💬 دردشة مع البائع"}
-              
-              {/* Chat indicator */}
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-            </Button>
-          </div>
+            {/* Chat indicator */}
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          </Button>
         </div>
       </div>
       

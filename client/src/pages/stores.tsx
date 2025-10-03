@@ -71,31 +71,6 @@ export default function Stores() {
     enabled: !!currentUser,
   });
 
-  // Add to cart mutation
-  const addToCartMutation = useMutation({
-    mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
-      return apiRequest("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity }),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "تم الإضافة",
-        description: "تم إضافة المنتج إلى السلة بنجاح",
-      });
-      setSelectedProduct(null);
-    },
-    onError: () => {
-      toast({
-        title: "خطأ",
-        description: "فشل في إضافة المنتج إلى السلة",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Contact seller mutation (for chat)
   const contactSellerMutation = useMutation({
@@ -630,20 +605,9 @@ export default function Stores() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className="pt-4">
                 <Button
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => addToCartMutation.mutate({ productId: selectedProduct.id })}
-                  disabled={addToCartMutation.isPending}
-                  data-testid="button-add-to-cart"
-                >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  إضافة إلى السلة
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+                  className="w-full bg-whatsapp-green hover:bg-green-600 text-white"
                   onClick={() => contactSellerMutation.mutate({ 
                     product: selectedProduct, 
                     sellerId: selectedProduct.vendorId 

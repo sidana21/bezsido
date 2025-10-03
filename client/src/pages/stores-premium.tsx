@@ -59,29 +59,6 @@ export default function StoresPremium() {
     },
   });
 
-  const addToCartMutation = useMutation({
-    mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
-      return apiRequest("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity: quantity.toString() }),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "تم الإضافة للسلة",
-        description: "تم إضافة المنتج إلى السلة بنجاح",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "خطأ",
-        description: "فشل في إضافة المنتج للسلة",
-        variant: "destructive",
-      });
-    },
-  });
 
   const filteredStores = stores.filter(store =>
     store?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -467,28 +444,14 @@ export default function StoresPremium() {
                                           </div>
                                           
                                           <div className="flex gap-3">
-                                            <Button
-                                              size="sm"
-                                              className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3 rounded-xl"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                addToCartMutation.mutate({ productId: product?.id });
-                                              }}
-                                              disabled={addToCartMutation.isPending}
-                                              data-testid={`button-add-to-cart-${product.id}`}
-                                            >
-                                              <ShoppingCart className="w-4 h-4 mr-2" />
-                                              {addToCartMutation.isPending ? "جاري..." : "أضف للسلة"}
-                                            </Button>
-                                            
-                                            <Link href={`/product/${product.id}`}>
+                                            <Link href={`/product/${product.id}`} className="w-full">
                                               <Button
                                                 size="sm"
-                                                variant="outline"
-                                                className="px-6 py-3 rounded-xl font-bold border-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-3 rounded-xl"
                                                 data-testid={`button-view-details-${product.id}`}
                                               >
-                                                التفاصيل
+                                                <Package className="w-4 h-4 mr-2" />
+                                                عرض التفاصيل
                                               </Button>
                                             </Link>
                                           </div>
