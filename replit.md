@@ -101,6 +101,34 @@ See `RENDER_DEPLOYMENT_COMPLETE_GUIDE.md` for complete deployment instructions.
 - **Admin Announcements System**: Dedicated page for sending announcements to all users, displayed with distinctive styling in user notifications.
 - **API Endpoints**: Dedicated endpoints for dashboard stats, activities, user management, and announcements.
 
+## File Upload System (Cloudinary Integration)
+
+### Overview
+The application uses Cloudinary for reliable cloud storage of images and videos. Files are uploaded to Cloudinary and only URLs are stored in NeonDB, preventing data loss on platforms like Render that use ephemeral storage.
+
+### Setup on Render
+Add these environment variables in Render dashboard:
+- `CLOUDINARY_CLOUD_NAME`: Your Cloudinary cloud name
+- `CLOUDINARY_API_KEY`: Your API key
+- `CLOUDINARY_API_SECRET`: Your API secret
+
+Get these values from [Cloudinary Dashboard](https://cloudinary.com/console) → Account Details
+
+### How It Works
+1. Files are uploaded to `/api/upload/media` endpoint
+2. Multer stores files in memory (memoryStorage)
+3. Files are uploaded to Cloudinary using the Node.js SDK
+4. Cloudinary URLs are returned and saved in database
+5. If Cloudinary is unavailable, fallback to local storage (temporary)
+
+### Implementation Details
+- **Location**: `server/cloudinary.ts` - Cloudinary configuration and upload functions
+- **Modified Files**: 
+  - `server/routes.ts` - Upload endpoint updated to use Cloudinary
+  - `server/index.ts` - Cloudinary initialization on startup
+- **Package**: `cloudinary` npm package installed
+- **Storage**: Uses memoryStorage for temporary file handling before cloud upload
+
 ## External Dependencies
 
 ### Core Framework & Database
@@ -109,6 +137,10 @@ See `RENDER_DEPLOYMENT_COMPLETE_GUIDE.md` for complete deployment instructions.
 - `drizzle-kit`: Database migration and schema management.
 - `connect-pg-simple`: PostgreSQL session store.
 - `express-session`: Server-side session management.
+
+### File Upload & Storage
+- `cloudinary`: Cloud-based image and video storage service.
+- `multer`: Multipart form data handling for file uploads.
 
 ### UI & State Management
 - `@radix-ui/*`: Accessible UI primitives.
