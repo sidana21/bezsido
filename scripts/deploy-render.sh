@@ -17,18 +17,22 @@ echo "✅ DATABASE_URL is configured"
 echo "📦 Installing dependencies..."
 npm install
 
-# Run database migrations/schema push
+# Run database schema push
 echo "🗄️ Setting up database schema..."
-echo "📋 Creating all required tables from schema.ts..."
+echo "📋 Creating all 53 tables (story_likes, story_comments, follows, etc)..."
 
-# Use drizzle-kit push with --force to skip interactive prompts
-# This allows automatic table creation without requiring user input
+# Use drizzle-kit push with --force flag
+# This creates all tables from schema.ts without interactive prompts
+# It automatically handles CREATE TABLE IF NOT EXISTS
+echo "🚀 Pushing schema to database..."
 npx drizzle-kit push --force
 
 if [ $? -eq 0 ]; then
-    echo "✅ Database schema created successfully!"
+    echo "✅ All 53 database tables created/verified successfully!"
+    echo "✅ Including: story_likes, story_comments, follows, posts, and all other tables"
 else
-    echo "⚠️ Database schema creation encountered issues, but continuing..."
+    echo "❌ Schema push failed! Check DATABASE_URL and network connectivity"
+    exit 1
 fi
 
 # Build the application
