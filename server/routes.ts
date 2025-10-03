@@ -6143,19 +6143,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "لا يمكنك متابعة نفسك" });
       }
       
-      await storage.followUser(followerId, targetUserId);
+      // Check if already following
+      const isFollowing = await storage.isUserFollowing(followerId, targetUserId);
       
-      // Create notification for the followed user
-      await storage.createSocialNotification({
-        userId: targetUserId,
-        fromUserId: followerId,
-        type: 'follow',
-        title: 'متابع جديد',
-        message: 'بدأ بمتابعتك',
-        isRead: false
-      });
-      
-      res.json({ success: true, message: "تم بدء المتابعة بنجاح" });
+      if (isFollowing) {
+        // If already following, unfollow (toggle behavior)
+        await storage.unfollowUser(followerId, targetUserId);
+        res.json({ success: true, action: "unfollowed", message: "تم إلغاء المتابعة بنجاح" });
+      } else {
+        // If not following, follow the user
+        await storage.followUser(followerId, targetUserId);
+        
+        // Create notification for the followed user
+        await storage.createSocialNotification({
+          userId: targetUserId,
+          fromUserId: followerId,
+          type: 'follow',
+          title: 'متابع جديد',
+          message: 'بدأ بمتابعتك',
+          isRead: false
+        });
+        
+        res.json({ success: true, action: "followed", message: "تم بدء المتابعة بنجاح" });
+      }
     } catch (error) {
       console.error('Error following user:', error);
       res.status(500).json({ message: "خطأ في متابعة المستخدم" });
