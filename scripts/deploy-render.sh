@@ -21,8 +21,9 @@ npm install
 echo "🗄️ Setting up database schema..."
 echo "📋 Creating all required tables from schema.ts..."
 
-# Use drizzle-kit push to create tables from schema
-npm run db:push
+# Use drizzle-kit push with --force to skip interactive prompts
+# This allows automatic table creation without requiring user input
+npx drizzle-kit push --force
 
 if [ $? -eq 0 ]; then
     echo "✅ Database schema created successfully!"
