@@ -2383,9 +2383,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Story not found" });
       }
       
-      const like = await storage.likeStory(storyId, req.userId, reactionType);
-      res.json(like);
+      // Check if user already liked the story
+      const hasLiked = await storage.hasUserLikedStory(storyId, req.userId);
+      
+      if (hasLiked) {
+        // If already liked, unlike it (toggle behavior)
+        await storage.unlikeStory(storyId, req.userId);
+        res.json({ success: true, action: "unliked" });
+      } else {
+        // If not liked, add the like
+        const like = await storage.likeStory(storyId, req.userId, reactionType);
+        res.json({ success: true, action: "liked", like });
+      }
     } catch (error) {
+      console.error('Error in like/unlike story:', error);
       res.status(500).json({ message: "Failed to like story" });
     }
   });
