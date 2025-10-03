@@ -858,6 +858,10 @@ export class DatabaseStorage implements IStorage {
         db = dbModule.db;
       }
       
+      // Delete all messages first to avoid foreign key constraint error
+      await db.delete(messages).where(eq(messages.chatId, id));
+      
+      // Then delete the chat
       await db.delete(chats).where(eq(chats.id, id));
       return true;
     } catch (error) {
