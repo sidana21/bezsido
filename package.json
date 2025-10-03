@@ -56,11 +56,13 @@
     "autoprefixer": "^10.4.21",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
+    "drizzle-kit": "^0.30.6",
     "drizzle-orm": "^0.39.3",
     "drizzle-zod": "^0.7.1",
     "embla-carousel-react": "^8.6.0",
@@ -99,8 +101,7 @@
     "wouter": "^3.7.1",
     "ws": "^8.18.3",
     "zod": "^3.25.76",
-    "zod-validation-error": "^3.5.3",
-    "drizzle-kit": "^0.30.6"
+    "zod-validation-error": "^3.5.3"
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.3.1",

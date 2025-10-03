@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage, type IStorage } from "./storage";
 import { AdminManager } from "./admin-manager";
+import { configureCloudinary } from "./cloudinary";
 
 // Ensure uploads directory exists (critical for Render deployment)
 try {
@@ -102,6 +103,9 @@ app.use((req, res, next) => {
 (async () => {
   // Database initialization disabled to preserve existing data
   console.log('🔒 Database initialization skipped - preserving existing data');
+
+  // تهيئة Cloudinary لرفع الملفات
+  configureCloudinary();
 
   const server = await registerRoutes(app);
 
