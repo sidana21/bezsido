@@ -110,16 +110,16 @@ export default function PromotionsPage() {
   const [selectedVendor, setSelectedVendor] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { data: vendors } = useQuery({
+  const { data: vendors } = useQuery<any[]>({
     queryKey: ["/api/vendor/my-vendors"],
   });
 
-  const { data: promotions, isLoading: isLoadingPromotions } = useQuery({
+  const { data: promotions, isLoading: isLoadingPromotions } = useQuery<any[]>({
     queryKey: ["/api/promotions/vendor", selectedVendor],
     enabled: !!selectedVendor
   });
 
-  const { data: settings } = useQuery({
+  const { data: settings } = useQuery<any>({
     queryKey: ["/api/promotions/settings"]
   });
 
@@ -143,10 +143,13 @@ export default function PromotionsPage() {
 
   const createPromotionMutation = useMutation({
     mutationFn: async (data: PromotionFormData) => {
-      return apiRequest('POST', '/api/promotions', {
-        ...data,
-        vendorId: selectedVendor,
-        totalPrice
+      return apiRequest('/api/promotions', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          vendorId: selectedVendor,
+          totalPrice
+        })
       });
     },
     onSuccess: () => {

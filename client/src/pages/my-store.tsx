@@ -14,7 +14,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertVendorSchema, insertProductSchema } from "@shared/schema";
 import { z } from "zod";
-import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings, Upload, ImageIcon, X, Trash2 } from "lucide-react";
+import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings, Upload, ImageIcon, X, Trash2, Megaphone } from "lucide-react";
+import { Link } from "wouter";
 
 interface VendorWithOwner extends Vendor {
   owner: User;
@@ -595,10 +596,18 @@ export default function MyStore() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">متجري</h1>
           {userStore && (
-            <Button onClick={openEditDialog} variant="outline" data-testid="button-edit-store">
-              <Edit className="w-4 h-4 ml-2" />
-              تعديل المتجر
-            </Button>
+            <div className="flex gap-2">
+              <Link href="/promotions">
+                <Button variant="default" className="gap-2" data-testid="button-promotions">
+                  <Megaphone className="w-4 h-4" />
+                  الإعلانات والترويج
+                </Button>
+              </Link>
+              <Button onClick={openEditDialog} variant="outline" data-testid="button-edit-store">
+                <Edit className="w-4 h-4 ml-2" />
+                تعديل المتجر
+              </Button>
+            </div>
           )}
         </div>
 
