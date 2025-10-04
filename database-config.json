@@ -1,5 +1,5 @@
 {
-  "DATABASE_URL": "postgresql://neondb_owner:npg_SP1nDjpqBZJ0@ep-rapid-grass-aeog9zvl.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require",
-  "lastUpdated": "2025-10-04T23:29:39.459Z",
+  "DATABASE_URL": "postgresql://postgres:password@helium/heliumdb?sslmode=disable",
+  "lastUpdated": "2025-10-04T23:45:35.880Z",
   "note": "رابط قاعدة البيانات الخارجية المحفوظ تلقائياً"
 }
