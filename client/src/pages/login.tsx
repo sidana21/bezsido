@@ -830,6 +830,16 @@ export default function LoginPage() {
                 استخدام رمز التحقق القديم
               </Button>
             </div>
+            
+            <div className="text-center mt-4 pt-4 border-t">
+              <a 
+                href="/privacy-policy" 
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+                data-testid="link-privacy-policy"
+              >
+                سياسة الخصوصية
+              </a>
+            </div>
           </CardContent>
         </Card>
       </div>

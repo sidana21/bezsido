@@ -8,6 +8,33 @@ Bivochat is a full-stack business messaging application built with React, TypeSc
 
 Preferred communication style: Simple, everyday language.
 
+## Privacy Policy & Google Play Store Compliance
+
+### Privacy Policy Page
+- **Location**: `/privacy-policy` - Accessible without authentication
+- **File**: `client/src/pages/privacy-policy.tsx`
+- **Links**: Available in login page footer and profile settings
+
+### Key Privacy Commitments
+1. **No Data Selling**: User data is never sold to third parties
+2. **User Control**: Users can delete their accounts and all data anytime
+3. **Transparency**: Clear explanations for all permissions and data usage
+4. **Cash-Only Payments**: No financial data collected (cash-on-delivery only)
+5. **Continuous Development**: Commitment to ongoing app improvements
+
+### Permissions Explained
+- **Notifications**: For new messages, comments, and product updates
+- **Photos/Media**: Only for uploading product images and profile pictures
+
+### Google Play Store Requirements Met
+- ✅ Comprehensive privacy policy with Arabic language support
+- ✅ Clear data collection and usage disclosure
+- ✅ User rights (deletion, modification, export)
+- ✅ Permissions justification
+- ✅ No collection of financial information
+- ✅ Children's privacy protection (13+ age requirement)
+- ✅ Contact information provided
+
 ## Replit Environment Setup
 
 ### Development Configuration

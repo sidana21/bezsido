@@ -745,6 +745,18 @@ export default function Profile() {
               <LogOut className="w-5 h-5 ml-2" />
               تسجيل الخروج
             </Button>
+            
+            <Link href="/privacy-policy">
+              <Button
+                variant="ghost"
+                className="w-full h-12 text-lg rounded-xl"
+                data-testid="button-privacy-policy"
+              >
+                <ShieldCheck className="w-5 h-5 ml-2" />
+                سياسة الخصوصية
+              </Button>
+            </Link>
+            
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <DialogTrigger asChild>
                 <Button
