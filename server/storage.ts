@@ -86,10 +86,12 @@ import {
   type StoryView,
   type InsertStoryView,
   type SocialNotification,
-  type InsertSocialNotification
+  type InsertSocialNotification,
+  type PrivacyPolicy,
+  type InsertPrivacyPolicy
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows } from '@shared/schema';
+import { adminCredentials, appFeatures, privacyPolicy, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows } from '@shared/schema';
 import { sql, or, gt, gte, count, sum, isNotNull } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
@@ -166,6 +168,10 @@ export interface IStorage {
   // Admin Features
   getAdminCredentials(): Promise<AdminCredentials | undefined>;
   updateAdminCredentials(credentials: InsertAdminCredentials): Promise<AdminCredentials>;
+  
+  // Privacy Policy
+  getPrivacyPolicy(): Promise<PrivacyPolicy | undefined>;
+  updatePrivacyPolicy(content: string, updatedBy: string): Promise<PrivacyPolicy>;
   
   // Stickers
   getAllStickers(): Promise<any[]>;
@@ -1416,6 +1422,55 @@ export class DatabaseStorage implements IStorage {
       return result[0];
     } catch (error) {
       console.error('Error updating admin credentials:', error);
+      throw error;
+    }
+  }
+
+  async getPrivacyPolicy(): Promise<PrivacyPolicy | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select().from(privacyPolicy).where(eq(privacyPolicy.id, 'privacy_policy')).limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting privacy policy:', error);
+      return undefined;
+    }
+  }
+
+  async updatePrivacyPolicy(content: string, updatedBy: string): Promise<PrivacyPolicy> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const policyData = {
+        id: "privacy_policy" as const,
+        content,
+        lastUpdatedBy: updatedBy,
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      };
+      
+      const result = await db.insert(privacyPolicy)
+        .values(policyData)
+        .onConflictDoUpdate({
+          target: privacyPolicy.id,
+          set: {
+            content,
+            lastUpdatedBy: updatedBy,
+            updatedAt: new Date(),
+          }
+        })
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('Error updating privacy policy:', error);
       throw error;
     }
   }
@@ -5937,6 +5992,7 @@ export class MemStorage implements IStorage {
   private sessions = new Map<string, Session>();
   private features = new Map<string, AppFeature>();
   private adminCredentials: AdminCredentials | undefined;
+  private privacyPolicyData: PrivacyPolicy | undefined;
   private calls = new Map<string, Call>();
   private stickers: any[] = [];
   private vendors = new Map<string, Vendor>();
@@ -6765,6 +6821,21 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     return this.adminCredentials;
+  }
+
+  async getPrivacyPolicy(): Promise<PrivacyPolicy | undefined> {
+    return this.privacyPolicyData;
+  }
+
+  async updatePrivacyPolicy(content: string, updatedBy: string): Promise<PrivacyPolicy> {
+    this.privacyPolicyData = {
+      id: "privacy_policy",
+      content,
+      lastUpdatedBy: updatedBy,
+      updatedAt: new Date(),
+      createdAt: this.privacyPolicyData?.createdAt || new Date(),
+    };
+    return this.privacyPolicyData;
   }
 
   async getAllFeatures(): Promise<AppFeature[]> {
