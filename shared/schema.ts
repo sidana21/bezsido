@@ -86,6 +86,24 @@ export const appFeatures = pgTable("app_features", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Privacy policy table
+export const privacyPolicy = pgTable("privacy_policy", {
+  id: varchar("id").primaryKey().default("privacy_policy"),
+  content: text("content").notNull(),
+  lastUpdatedBy: varchar("last_updated_by"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPrivacyPolicySchema = createInsertSchema(privacyPolicy).omit({
+  id: true,
+  updatedAt: true,
+  createdAt: true,
+});
+
+export type PrivacyPolicy = typeof privacyPolicy.$inferSelect;
+export type InsertPrivacyPolicy = z.infer<typeof insertPrivacyPolicySchema>;
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   isVerified: true,
