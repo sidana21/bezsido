@@ -380,9 +380,9 @@ export default function AdminPromotionsPage() {
                   </div>
                   <Switch
                     id="featured-stores"
-                    checked={settings?.enableFeaturedStores}
+                    checked={settings?.featuredStoreEnabled}
                     onCheckedChange={(checked) => 
-                      updateSettingsMutation.mutate({ enableFeaturedStores: checked })
+                      updateSettingsMutation.mutate({ featuredStoreEnabled: checked })
                     }
                     data-testid="switch-featured-stores"
                   />
@@ -397,9 +397,9 @@ export default function AdminPromotionsPage() {
                   </div>
                   <Switch
                     id="sponsored-products"
-                    checked={settings?.enableSponsoredProducts}
+                    checked={settings?.sponsoredProductEnabled}
                     onCheckedChange={(checked) => 
-                      updateSettingsMutation.mutate({ enableSponsoredProducts: checked })
+                      updateSettingsMutation.mutate({ sponsoredProductEnabled: checked })
                     }
                     data-testid="switch-sponsored-products"
                   />
@@ -414,9 +414,9 @@ export default function AdminPromotionsPage() {
                   </div>
                   <Switch
                     id="boosted-posts"
-                    checked={settings?.enableBoostedPosts}
+                    checked={settings?.boostedPostEnabled}
                     onCheckedChange={(checked) => 
-                      updateSettingsMutation.mutate({ enableBoostedPosts: checked })
+                      updateSettingsMutation.mutate({ boostedPostEnabled: checked })
                     }
                     data-testid="switch-boosted-posts"
                   />
@@ -431,9 +431,9 @@ export default function AdminPromotionsPage() {
                   </div>
                   <Switch
                     id="premium-subscriptions"
-                    checked={settings?.enablePremiumSubscriptions}
+                    checked={settings?.premiumSubscriptionEnabled}
                     onCheckedChange={(checked) => 
-                      updateSettingsMutation.mutate({ enablePremiumSubscriptions: checked })
+                      updateSettingsMutation.mutate({ premiumSubscriptionEnabled: checked })
                     }
                     data-testid="switch-premium-subscriptions"
                   />
@@ -448,9 +448,9 @@ export default function AdminPromotionsPage() {
                   </div>
                   <Switch
                     id="location-ads"
-                    checked={settings?.enableLocationAds}
+                    checked={settings?.locationAdsEnabled}
                     onCheckedChange={(checked) => 
-                      updateSettingsMutation.mutate({ enableLocationAds: checked })
+                      updateSettingsMutation.mutate({ locationAdsEnabled: checked })
                     }
                     data-testid="switch-location-ads"
                   />
@@ -465,9 +465,9 @@ export default function AdminPromotionsPage() {
                   </div>
                   <Switch
                     id="story-ads"
-                    checked={settings?.enableStoryAds}
+                    checked={settings?.storyAdsEnabled}
                     onCheckedChange={(checked) => 
-                      updateSettingsMutation.mutate({ enableStoryAds: checked })
+                      updateSettingsMutation.mutate({ storyAdsEnabled: checked })
                     }
                     data-testid="switch-story-ads"
                   />
