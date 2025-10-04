@@ -2007,7 +2007,8 @@ export class DatabaseStorage implements IStorage {
         { id: "social_feed", name: "المنشورات", description: "مشاركة المحتوى والمنشورات الاجتماعية", isEnabled: true, category: "social", priority: 7 },
         { id: "neighborhoods", name: "مجتمع الحي", description: "التواصل مع الجيران وطلب المساعدة", isEnabled: true, category: "social", priority: 8 },
         { id: "affiliate", name: "التسويق بالعمولة", description: "كسب المال من خلال التسويق", isEnabled: true, category: "marketplace", priority: 9 },
-        { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 10 },
+        { id: "promotions", name: "الإعلانات والترويج", description: "إنشاء وإدارة الحملات الإعلانية والمنتجات المروجة", isEnabled: true, category: "marketplace", priority: 10 },
+        { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 11 },
       ];
 
       for (const feature of defaultFeatures) {
@@ -7525,7 +7526,8 @@ export class MemStorage implements IStorage {
       { id: "social_feed", name: "المنشورات", description: "مشاركة المحتوى والمنشورات الاجتماعية", isEnabled: true, category: "social", priority: 5, createdAt: new Date(), updatedAt: new Date() },
       { id: "neighborhoods", name: "مجتمع الحي", description: "التواصل مع الجيران وطلب المساعدة", isEnabled: true, category: "social", priority: 6, createdAt: new Date(), updatedAt: new Date() },
       { id: "affiliate", name: "التسويق بالعمولة", description: "كسب المال من خلال التسويق", isEnabled: true, category: "marketplace", priority: 7, createdAt: new Date(), updatedAt: new Date() },
-      { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 8, createdAt: new Date(), updatedAt: new Date() },
+      { id: "promotions", name: "الإعلانات والترويج", description: "إنشاء وإدارة الحملات الإعلانية والمنتجات المروجة", isEnabled: true, category: "marketplace", priority: 8, createdAt: new Date(), updatedAt: new Date() },
+      { id: "verification", name: "التوثيق", description: "توثيق الحسابات والمتاجر", isEnabled: true, category: "admin", priority: 9, createdAt: new Date(), updatedAt: new Date() },
     ];
 
     defaultFeatures.forEach(feature => {

@@ -16,6 +16,7 @@ import { insertVendorSchema, insertProductSchema } from "@shared/schema";
 import { z } from "zod";
 import { StoreIcon, Plus, Edit, MapPin, Phone, Clock, Settings, Upload, ImageIcon, X, Trash2, Megaphone } from "lucide-react";
 import { Link } from "wouter";
+import { FeatureGuard } from "@/hooks/use-features";
 
 interface VendorWithOwner extends Vendor {
   owner: User;
@@ -597,12 +598,14 @@ export default function MyStore() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">متجري</h1>
           {userStore && (
             <div className="flex gap-2">
-              <Link href="/promotions">
-                <Button variant="default" className="gap-2" data-testid="button-promotions">
-                  <Megaphone className="w-4 h-4" />
-                  الإعلانات والترويج
-                </Button>
-              </Link>
+              <FeatureGuard feature="promotions">
+                <Link href="/promotions">
+                  <Button variant="default" className="gap-2" data-testid="button-promotions">
+                    <Megaphone className="w-4 h-4" />
+                    الإعلانات والترويج
+                  </Button>
+                </Link>
+              </FeatureGuard>
               <Button onClick={openEditDialog} variant="outline" data-testid="button-edit-store">
                 <Edit className="w-4 h-4 ml-2" />
                 تعديل المتجر
