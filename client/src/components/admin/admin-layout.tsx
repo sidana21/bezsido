@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Mail,
-  Megaphone
+  Megaphone,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -78,6 +79,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       title: 'إعدادات البريد الإلكتروني',
       icon: Mail,
       href: '/admin/email-settings',
+    },
+    {
+      title: 'تعديل سياسة الخصوصية',
+      icon: Shield,
+      href: '/admin/privacy-policy-editor',
     },
     {
       title: 'الإعدادات',
