@@ -30,12 +30,14 @@ import {
   Camera,
   Settings,
   Smartphone,
-  Upload
+  Upload,
+  Megaphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MobileProductUpload from '@/components/mobile-product-upload';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ImageModal from '@/components/ui/image-modal';
+import { Link } from 'wouter';
 
 interface VendorCategory {
   id: string;
@@ -602,6 +604,16 @@ export default function MyVendorPage() {
                     <TrendingUp className="w-6 h-6" />
                     <span>التقارير</span>
                   </Button>
+                  <Link href="/promotions">
+                    <Button 
+                      variant="outline" 
+                      className="h-20 flex-col space-y-2 w-full" 
+                      data-testid="button-promotions"
+                    >
+                      <Megaphone className="w-6 h-6 text-primary" />
+                      <span>خدمات الترويج</span>
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
