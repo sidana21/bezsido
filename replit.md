@@ -126,6 +126,11 @@ See `RENDER_DEPLOYMENT_COMPLETE_GUIDE.md` for complete deployment instructions.
 - **Mobile product upload**: Native HTML select elements provide reliable mobile compatibility for category selection (replacing Radix UI Select).
 - **Video views tracking**: Automatic view tracking via Intersection Observer (70% visibility for 1 second), views badge always displays including "0 مشاهدة" for new posts.
 - **Verification requests**: Enhanced error handling with Arabic error messages and requestType field validation.
+- **Promotions System** (October 4, 2025):
+  - Fixed TypeScript errors in PromotionsPage.tsx (corrected apiRequest usage)
+  - Added promotions access button with Megaphone icon in vendor store page header
+  - Implemented defensive logic in updatePromotionSettings to auto-create default settings row
+  - System now works reliably in fresh environments without manual database initialization
 
 ### Admin Panel Features
 - **Comprehensive Dashboard Statistics**: Real-time monitoring of users, stores, orders, revenue, and verification requests.
