@@ -1,5 +1,5 @@
 /**
- * BizChat Application Fixes & Error Prevention
+ * Bivochat Application Fixes & Error Prevention
  * ملف الإصلاحات الشاملة لمنع تكرار المشاكل
  * 
  * هذا الملف يحتوي على جميع الإصلاحات المطبقة في التطبيق

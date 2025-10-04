@@ -13,10 +13,10 @@ import {
   Send, Smile, Camera, Tag, ShoppingBag, Eye, ChevronLeft, ChevronRight,
   User as UserIcon, ExternalLink, X
 } from "lucide-react";
-import type { User, BizChatPost } from "@shared/schema";
+import type { User, BivochatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
-interface PostWithUser extends BizChatPost {
+interface PostWithUser extends BivochatPost {
   user: User;
   isLiked?: boolean;
   isSaved?: boolean;

@@ -98,7 +98,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     )}>
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-2">
-          <img src={appIconUrl} alt="BizChat" className="w-20 h-20 object-contain" />
+          <img src={appIconUrl} alt="Bivochat" className="w-20 h-20 object-contain" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             لوحة الإدارة
           </h2>

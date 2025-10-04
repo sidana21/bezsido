@@ -170,7 +170,7 @@ export function useNotifications(options: NotificationOptions = {}) {
         return; // لا نعرض إشعار إذا كان في نفس المحادثة
       }
 
-      let title = `رسالة جديدة في BizChat`;
+      let title = `رسالة جديدة في Bivochat`;
       let body = '';
 
       if (latestMessage) {

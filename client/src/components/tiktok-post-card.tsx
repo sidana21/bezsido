@@ -13,10 +13,10 @@ import {
   Send, Smile, Camera, Tag, ShoppingBag, Eye, ChevronLeft, ChevronRight,
   User as UserIcon, ExternalLink, X, UserPlus, Plus, Trash2
 } from "lucide-react";
-import type { User, BizChatPost } from "@shared/schema";
+import type { User, BivochatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
-interface PostWithUser extends BizChatPost {
+interface PostWithUser extends BivochatPost {
   user: User;
   isLiked?: boolean;
   isSaved?: boolean;
@@ -370,8 +370,8 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
     activateButtonPulse('share');
     
     const shareData = {
-      title: `منشور من ${post.user.name} - BizChat`,
-      text: post.content || 'شاهد هذا المنشور على BizChat',
+      title: `منشور من ${post.user.name} - Bivochat`,
+      text: post.content || 'شاهد هذا المنشور على Bivochat',
       url: `${window.location.origin}/user-profile/${post.user.id}`
     };
 

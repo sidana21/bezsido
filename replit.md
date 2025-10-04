@@ -1,8 +1,8 @@
-# BizChat
+# Bivochat
 
 ## Overview
 
-BizChat is a full-stack business messaging application built with React, TypeScript, and Express. It integrates messaging with commerce features, offering a responsive UI for business communication and trade. Key capabilities include individual and group chats, product promotion via stories/status updates, message status tracking, and robust Arabic language support. The project aims to provide a social media experience similar to TikTok, integrated with business functionalities.
+Bivochat is a full-stack business messaging application built with React, TypeScript, and Express. It integrates messaging with commerce features, offering a responsive UI for business communication and trade. Key capabilities include individual and group chats, product promotion via stories/status updates, message status tracking, and robust Arabic language support. The project aims to provide a social media experience similar to TikTok, integrated with business functionalities.
 
 ## User Preferences
 

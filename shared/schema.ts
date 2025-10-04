@@ -1098,7 +1098,7 @@ export const follows = pgTable("follows", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// منشورات البيزنس تشات المتطورة - Advanced BizChat Posts
+// منشورات البيزنس تشات المتطورة - Advanced Bivochat Posts
 export const bizChatPosts = pgTable("bizchat_posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -1312,7 +1312,7 @@ export const insertBusinessPostSchema = createInsertSchema(businessPosts).omit({
   updatedAt: true,
 });
 
-export const insertBizChatPostSchema = createInsertSchema(bizChatPosts).omit({
+export const insertBivochatPostSchema = createInsertSchema(bizChatPosts).omit({
   id: true,
   likesCount: true,
   commentsCount: true,
@@ -1359,7 +1359,7 @@ export const insertAffiliateProgramSchema = createInsertSchema(affiliatePrograms
 
 // Types for new advanced features
 export type Follow = typeof follows.$inferSelect;
-export type BizChatPost = typeof bizChatPosts.$inferSelect;
+export type BivochatPost = typeof bizChatPosts.$inferSelect;
 export type PostInteraction = typeof postInteractions.$inferSelect;
 export type PostCommentAdvanced = typeof postCommentsAdvanced.$inferSelect;
 export type LocalCommunity = typeof localCommunities.$inferSelect;

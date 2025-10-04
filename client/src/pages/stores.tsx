@@ -144,7 +144,7 @@ export default function Stores() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-white to-white/90 bg-clip-text">متاجر BizChat</h1>
+              <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-white to-white/90 bg-clip-text">متاجر Bivochat</h1>
               <p className="text-white/80 text-sm">تسوق من مجموعة واسعة من المنتجات المحلية</p>
             </div>
           </div>

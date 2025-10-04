@@ -6,13 +6,13 @@ import { useLocation } from "wouter";
 import {
   Plus, Bell, BellDot, Camera, ArrowLeft, Home, Settings
 } from "lucide-react";
-import type { User, BizChatPost } from "@shared/schema";
+import type { User, BivochatPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { TikTokPostCard } from "@/components/tiktok-post-card";
 import { EnhancedCreatePost } from "@/components/enhanced-create-post";
 import { NotificationsSettingsModal } from "@/components/notifications-settings-modal";
 
-interface PostWithUser extends BizChatPost {
+interface PostWithUser extends BivochatPost {
   user: User;
   isLiked?: boolean;
   isSaved?: boolean;
@@ -171,7 +171,7 @@ export default function SocialFeed() {
             لا توجد منشورات بعد
           </h2>
           <p className="text-gray-300 mb-8 text-lg">
-            كن أول من يشارك منشور في مجتمع BizChat!
+            كن أول من يشارك منشور في مجتمع Bivochat!
           </p>
           <Button
             onClick={() => setLocation('/create-post')}
@@ -225,7 +225,7 @@ export default function SocialFeed() {
             <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">B</span>
             </div>
-            <h1 className="text-white font-bold text-xl">BizChat</h1>
+            <h1 className="text-white font-bold text-xl">Bivochat</h1>
           </div>
 
           {/* زر الإشعارات */}

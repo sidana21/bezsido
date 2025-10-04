@@ -66,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('تطبيق BizChat: خطأ غير متوقع:', error, errorInfo);
+    console.error('تطبيق Bivochat: خطأ غير متوقع:', error, errorInfo);
   }
 
   render() {

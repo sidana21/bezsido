@@ -33,7 +33,7 @@ if (fs.existsSync(distPath)) {
       <html dir="rtl">
         <head>
           <meta charset="UTF-8">
-          <title>BizChat - جاري التحضير</title>
+          <title>Bivochat - جاري التحضير</title>
           <style>
             body { 
               font-family: Arial, sans-serif; 
@@ -64,7 +64,7 @@ if (fs.existsSync(distPath)) {
         </head>
         <body>
           <div class="container">
-            <h1>🚀 BizChat</h1>
+            <h1>🚀 Bivochat</h1>
             <p>التطبيق غير جاهز للتشغيل بعد</p>
             
             <div class="steps">
@@ -86,5 +86,5 @@ if (fs.existsSync(distPath)) {
 }
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 خادم BizChat يعمل على http://0.0.0.0:${PORT}`);
+  console.log(`🚀 خادم Bivochat يعمل على http://0.0.0.0:${PORT}`);
 });

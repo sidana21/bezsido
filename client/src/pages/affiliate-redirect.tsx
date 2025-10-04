@@ -143,7 +143,7 @@ export default function AffiliateRedirect() {
               <span className="text-sm font-medium">رابط تسويقي</span>
             </div>
             <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-              هذا المنتج تم مشاركته عبر نظام التسويق بالعمولة في BizChat
+              هذا المنتج تم مشاركته عبر نظام التسويق بالعمولة في Bivochat
             </p>
           </div>
 

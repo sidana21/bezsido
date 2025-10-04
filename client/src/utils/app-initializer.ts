@@ -14,7 +14,7 @@ import { applyAllRemoveChildFixes } from './removeChild-fix';
  * تهيئة نظام الحماية الشامل للتطبيق
  */
 export const initializeApp = () => {
-  console.debug('🛡️ Initializing BizChat safety systems...');
+  console.debug('🛡️ Initializing Bivochat safety systems...');
   
   try {
     // Initialize runtime error fixes
@@ -35,7 +35,7 @@ export const initializeApp = () => {
     // Set up page visibility change handler
     setupVisibilityChangeHandler();
     
-    console.debug('✅ BizChat safety systems initialized successfully');
+    console.debug('✅ Bivochat safety systems initialized successfully');
     
   } catch (error) {
     console.debug('⚠️ Safety system initialization warning:', error);

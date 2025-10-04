@@ -15,7 +15,7 @@ import {
   Verified, Crown, Star, ShoppingBag, Share2, Settings,
   Camera, Edit, Link as LinkIcon, Instagram, Facebook, Twitter
 } from "lucide-react";
-import type { User, BizChatPost, Follow } from "@shared/schema";
+import type { User, BivochatPost, Follow } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { TopBar } from "@/components/top-bar";
 
@@ -41,7 +41,7 @@ interface ProfileData extends User {
   };
 }
 
-interface PostWithStats extends BizChatPost {
+interface PostWithStats extends BivochatPost {
   user: User;
   isLiked?: boolean;
   isSaved?: boolean;

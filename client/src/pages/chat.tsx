@@ -51,7 +51,7 @@ export default function Chat() {
 
   return (
     <>
-      <TopBar title="BizChat" />
+      <TopBar title="Bivochat" />
       <div className="flex h-[100dvh] w-full bg-white dark:bg-gray-800 pb-20 pt-14">
       {/* Mobile overlay */}
       {isMobile && sidebarVisible && selectedChatId && (

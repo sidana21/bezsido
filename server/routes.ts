@@ -653,7 +653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         user, 
         token,
-        message: "تم إنشاء حسابك بنجاح! مرحباً بك في BizChat" 
+        message: "تم إنشاء حسابك بنجاح! مرحباً بك في Bivochat" 
       });
     } catch (error: any) {
       // Enhanced error logging for production debugging
@@ -5507,7 +5507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mailOptions = {
         from: gmailUser,
         to: testEmail,
-        subject: 'رمز التحقق التجريبي - BizChat Test',
+        subject: 'رمز التحقق التجريبي - Bivochat Test',
         html: `
           <div dir="rtl" style="text-align: center; font-family: Arial, sans-serif;">
             <h2>🧪 اختبار خدمة البريد الإلكتروني</h2>
