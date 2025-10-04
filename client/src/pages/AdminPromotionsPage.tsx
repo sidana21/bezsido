@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { AdminLayout } from "@/components/admin/admin-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,27 +48,53 @@ const TIER_LABELS: Record<string, string> = {
   gold: 'ذهبي'
 };
 
+interface PromotionSettings {
+  featuredStoreEnabled?: boolean;
+  sponsoredProductEnabled?: boolean;
+  boostedPostEnabled?: boolean;
+  premiumSubscriptionEnabled?: boolean;
+  locationAdsEnabled?: boolean;
+  storyAdsEnabled?: boolean;
+}
+
+interface Promotion {
+  id: string;
+  promotionType: string;
+  status: string;
+  description: string;
+  subscriptionTier: string;
+  startDate: string;
+  totalPrice: number;
+  paymentStatus: string;
+  viewCount?: number;
+  clickCount?: number;
+  rejectionReason?: string;
+}
+
 export default function AdminPromotionsPage() {
   const { toast } = useToast();
-  const [selectedPromotion, setSelectedPromotion] = useState<any>(null);
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  const { data: settings, isLoading: isLoadingSettings } = useQuery({
+  const { data: settings, isLoading: isLoadingSettings } = useQuery<PromotionSettings>({
     queryKey: ["/api/promotions/settings"]
   });
 
-  const { data: pendingPromotions, isLoading: isLoadingPending } = useQuery({
+  const { data: pendingPromotions, isLoading: isLoadingPending } = useQuery<Promotion[]>({
     queryKey: ["/api/promotions/pending"]
   });
 
-  const { data: allPromotions, isLoading: isLoadingAll } = useQuery({
+  const { data: allPromotions, isLoading: isLoadingAll } = useQuery<Promotion[]>({
     queryKey: ["/api/promotions/all"]
   });
 
   const updateSettingsMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiRequest('PATCH', '/api/promotions/settings', data);
+    mutationFn: async (data: Partial<PromotionSettings>) => {
+      return apiRequest('/api/promotions/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/promotions/settings"] });
@@ -87,7 +114,9 @@ export default function AdminPromotionsPage() {
 
   const approvePromotionMutation = useMutation({
     mutationFn: async (promotionId: string) => {
-      return apiRequest('PATCH', `/api/promotions/${promotionId}/approve`, {});
+      return apiRequest(`/api/promotions/${promotionId}/approve`, {
+        method: 'PATCH'
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/promotions/pending"] });
@@ -108,7 +137,10 @@ export default function AdminPromotionsPage() {
 
   const rejectPromotionMutation = useMutation({
     mutationFn: async ({ promotionId, reason }: { promotionId: string; reason: string }) => {
-      return apiRequest('PATCH', `/api/promotions/${promotionId}/reject`, { reason });
+      return apiRequest(`/api/promotions/${promotionId}/reject`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reason })
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/promotions/pending"] });
@@ -131,10 +163,10 @@ export default function AdminPromotionsPage() {
   });
 
   const updatePaymentMutation = useMutation({
-    mutationFn: async ({ promotionId, paymentStatus, paidAmount }: any) => {
-      return apiRequest('PATCH', `/api/promotions/${promotionId}/payment`, { 
-        paymentStatus, 
-        paidAmount 
+    mutationFn: async ({ promotionId, paymentStatus, paidAmount }: { promotionId: string; paymentStatus: string; paidAmount: number }) => {
+      return apiRequest(`/api/promotions/${promotionId}/payment`, {
+        method: 'PATCH',
+        body: JSON.stringify({ paymentStatus, paidAmount })
       });
     },
     onSuccess: () => {
@@ -199,7 +231,7 @@ export default function AdminPromotionsPage() {
     );
   };
 
-  const renderPromotionCard = (promotion: any, showActions = false) => {
+  const renderPromotionCard = (promotion: Promotion, showActions = false) => {
     return (
       <Card key={promotion.id} data-testid={`card-promotion-${promotion.id}`}>
         <CardContent className="pt-6">
@@ -300,14 +332,15 @@ export default function AdminPromotionsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6" dir="rtl">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">إدارة الإعلانات</h1>
-          <p className="text-muted-foreground">إدارة طلبات الترويج والإعدادات</p>
+    <AdminLayout>
+      <div className="container mx-auto p-6 space-y-6" dir="rtl">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">إدارة الإعلانات</h1>
+            <p className="text-muted-foreground">إدارة طلبات الترويج والإعدادات</p>
+          </div>
+          <Settings className="w-8 h-8 text-muted-foreground" />
         </div>
-        <Settings className="w-8 h-8 text-muted-foreground" />
-      </div>
 
       <Tabs defaultValue="pending" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
@@ -518,6 +551,7 @@ export default function AdminPromotionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

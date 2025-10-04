@@ -64,7 +64,8 @@ export async function setupVite(app: Express, server: Server) {
         `src="./src/main.tsx"`,
         `src="./src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      // Use '/' as the base URL to avoid relative path issues with nested routes like /admin/login
+      const page = await vite.transformIndexHtml('/', template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);

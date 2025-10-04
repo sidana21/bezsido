@@ -14,7 +14,8 @@ import {
   X,
   Mail,
   Megaphone,
-  Shield
+  Shield,
+  TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -69,6 +70,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       title: 'إدارة الطلبات',
       icon: ShoppingCart,
       href: '/admin/orders',
+    },
+    {
+      title: 'إدارة الإعلانات',
+      icon: TrendingUp,
+      href: '/admin/promotions',
     },
     {
       title: 'إدارة الميزات',
