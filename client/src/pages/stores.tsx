@@ -16,6 +16,99 @@ interface VendorWithOwner extends Vendor {
   owner: User;
 }
 
+// Featured Promotions Component
+function FeaturedPromotionsSection({ location }: { location?: string }) {
+  const { data: featuredStores = [] } = useQuery<any[]>({
+    queryKey: ["/api/promotions/featured-stores", location],
+    queryFn: () => apiRequest(`/api/promotions/featured-stores${location ? `?location=${location}` : ''}`),
+    enabled: !!location
+  });
+
+  const { data: sponsoredProducts = [] } = useQuery<any[]>({
+    queryKey: ["/api/promotions/sponsored-products", location],
+    queryFn: () => apiRequest(`/api/promotions/sponsored-products${location ? `?location=${location}` : ''}`),
+    enabled: !!location
+  });
+
+  if ((!featuredStores || featuredStores.length === 0) && (!sponsoredProducts || sponsoredProducts.length === 0)) {
+    return null;
+  }
+
+  return (
+    <div className="mb-10">
+      {/* Featured Stores */}
+      {featuredStores && featuredStores.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-3">
+            <Crown className="w-7 h-7 text-yellow-500 animate-pulse" />
+            متاجر مميزة
+          </h3>
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+            {featuredStores.map((store: any) => (
+              <Link key={store.id} href={`/vendor/${store.id}`}>
+                <Card className="flex-shrink-0 w-64 hover:shadow-2xl transition-all cursor-pointer border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-50/80 to-amber-50/80 dark:from-yellow-900/20 dark:to-amber-900/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="relative">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">
+                          <Store className="w-8 h-8 text-white" />
+                        </div>
+                        <div className="absolute -top-1 -right-1">
+                          <Crown className="w-5 h-5 text-yellow-500" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 dark:text-white truncate">{store.displayName}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{store.description}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          <span className="text-sm font-medium">{parseFloat(store.averageRating).toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sponsored Products */}
+      {sponsoredProducts && sponsoredProducts.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-3">
+            <TrendingUp className="w-7 h-7 text-blue-500 animate-pulse" />
+            منتجات مروجة
+          </h3>
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+            {sponsoredProducts.map((product: any) => (
+              <Link key={product.id} href={`/product/${product.id}`}>
+                <Card className="flex-shrink-0 w-48 hover:shadow-2xl transition-all cursor-pointer border-2 border-blue-500/50 bg-gradient-to-br from-blue-50/80 to-cyan-50/80 dark:from-blue-900/20 dark:to-cyan-900/20">
+                  <CardContent className="p-3">
+                    <div className="relative mb-2">
+                      <img 
+                        src={product.images?.[0] || '/placeholder.png'} 
+                        alt={product.name}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <Badge className="absolute top-2 right-2 bg-blue-500">مروّج</Badge>
+                    </div>
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate">{product.name}</h4>
+                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                      {parseInt(product.salePrice || product.originalPrice).toLocaleString()} دج
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Stores() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStore, setSelectedStore] = useState<VendorWithOwner | null>(null);
@@ -190,6 +283,9 @@ export default function Stores() {
             data-testid="input-search-stores"
           />
         </div>
+
+        {/* Featured Stores & Products Section */}
+        <FeaturedPromotionsSection location={currentUser?.location} />
 
         {/* Service Categories - Horizontal Scroll */}
         <div className="mb-10">
