@@ -33,6 +33,7 @@ import TaxiDriver from "@/pages/taxi-driver";
 import HomeServices from "@/pages/home-services";
 import BeautyServices from "@/pages/beauty-services";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import PromotionsPage from "@/pages/PromotionsPage";
 // Admin Pages
 import { AdminLogin } from "@/pages/admin/admin-login";
 import { AdminDashboard } from "@/pages/admin/admin-dashboard";
@@ -45,6 +46,7 @@ import { FeaturesManagement } from "@/pages/admin/features-management";
 import EmailSettings from "@/pages/admin/email-settings";
 import { SendAnnouncement } from "@/pages/admin/send-announcement";
 import PrivacySectionsEditor from "@/pages/admin/privacy-sections-editor";
+import AdminPromotionsPage from "@/pages/AdminPromotionsPage";
 import { AdminProtectedRoute } from "@/components/admin/admin-protected-route";
 
 // Error Boundary Component للتعامل مع الأخطاء ومنع الشاشة السوداء
@@ -173,6 +175,11 @@ function Router() {
             <AdminSettings />
           </AdminProtectedRoute>
         </Route>
+        <Route path="/admin/promotions">
+          <AdminProtectedRoute>
+            <AdminPromotionsPage />
+          </AdminProtectedRoute>
+        </Route>
         <Route path="/admin">
           <AdminProtectedRoute>
             <AdminDashboard />
@@ -193,6 +200,7 @@ function Router() {
             <Route path="/product/:productId" component={ProductDetail} />
             <Route path="/my-vendor" component={MyVendor} />
             <Route path="/vendor/:vendorId" component={VendorProfile} />
+            <Route path="/promotions" component={PromotionsPage} />
             <Route path="/cart" component={Cart} />
             <Route path="/orders" component={Orders} />
             <Route path="/neighborhoods" component={Neighborhoods} />
