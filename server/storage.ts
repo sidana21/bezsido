@@ -9641,6 +9641,8 @@ export class MemStorage implements IStorage {
       db = dbModule.db;
     }
 
+    await this.getPromotionSettings();
+
     const [updatedSettings] = await db.update(promotionSettings)
       .set({ ...settings, updatedAt: new Date() })
       .where(eq(promotionSettings.id, 'promotion_settings'))
