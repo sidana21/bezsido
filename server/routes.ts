@@ -6758,6 +6758,296 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== نظام الإعلانات والترويج - Promotions System ==========
+
+  // الحصول على إعدادات الإعلانات
+  app.get("/api/promotions/settings", async (req, res) => {
+    try {
+      const settings = await storage.getPromotionSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching promotion settings:', error);
+      res.status(500).json({ message: "خطأ في جلب إعدادات الإعلانات" });
+    }
+  });
+
+  // تحديث إعدادات الإعلانات (للأدمن فقط)
+  app.patch("/api/promotions/settings", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بتعديل الإعدادات" });
+      }
+
+      const updatedSettings = await storage.updatePromotionSettings(req.body);
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error('Error updating promotion settings:', error);
+      res.status(500).json({ message: "خطأ في تحديث الإعدادات" });
+    }
+  });
+
+  // إنشاء طلب ترويج جديد
+  app.post("/api/promotions", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      
+      // التحقق من أن المستخدم لديه متجر
+      const vendors = await storage.getVendorsByUserId(userId);
+      if (!vendors || vendors.length === 0) {
+        return res.status(403).json({ message: "يجب أن يكون لديك متجر لإنشاء إعلان" });
+      }
+
+      const vendorId = req.body.vendorId || vendors[0].id;
+      
+      // حساب تاريخ الانتهاء
+      const startDate = new Date();
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + req.body.durationDays);
+
+      const promotionData = {
+        ...req.body,
+        vendorId,
+        startDate,
+        endDate,
+        status: 'pending',
+        paymentStatus: 'unpaid'
+      };
+
+      const promotion = await storage.createPromotion(promotionData);
+      res.status(201).json(promotion);
+    } catch (error) {
+      console.error('Error creating promotion:', error);
+      res.status(500).json({ message: "خطأ في إنشاء الإعلان" });
+    }
+  });
+
+  // الحصول على إعلانات البائع
+  app.get("/api/promotions/vendor/:vendorId", requireAuth, async (req: any, res) => {
+    try {
+      const { vendorId } = req.params;
+      const userId = req.userId;
+      
+      // التحقق من أن البائع يملك المتجر
+      const vendor = await storage.getVendor(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ message: "المتجر غير موجود" });
+      }
+
+      // Allow admin to view all promotions
+      const user = await storage.getUser(userId);
+      if (vendor.userId !== userId && !user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بعرض هذه الإعلانات" });
+      }
+
+      const promotions = await storage.getVendorPromotions(vendorId);
+      res.json(promotions);
+    } catch (error) {
+      console.error('Error fetching vendor promotions:', error);
+      res.status(500).json({ message: "خطأ في جلب الإعلانات" });
+    }
+  });
+
+  // الحصول على جميع الإعلانات (للأدمن)
+  app.get("/api/promotions/all", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بعرض جميع الإعلانات" });
+      }
+
+      const promotions = await storage.getAllPromotions();
+      res.json(promotions);
+    } catch (error) {
+      console.error('Error fetching all promotions:', error);
+      res.status(500).json({ message: "خطأ في جلب الإعلانات" });
+    }
+  });
+
+  // الحصول على الإعلانات المعلقة (للأدمن)
+  app.get("/api/promotions/pending", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بعرض الإعلانات المعلقة" });
+      }
+
+      const promotions = await storage.getPendingPromotions();
+      res.json(promotions);
+    } catch (error) {
+      console.error('Error fetching pending promotions:', error);
+      res.status(500).json({ message: "خطأ في جلب الإعلانات المعلقة" });
+    }
+  });
+
+  // الحصول على الإعلانات النشطة
+  app.get("/api/promotions/active", async (req, res) => {
+    try {
+      const promotions = await storage.getActivePromotions();
+      res.json(promotions);
+    } catch (error) {
+      console.error('Error fetching active promotions:', error);
+      res.status(500).json({ message: "خطأ في جلب الإعلانات النشطة" });
+    }
+  });
+
+  // الحصول على المتاجر المميزة
+  app.get("/api/promotions/featured-stores", async (req, res) => {
+    try {
+      const { location } = req.query;
+      const stores = await storage.getFeaturedStores(location as string);
+      res.json(stores);
+    } catch (error) {
+      console.error('Error fetching featured stores:', error);
+      res.status(500).json({ message: "خطأ في جلب المتاجر المميزة" });
+    }
+  });
+
+  // الحصول على المنتجات المروجة
+  app.get("/api/promotions/sponsored-products", async (req, res) => {
+    try {
+      const { location } = req.query;
+      const products = await storage.getSponsoredProducts(location as string);
+      res.json(products);
+    } catch (error) {
+      console.error('Error fetching sponsored products:', error);
+      res.status(500).json({ message: "خطأ في جلب المنتجات المروجة" });
+    }
+  });
+
+  // الموافقة على إعلان (للأدمن)
+  app.patch("/api/promotions/:promotionId/approve", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بالموافقة على الإعلانات" });
+      }
+
+      const { promotionId } = req.params;
+      const promotion = await storage.updatePromotionStatus(
+        promotionId, 
+        'active', 
+        req.userId
+      );
+
+      if (!promotion) {
+        return res.status(404).json({ message: "الإعلان غير موجود" });
+      }
+
+      res.json(promotion);
+    } catch (error) {
+      console.error('Error approving promotion:', error);
+      res.status(500).json({ message: "خطأ في الموافقة على الإعلان" });
+    }
+  });
+
+  // رفض إعلان (للأدمن)
+  app.patch("/api/promotions/:promotionId/reject", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك برفض الإعلانات" });
+      }
+
+      const { promotionId } = req.params;
+      const { reason } = req.body;
+      
+      const promotion = await storage.updatePromotionStatus(
+        promotionId, 
+        'rejected', 
+        req.userId,
+        reason
+      );
+
+      if (!promotion) {
+        return res.status(404).json({ message: "الإعلان غير موجود" });
+      }
+
+      res.json(promotion);
+    } catch (error) {
+      console.error('Error rejecting promotion:', error);
+      res.status(500).json({ message: "خطأ في رفض الإعلان" });
+    }
+  });
+
+  // تحديث حالة الدفع
+  app.patch("/api/promotions/:promotionId/payment", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بتحديث حالة الدفع" });
+      }
+
+      const { promotionId } = req.params;
+      const { paymentStatus, paidAmount } = req.body;
+      
+      const promotion = await storage.updatePromotion(promotionId, {
+        paymentStatus,
+        paidAmount
+      });
+
+      if (!promotion) {
+        return res.status(404).json({ message: "الإعلان غير موجود" });
+      }
+
+      res.json(promotion);
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      res.status(500).json({ message: "خطأ في تحديث حالة الدفع" });
+    }
+  });
+
+  // زيادة عدد المشاهدات
+  app.post("/api/promotions/:promotionId/view", async (req, res) => {
+    try {
+      const { promotionId } = req.params;
+      await storage.incrementPromotionViews(promotionId);
+      res.json({ message: "تم تسجيل المشاهدة" });
+    } catch (error) {
+      console.error('Error incrementing views:', error);
+      res.status(500).json({ message: "خطأ في تسجيل المشاهدة" });
+    }
+  });
+
+  // زيادة عدد النقرات
+  app.post("/api/promotions/:promotionId/click", async (req, res) => {
+    try {
+      const { promotionId } = req.params;
+      await storage.incrementPromotionClicks(promotionId);
+      res.json({ message: "تم تسجيل النقرة" });
+    } catch (error) {
+      console.error('Error incrementing clicks:', error);
+      res.status(500).json({ message: "خطأ في تسجيل النقرة" });
+    }
+  });
+
+  // حذف إعلان
+  app.delete("/api/promotions/:promotionId", requireAuth, async (req: any, res) => {
+    try {
+      const { promotionId } = req.params;
+      const userId = req.userId;
+      
+      const promotion = await storage.getPromotion(promotionId);
+      if (!promotion) {
+        return res.status(404).json({ message: "الإعلان غير موجود" });
+      }
+
+      // التحقق من الصلاحيات
+      const vendor = await storage.getVendor(promotion.vendorId);
+      const user = await storage.getUser(userId);
+      
+      if (vendor?.userId !== userId && !user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بحذف هذا الإعلان" });
+      }
+
+      await storage.deletePromotion(promotionId);
+      res.json({ message: "تم حذف الإعلان بنجاح" });
+    } catch (error) {
+      console.error('Error deleting promotion:', error);
+      res.status(500).json({ message: "خطأ في حذف الإعلان" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -88,10 +88,14 @@ import {
   type SocialNotification,
   type InsertSocialNotification,
   type PrivacyPolicy,
-  type InsertPrivacyPolicy
+  type InsertPrivacyPolicy,
+  type Promotion,
+  type InsertPromotion,
+  type PromotionSettings,
+  type InsertPromotionSettings
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, privacyPolicy, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows } from '@shared/schema';
+import { adminCredentials, appFeatures, privacyPolicy, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows, promotions, promotionSettings } from '@shared/schema';
 import { sql, or, gt, gte, count, sum, isNotNull } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
@@ -426,6 +430,25 @@ export interface IStorage {
   getFollowingCount(userId: string): Promise<number>;
   getFollowers(userId: string): Promise<User[]>;
   getFollowing(userId: string): Promise<User[]>;
+  
+  // Promotions - نظام الإعلانات والترويج
+  createPromotion(promotion: InsertPromotion): Promise<Promotion>;
+  getPromotion(promotionId: string): Promise<Promotion | undefined>;
+  getVendorPromotions(vendorId: string): Promise<Promotion[]>;
+  getAllPromotions(): Promise<Promotion[]>;
+  getPendingPromotions(): Promise<Promotion[]>;
+  getActivePromotions(): Promise<Promotion[]>;
+  updatePromotionStatus(promotionId: string, status: string, approvedBy?: string, rejectionReason?: string): Promise<Promotion | undefined>;
+  updatePromotion(promotionId: string, updates: Partial<InsertPromotion>): Promise<Promotion | undefined>;
+  deletePromotion(promotionId: string): Promise<boolean>;
+  incrementPromotionViews(promotionId: string): Promise<void>;
+  incrementPromotionClicks(promotionId: string): Promise<void>;
+  getFeaturedStores(location?: string): Promise<any[]>;
+  getSponsoredProducts(location?: string): Promise<any[]>;
+  
+  // Promotion Settings - إعدادات الإعلانات
+  getPromotionSettings(): Promise<PromotionSettings | undefined>;
+  updatePromotionSettings(settings: Partial<InsertPromotionSettings>): Promise<PromotionSettings>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
@@ -9387,6 +9410,243 @@ export class MemStorage implements IStorage {
 
     console.log(`📢 Admin announcement sent to ${sentCount} users`);
     return sentCount;
+  }
+
+  // Promotions - نظام الإعلانات والترويج
+  async createPromotion(promotion: InsertPromotion): Promise<Promotion> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const [newPromotion] = await db.insert(promotions).values(promotion).returning();
+    return newPromotion;
+  }
+
+  async getPromotion(promotionId: string): Promise<Promotion | undefined> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const [promotion] = await db.select().from(promotions).where(eq(promotions.id, promotionId));
+    return promotion;
+  }
+
+  async getVendorPromotions(vendorId: string): Promise<Promotion[]> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    return await db.select().from(promotions)
+      .where(eq(promotions.vendorId, vendorId))
+      .orderBy(desc(promotions.createdAt));
+  }
+
+  async getAllPromotions(): Promise<Promotion[]> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    return await db.select().from(promotions).orderBy(desc(promotions.createdAt));
+  }
+
+  async getPendingPromotions(): Promise<Promotion[]> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    return await db.select().from(promotions)
+      .where(eq(promotions.status, 'pending'))
+      .orderBy(desc(promotions.createdAt));
+  }
+
+  async getActivePromotions(): Promise<Promotion[]> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const now = new Date();
+    return await db.select().from(promotions)
+      .where(
+        and(
+          eq(promotions.status, 'active'),
+          gte(promotions.endDate, now)
+        )
+      )
+      .orderBy(desc(promotions.createdAt));
+  }
+
+  async updatePromotionStatus(
+    promotionId: string, 
+    status: string, 
+    approvedBy?: string, 
+    rejectionReason?: string
+  ): Promise<Promotion | undefined> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const updates: any = { status, updatedAt: new Date() };
+    
+    if (approvedBy) {
+      updates.approvedBy = approvedBy;
+      updates.approvedAt = new Date();
+    }
+    
+    if (rejectionReason) {
+      updates.rejectionReason = rejectionReason;
+    }
+
+    if (status === 'active') {
+      updates.startDate = new Date();
+    }
+
+    const [updatedPromotion] = await db.update(promotions)
+      .set(updates)
+      .where(eq(promotions.id, promotionId))
+      .returning();
+
+    return updatedPromotion;
+  }
+
+  async updatePromotion(promotionId: string, updates: Partial<InsertPromotion>): Promise<Promotion | undefined> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const [updatedPromotion] = await db.update(promotions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(promotions.id, promotionId))
+      .returning();
+
+    return updatedPromotion;
+  }
+
+  async deletePromotion(promotionId: string): Promise<boolean> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    await db.delete(promotions).where(eq(promotions.id, promotionId));
+    return true;
+  }
+
+  async incrementPromotionViews(promotionId: string): Promise<void> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    await db.update(promotions)
+      .set({ viewCount: sql`${promotions.viewCount} + 1` })
+      .where(eq(promotions.id, promotionId));
+  }
+
+  async incrementPromotionClicks(promotionId: string): Promise<void> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    await db.update(promotions)
+      .set({ clickCount: sql`${promotions.clickCount} + 1` })
+      .where(eq(promotions.id, promotionId));
+  }
+
+  async getFeaturedStores(location?: string): Promise<any[]> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const now = new Date();
+    const conditions = [
+      eq(promotions.promotionType, 'featured_store'),
+      eq(promotions.status, 'active'),
+      gte(promotions.endDate, now)
+    ];
+
+    const activePromotions = await db.select({
+      promotion: promotions,
+      vendor: vendors
+    })
+    .from(promotions)
+    .innerJoin(vendors, eq(promotions.vendorId, vendors.id))
+    .where(and(...conditions))
+    .orderBy(desc(promotions.createdAt))
+    .limit(10);
+
+    return activePromotions;
+  }
+
+  async getSponsoredProducts(location?: string): Promise<any[]> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const now = new Date();
+    const conditions = [
+      eq(promotions.promotionType, 'sponsored_product'),
+      eq(promotions.status, 'active'),
+      gte(promotions.endDate, now)
+    ];
+
+    const activePromotions = await db.select({
+      promotion: promotions,
+      product: products,
+      vendor: vendors
+    })
+    .from(promotions)
+    .innerJoin(products, eq(promotions.targetId, products.id))
+    .innerJoin(vendors, eq(promotions.vendorId, vendors.id))
+    .where(and(...conditions))
+    .orderBy(desc(promotions.createdAt))
+    .limit(20);
+
+    return activePromotions;
+  }
+
+  // Promotion Settings - إعدادات الإعلانات
+  async getPromotionSettings(): Promise<PromotionSettings | undefined> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const [settings] = await db.select().from(promotionSettings)
+      .where(eq(promotionSettings.id, 'promotion_settings'));
+    
+    if (!settings) {
+      const [newSettings] = await db.insert(promotionSettings)
+        .values({ id: 'promotion_settings' })
+        .returning();
+      return newSettings;
+    }
+
+    return settings;
+  }
+
+  async updatePromotionSettings(settings: Partial<InsertPromotionSettings>): Promise<PromotionSettings> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+
+    const [updatedSettings] = await db.update(promotionSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(promotionSettings.id, 'promotion_settings'))
+      .returning();
+
+    return updatedSettings;
   }
 
 }
