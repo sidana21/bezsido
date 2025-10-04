@@ -4712,9 +4712,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `تم ${isEnabled ? 'تفعيل' : 'إيقاف'} الميزة بنجاح`,
         feature
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Update feature error:', error);
-      res.status(500).json({ message: "خطأ في الخادم" });
+      
+      // Check if it's a database connection error
+      const isConnectionError = 
+        error?.message?.includes('Database connection') ||
+        error?.message?.includes('Connection') ||
+        error?.message?.includes('ECONNRESET') ||
+        error?.message?.includes('timeout') ||
+        error?.code === 'ECONNRESET' ||
+        error?.code === 'ETIMEDOUT';
+      
+      if (isConnectionError) {
+        return res.status(503).json({ 
+          message: "فشل الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى",
+          details: "Database connection error"
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "خطأ في تحديث الميزة",
+        details: error.message 
+      });
     }
   });
 

@@ -101,6 +101,95 @@ import { eq, and, desc, ne } from 'drizzle-orm';
 
 // Database connection will be imported conditionally when needed
 let db: any = null;
+let dbInitPromise: Promise<any> | null = null;
+let dbInitMutex = false;
+
+// Helper function to ensure database is ready (idempotent with mutex)
+async function ensureDbReady(): Promise<void> {
+  if (db) return;
+  
+  // If initialization is already in progress, wait for it
+  if (dbInitPromise) {
+    await dbInitPromise;
+    return;
+  }
+  
+  // Use mutex to prevent concurrent initializations
+  if (dbInitMutex) {
+    // Wait a bit and retry
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return ensureDbReady();
+  }
+  
+  try {
+    dbInitMutex = true;
+    console.log('🔄 Ensuring database connection is ready...');
+    
+    const dbModule = await import('./db');
+    
+    // Initialize database if not already done
+    if (!db) {
+      dbInitPromise = (dbModule as any).initializeDatabase?.();
+      if (dbInitPromise) {
+        await dbInitPromise;
+      }
+      db = dbModule.db;
+    }
+    
+    // Verify connection is active
+    if (db) {
+      await db.execute(sql`SELECT 1`);
+      console.log('✅ Database connection verified');
+    }
+  } catch (error) {
+    console.error('❌ Failed to ensure database readiness:', error);
+    throw new Error('Database connection not available');
+  } finally {
+    dbInitMutex = false;
+    dbInitPromise = null;
+  }
+}
+
+// Retry wrapper for transient database errors
+async function retryDbOperation<T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if error is transient (network/connection issues)
+      const isTransient = 
+        error?.code === 'ECONNRESET' ||
+        error?.code === 'ETIMEDOUT' ||
+        error?.code === 'ECONNREFUSED' ||
+        error?.message?.includes('Connection') ||
+        error?.message?.includes('timeout') ||
+        error?.message?.includes('ECONNRESET') ||
+        error?.message?.includes('FetchError') ||
+        error?.message?.includes('network');
+      
+      if (!isTransient || attempt === maxRetries) {
+        console.error(`❌ ${operationName} failed after ${attempt} attempts:`, error);
+        throw error;
+      }
+      
+      // Exponential backoff
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      console.warn(`⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+}
 
 export interface IStorage {
   // Call management
@@ -1857,19 +1946,45 @@ export class DatabaseStorage implements IStorage {
 
   async updateFeature(featureId: string, updates: Partial<InsertAppFeature>): Promise<AppFeature | undefined> {
     try {
+      // Ensure database connection is ready before proceeding
+      await ensureDbReady();
+      
       if (!db) {
-        const dbModule = await import('./db');
-        db = dbModule.db;
+        throw new Error('Database connection not available after initialization');
       }
       
-      const result = await db.update(appFeatures)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(appFeatures.id, featureId))
-        .returning();
-      return result[0] || undefined;
-    } catch (error) {
-      console.error('Error updating feature:', error);
-      return undefined;
+      console.log(`🔄 Updating feature: ${featureId}`, { updates: JSON.stringify(updates) });
+      
+      // Use retry logic for the database operation
+      const result = await retryDbOperation(
+        async () => {
+          return await db.update(appFeatures)
+            .set({ ...updates, updatedAt: new Date() })
+            .where(eq(appFeatures.id, featureId))
+            .returning();
+        },
+        `updateFeature(${featureId})`,
+        3,
+        1000
+      );
+      
+      if (!result || result.length === 0) {
+        console.warn(`⚠️ Feature not found: ${featureId}`);
+        return undefined;
+      }
+      
+      console.log(`✅ Feature updated successfully: ${featureId}`, { isEnabled: result[0].isEnabled });
+      return result[0];
+    } catch (error: any) {
+      console.error(`❌ Error updating feature ${featureId}:`, {
+        featureId,
+        updates,
+        error: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      // Re-throw the error so the route handler can provide appropriate HTTP response
+      throw error;
     }
   }
 

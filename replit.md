@@ -88,6 +88,25 @@ Preferred communication style: Simple, everyday language.
 - `follows`: For user following system
 - All other tables defined in `shared/schema.ts`
 
+### Database Connection Reliability Improvements (October 4, 2025)
+**Problem**: Feature updates (e.g., enabling ads) worked locally but failed on Render with misleading "Feature not found" errors, despite the actual issue being database connection failures during cold starts.
+
+**Solution Implemented**:
+- ✅ **Database Health Check**: Added `ensureDbReady()` helper function with mutex locking to guarantee connection availability before operations
+- ✅ **Retry Logic**: Implemented exponential backoff retry mechanism (3 attempts) for transient network errors (ECONNRESET, timeouts)
+- ✅ **Enhanced Error Handling**: 
+  - Storage layer now throws errors instead of silently returning `undefined`
+  - API routes distinguish between 404 (not found) and 503 (connection error)
+  - Connection errors return clear Arabic messages: "فشل الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى"
+- ✅ **Improved Logging**: Added structured logging with operation context (featureId, updates, error codes) for production debugging
+- ✅ **Cold Start Handling**: Database initialization is now properly awaited before processing requests
+
+**Technical Details**:
+- Modified `server/storage.ts`: Added `ensureDbReady()` and `retryDbOperation()` wrapper functions
+- Updated `updateFeature()` method to use health check + retry logic
+- Enhanced `server/routes.ts`: PUT `/api/admin/features/:featureId` now returns 503 for connection errors
+- Works seamlessly in both Replit (development) and Render (production) environments
+
 See `RENDER_DEPLOYMENT_COMPLETE_GUIDE.md` for complete deployment instructions.
 
 ## System Architecture
