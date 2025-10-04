@@ -4309,6 +4309,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Privacy Policy Management
+  app.get("/api/privacy-policy", async (req, res) => {
+    try {
+      const policy = await storage.getPrivacyPolicy();
+      res.json(policy || { content: null });
+    } catch (error) {
+      console.error("Failed to get privacy policy:", error);
+      res.status(500).json({ message: "فشل في تحميل سياسة الخصوصية" });
+    }
+  });
+
+  app.put("/api/admin/privacy-policy", requireAdmin, async (req: any, res) => {
+    try {
+      const { content } = req.body;
+      
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ message: "المحتوى مطلوب" });
+      }
+      
+      const updatedPolicy = await storage.updatePrivacyPolicy(content, req.userId);
+      
+      res.json({ 
+        success: true,
+        message: "تم تحديث سياسة الخصوصية بنجاح",
+        policy: updatedPolicy
+      });
+    } catch (error) {
+      console.error("Failed to update privacy policy:", error);
+      res.status(500).json({ message: "فشل في تحديث سياسة الخصوصية" });
+    }
+  });
+
   // ===========================
   // Additional Admin API Routes
   // ===========================
