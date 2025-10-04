@@ -44,6 +44,7 @@ import { OrdersManagement } from "@/pages/admin/orders-management";
 import { FeaturesManagement } from "@/pages/admin/features-management";
 import EmailSettings from "@/pages/admin/email-settings";
 import { SendAnnouncement } from "@/pages/admin/send-announcement";
+import PrivacySectionsEditor from "@/pages/admin/privacy-sections-editor";
 import { AdminProtectedRoute } from "@/components/admin/admin-protected-route";
 
 // Error Boundary Component للتعامل مع الأخطاء ومنع الشاشة السوداء
@@ -160,6 +161,11 @@ function Router() {
         <Route path="/admin/email-settings">
           <AdminProtectedRoute>
             <EmailSettings />
+          </AdminProtectedRoute>
+        </Route>
+        <Route path="/admin/privacy-sections">
+          <AdminProtectedRoute>
+            <PrivacySectionsEditor />
           </AdminProtectedRoute>
         </Route>
         <Route path="/admin/settings">

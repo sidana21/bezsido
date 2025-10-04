@@ -104,6 +104,29 @@ export const insertPrivacyPolicySchema = createInsertSchema(privacyPolicy).omit(
 export type PrivacyPolicy = typeof privacyPolicy.$inferSelect;
 export type InsertPrivacyPolicy = z.infer<typeof insertPrivacyPolicySchema>;
 
+// Privacy policy sections table - for editable privacy policy sections
+export const privacySections = pgTable("privacy_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionKey: varchar("section_key").notNull().unique(), // unique identifier for each section
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  icon: text("icon"), // icon name from lucide-react
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  lastUpdatedBy: varchar("last_updated_by"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPrivacySectionSchema = createInsertSchema(privacySections).omit({
+  id: true,
+  updatedAt: true,
+  createdAt: true,
+});
+
+export type PrivacySection = typeof privacySections.$inferSelect;
+export type InsertPrivacySection = z.infer<typeof insertPrivacySectionSchema>;
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   isVerified: true,

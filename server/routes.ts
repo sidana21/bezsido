@@ -4341,6 +4341,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Privacy Sections Management
+  app.get("/api/privacy-sections", async (req, res) => {
+    try {
+      const sections = await storage.getAllPrivacySections();
+      res.json(sections);
+    } catch (error) {
+      console.error("Failed to get privacy sections:", error);
+      res.status(500).json({ message: "فشل في تحميل أقسام سياسة الخصوصية" });
+    }
+  });
+
+  app.get("/api/privacy-sections/:sectionKey", async (req, res) => {
+    try {
+      const section = await storage.getPrivacySection(req.params.sectionKey);
+      if (!section) {
+        return res.status(404).json({ message: "القسم غير موجود" });
+      }
+      res.json(section);
+    } catch (error) {
+      console.error("Failed to get privacy section:", error);
+      res.status(500).json({ message: "فشل في تحميل القسم" });
+    }
+  });
+
+  app.post("/api/admin/privacy-sections", requireAdmin, async (req: any, res) => {
+    try {
+      const section = await storage.createPrivacySection({
+        ...req.body,
+        lastUpdatedBy: req.userId
+      });
+      res.json({ message: "تم إنشاء القسم بنجاح", section });
+    } catch (error) {
+      console.error("Failed to create privacy section:", error);
+      res.status(500).json({ message: "فشل في إنشاء القسم" });
+    }
+  });
+
+  app.put("/api/admin/privacy-sections/:sectionKey", requireAdmin, async (req: any, res) => {
+    try {
+      const { title, content, icon, sortOrder, isActive } = req.body;
+      const updated = await storage.updatePrivacySection(req.params.sectionKey, {
+        title,
+        content,
+        icon,
+        sortOrder,
+        isActive,
+        lastUpdatedBy: req.userId
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "القسم غير موجود" });
+      }
+      
+      res.json({ message: "تم تحديث القسم بنجاح", section: updated });
+    } catch (error) {
+      console.error("Failed to update privacy section:", error);
+      res.status(500).json({ message: "فشل في تحديث القسم" });
+    }
+  });
+
+  app.delete("/api/admin/privacy-sections/:sectionKey", requireAdmin, async (req: any, res) => {
+    try {
+      const success = await storage.deletePrivacySection(req.params.sectionKey);
+      if (!success) {
+        return res.status(404).json({ message: "القسم غير موجود" });
+      }
+      res.json({ message: "تم حذف القسم بنجاح" });
+    } catch (error) {
+      console.error("Failed to delete privacy section:", error);
+      res.status(500).json({ message: "فشل في حذف القسم" });
+    }
+  });
+
   // ===========================
   // Additional Admin API Routes
   // ===========================

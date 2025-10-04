@@ -173,6 +173,14 @@ export interface IStorage {
   getPrivacyPolicy(): Promise<PrivacyPolicy | undefined>;
   updatePrivacyPolicy(content: string, updatedBy: string): Promise<PrivacyPolicy>;
   
+  // Privacy Sections
+  getAllPrivacySections(): Promise<PrivacySection[]>;
+  getPrivacySection(sectionKey: string): Promise<PrivacySection | undefined>;
+  createPrivacySection(section: InsertPrivacySection): Promise<PrivacySection>;
+  updatePrivacySection(sectionKey: string, updates: Partial<InsertPrivacySection>): Promise<PrivacySection | undefined>;
+  deletePrivacySection(sectionKey: string): Promise<boolean>;
+  initializeDefaultPrivacySections(): Promise<void>;
+  
   // Stickers
   getAllStickers(): Promise<any[]>;
   
@@ -1472,6 +1480,231 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error updating privacy policy:', error);
       throw error;
+    }
+  }
+
+  // Privacy Sections implementation
+  async getAllPrivacySections(): Promise<PrivacySection[]> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select()
+        .from(privacySections)
+        .where(eq(privacySections.isActive, true))
+        .orderBy(privacySections.sortOrder);
+      
+      // Initialize default sections if table is empty
+      if (result.length === 0) {
+        await this.initializeDefaultPrivacySections();
+        return await db.select()
+          .from(privacySections)
+          .where(eq(privacySections.isActive, true))
+          .orderBy(privacySections.sortOrder);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error getting privacy sections:', error);
+      return [];
+    }
+  }
+
+  async getPrivacySection(sectionKey: string): Promise<PrivacySection | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select()
+        .from(privacySections)
+        .where(eq(privacySections.sectionKey, sectionKey))
+        .limit(1);
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting privacy section:', error);
+      return undefined;
+    }
+  }
+
+  async createPrivacySection(section: InsertPrivacySection): Promise<PrivacySection> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.insert(privacySections)
+        .values(section)
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating privacy section:', error);
+      throw error;
+    }
+  }
+
+  async updatePrivacySection(sectionKey: string, updates: Partial<InsertPrivacySection>): Promise<PrivacySection | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.update(privacySections)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(privacySections.sectionKey, sectionKey))
+        .returning();
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error updating privacy section:', error);
+      return undefined;
+    }
+  }
+
+  async deletePrivacySection(sectionKey: string): Promise<boolean> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(privacySections)
+        .where(eq(privacySections.sectionKey, sectionKey));
+      return true;
+    } catch (error) {
+      console.error('Error deleting privacy section:', error);
+      return false;
+    }
+  }
+
+  async initializeDefaultPrivacySections(): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+
+      const existingSections = await db.select().from(privacySections);
+      if (existingSections.length > 0) {
+        console.log('Privacy sections already initialized');
+        return;
+      }
+
+      const defaultSections: InsertPrivacySection[] = [
+        {
+          sectionKey: 'introduction',
+          title: 'مقدمة',
+          content: 'نحن في Bivochat نلتزم بحماية خصوصيتك وأمان بياناتك الشخصية. تطبيقنا مصمم لتوفير منصة آمنة وموثوقة للتواصل الاجتماعي والتجارة الإلكترونية.',
+          icon: 'Sparkles',
+          sortOrder: 1,
+          isActive: true
+        },
+        {
+          sectionKey: 'commitment',
+          title: 'التزامنا الأساسي تجاهك',
+          content: '✓ نحن لا نبيع بياناتك أبداً\n✓ حقك في الحذف الكامل\n✓ شفافية كاملة في جميع عملياتنا',
+          icon: 'Lock',
+          sortOrder: 2,
+          isActive: true
+        },
+        {
+          sectionKey: 'data_collection',
+          title: 'البيانات التي نجمعها',
+          content: '1. معلومات الحساب: الاسم، البريد الإلكتروني، صورة الملف الشخصي\n2. بيانات الاستخدام: المحادثات، المنشورات، المنتجات\n3. بيانات تقنية: نوع الجهاز، عنوان IP (للأمان فقط)',
+          icon: 'Eye',
+          sortOrder: 3,
+          isActive: true
+        },
+        {
+          sectionKey: 'permissions',
+          title: 'الصلاحيات المطلوبة',
+          content: '• صلاحية الإشعارات: لإرسال إشعارات الرسائل والتحديثات\n• صلاحية الوصول للصور: لرفع صور المنتجات والملف الشخصي فقط',
+          icon: 'Bell',
+          sortOrder: 4,
+          isActive: true
+        },
+        {
+          sectionKey: 'data_usage',
+          title: 'كيف نستخدم بياناتك',
+          content: '• تمكين التواصل بين المستخدمين\n• عرض منتجاتك للمشترين\n• تحسين تجربة المستخدم\n• حماية الأمان ومنع الاحتيال',
+          icon: 'Shield',
+          sortOrder: 5,
+          isActive: true
+        },
+        {
+          sectionKey: 'payment_methods',
+          title: 'طرق الدفع',
+          content: 'جميع المعاملات داخل التطبيق تتم عن طريق الدفع عند الاستلام فقط. لا نجمع أو نخزن أي معلومات بطاقات ائتمانية أو بنكية.',
+          icon: 'CreditCard',
+          sortOrder: 6,
+          isActive: true
+        },
+        {
+          sectionKey: 'data_sharing',
+          title: 'مشاركة البيانات',
+          content: 'نحن لا نبيع بياناتك الشخصية. قد نشارك بيانات محدودة فقط مع:\n• مزودي الخدمات التقنية\n• للامتثال للقوانين\n• لحماية حقوق وأمان المستخدمين',
+          icon: 'Share2',
+          sortOrder: 7,
+          isActive: true
+        },
+        {
+          sectionKey: 'data_security',
+          title: 'أمان البيانات',
+          content: '🔒 تشفير البيانات أثناء النقل والتخزين\n🔒 مصادقة آمنة عبر OTP\n🔒 خوادم آمنة ومراقبة مستمرة\n🔒 نسخ احتياطي دوري',
+          icon: 'Lock',
+          sortOrder: 8,
+          isActive: true
+        },
+        {
+          sectionKey: 'user_rights',
+          title: 'حقوقك في التحكم ببياناتك',
+          content: '✓ حذف الحساب بالكامل في أي وقت\n✓ تعديل معلومات ملفك الشخصي\n✓ تصدير نسخة من بياناتك\n✓ إلغاء الاشتراك من الإشعارات',
+          icon: 'Trash2',
+          sortOrder: 9,
+          isActive: true
+        },
+        {
+          sectionKey: 'children_privacy',
+          title: 'خصوصية الأطفال',
+          content: 'تطبيق Bivochat مخصص للمستخدمين من عمر 13 سنة فما فوق. نحن لا نجمع عن قصد معلومات من الأطفال دون سن 13 عاماً.',
+          icon: 'Users',
+          sortOrder: 10,
+          isActive: true
+        },
+        {
+          sectionKey: 'continuous_development',
+          title: 'التزامنا بالتطوير المستمر',
+          content: '✨ إضافة ميزات جديدة\n✨ تحسين الأداء والسرعة\n✨ تعزيز الأمان والخصوصية\n✨ إصلاح الأخطاء بسرعة\n✨ الاستماع لملاحظاتكم',
+          icon: 'Sparkles',
+          sortOrder: 11,
+          isActive: true
+        },
+        {
+          sectionKey: 'policy_changes',
+          title: 'التغييرات على السياسة',
+          content: 'قد نقوم بتحديث سياسة الخصوصية من وقت لآخر. سنقوم بإخطارك بأي تغييرات جوهرية عبر إشعار داخل التطبيق.',
+          icon: 'RefreshCw',
+          sortOrder: 12,
+          isActive: true
+        },
+        {
+          sectionKey: 'contact_us',
+          title: 'تواصل معنا',
+          content: 'إذا كان لديك أي أسئلة:\n📧 البريد الإلكتروني: privacy@bivochat.com\n📱 دعم المستخدمين: من خلال إعدادات التطبيق',
+          icon: 'Mail',
+          sortOrder: 13,
+          isActive: true
+        }
+      ];
+
+      await db.insert(privacySections).values(defaultSections);
+      console.log('✅ Default privacy sections initialized');
+    } catch (error) {
+      console.error('Error initializing privacy sections:', error);
     }
   }
 
@@ -5993,6 +6226,7 @@ export class MemStorage implements IStorage {
   private features = new Map<string, AppFeature>();
   private adminCredentials: AdminCredentials | undefined;
   private privacyPolicyData: PrivacyPolicy | undefined;
+  private privacySectionsData = new Map<string, PrivacySection>();
   private calls = new Map<string, Call>();
   private stickers: any[] = [];
   private vendors = new Map<string, Vendor>();
@@ -6836,6 +7070,52 @@ export class MemStorage implements IStorage {
       createdAt: this.privacyPolicyData?.createdAt || new Date(),
     };
     return this.privacyPolicyData;
+  }
+
+  // Privacy Sections
+  async getAllPrivacySections(): Promise<PrivacySection[]> {
+    return Array.from(this.privacySectionsData.values())
+      .filter(section => section.isActive)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
+
+  async getPrivacySection(sectionKey: string): Promise<PrivacySection | undefined> {
+    return this.privacySectionsData.get(sectionKey);
+  }
+
+  async createPrivacySection(section: InsertPrivacySection): Promise<PrivacySection> {
+    const newSection: PrivacySection = {
+      id: randomUUID(),
+      ...section,
+      icon: section.icon ?? null,
+      lastUpdatedBy: section.lastUpdatedBy ?? null,
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    };
+    this.privacySectionsData.set(newSection.sectionKey, newSection);
+    return newSection;
+  }
+
+  async updatePrivacySection(sectionKey: string, updates: Partial<InsertPrivacySection>): Promise<PrivacySection | undefined> {
+    const existing = this.privacySectionsData.get(sectionKey);
+    if (!existing) return undefined;
+
+    const updated: PrivacySection = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.privacySectionsData.set(sectionKey, updated);
+    return updated;
+  }
+
+  async deletePrivacySection(sectionKey: string): Promise<boolean> {
+    return this.privacySectionsData.delete(sectionKey);
+  }
+
+  async initializeDefaultPrivacySections(): Promise<void> {
+    // Empty in MemStorage - sections should be created via admin panel
+    console.log('Privacy sections initialization skipped in memory storage');
   }
 
   async getAllFeatures(): Promise<AppFeature[]> {

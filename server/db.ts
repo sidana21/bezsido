@@ -526,6 +526,21 @@ async function ensureTablesExist() {
         reviewed_by VARCHAR REFERENCES users(id)
       )
     `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS privacy_sections (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        section_key VARCHAR NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        icon TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        last_updated_by VARCHAR,
+        updated_at TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
     
     // Add password column to existing users table if it doesn't exist
     try {

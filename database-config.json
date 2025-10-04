@@ -1,7 +1,5 @@
 {
-  "note": "رابط قاعدة البيانات الخارجية المحفوظ تلقائياً",
-  "warning": "هذا الملف للتطوير المحلي فقط ولن يؤثر على النشر على Render",
-  "production_note": "في بيئة الإنتاج، يتم استخدام متغير البيئة DATABASE_URL فقط",
-  "lastUpdated": "2025-10-04T14:28:06.715Z",
-  "DATABASE_URL": "postgresql://neondb_owner:npg_9vFtNGVpge4J@ep-divine-firefly-agptm72n.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+  "DATABASE_URL": "postgresql://neondb_owner:npg_Mka59EfLRtyi@ep-royal-sunset-aecu8ops.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require",
+  "lastUpdated": "2025-10-04T18:13:53.197Z",
+  "note": "رابط قاعدة البيانات الخارجية المحفوظ تلقائياً"
 }
