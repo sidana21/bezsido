@@ -1534,3 +1534,123 @@ export type InsertPostComment = z.infer<typeof insertPostCommentSchema>;
 export type PostComment = typeof postComments.$inferSelect;
 export type InsertStoryView = z.infer<typeof insertStoryViewSchema>;
 export type StoryView = typeof storyViews.$inferSelect;
+
+// نظام الإعلانات والترويج - Promotions System
+export const promotions = pgTable("promotions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: varchar("vendor_id").notNull().references(() => vendors.id, { onDelete: 'cascade' }),
+  
+  // نوع الترويج
+  promotionType: text("promotion_type").notNull(), // 'featured_store', 'sponsored_product', 'boosted_post', 'story_ad', 'location_ad', 'premium_subscription'
+  
+  // تفاصيل الترويج
+  targetId: varchar("target_id"), // ID المنتج أو المنشور أو القصة
+  targetType: text("target_type"), // 'product', 'post', 'story', 'store'
+  
+  // المدة والتسعير
+  duration: text("duration").notNull(), // 'daily', 'weekly', 'monthly'
+  durationDays: integer("duration_days").notNull(), // عدد الأيام
+  price: decimal("price").notNull(), // السعر بالدينار الجزائري
+  paidAmount: decimal("paid_amount").default("0"), // المبلغ المدفوع
+  
+  // المناطق المستهدفة
+  targetLocations: jsonb("target_locations").$type<string[]>().default([]), // المناطق للإعلان المحلي
+  
+  // الحالة
+  status: text("status").notNull().default("pending"), // 'pending', 'active', 'paused', 'completed', 'rejected', 'cancelled'
+  paymentStatus: text("payment_status").notNull().default("unpaid"), // 'unpaid', 'paid', 'refunded'
+  paymentMethod: text("payment_method").default("cash"), // 'cash', 'bank_transfer'
+  
+  // الموافقة والإدارة
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  adminNotes: text("admin_notes"),
+  
+  // التواريخ
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  
+  // الإحصائيات
+  viewCount: integer("view_count").default(0),
+  clickCount: integer("click_count").default(0),
+  conversionCount: integer("conversion_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// إعدادات نظام الإعلانات - Promotion Settings
+export const promotionSettings = pgTable("promotion_settings", {
+  id: varchar("id").primaryKey().default("promotion_settings"),
+  
+  // تفعيل/تعطيل الميزات
+  featuredStoreEnabled: boolean("featured_store_enabled").default(true),
+  sponsoredProductEnabled: boolean("sponsored_product_enabled").default(true),
+  boostedPostEnabled: boolean("boosted_post_enabled").default(true),
+  storyAdsEnabled: boolean("story_ads_enabled").default(true),
+  locationAdsEnabled: boolean("location_ads_enabled").default(true),
+  premiumSubscriptionEnabled: boolean("premium_subscription_enabled").default(true),
+  
+  // الأسعار (بالدينار الجزائري)
+  // ترويج المتجر المميز
+  featuredStoreDailyPrice: decimal("featured_store_daily_price").default("500"),
+  featuredStoreWeeklyPrice: decimal("featured_store_weekly_price").default("3000"),
+  featuredStoreMonthlyPrice: decimal("featured_store_monthly_price").default("10000"),
+  
+  // ترويج المنتج
+  sponsoredProductDailyPrice: decimal("sponsored_product_daily_price").default("500"),
+  sponsoredProductWeeklyPrice: decimal("sponsored_product_weekly_price").default("2000"),
+  sponsoredProductMonthlyPrice: decimal("sponsored_product_monthly_price").default("5000"),
+  
+  // تعزيز المنشور
+  boostedPostPrice: decimal("boosted_post_price").default("300"),
+  boostedPostWeeklyPrice: decimal("boosted_post_weekly_price").default("1000"),
+  
+  // إعلان القصص
+  storyAdDailyPrice: decimal("story_ad_daily_price").default("500"),
+  storyAdWeeklyPrice: decimal("story_ad_weekly_price").default("3000"),
+  
+  // إعلان محلي حسب المنطقة
+  locationAdDailyPrice: decimal("location_ad_daily_price").default("200"),
+  locationAdWeeklyPrice: decimal("location_ad_weekly_price").default("1500"),
+  
+  // الاشتراك المميز
+  premiumBronzeMonthlyPrice: decimal("premium_bronze_monthly_price").default("5000"),
+  premiumSilverMonthlyPrice: decimal("premium_silver_monthly_price").default("10000"),
+  premiumGoldMonthlyPrice: decimal("premium_gold_monthly_price").default("20000"),
+  
+  // الحدود والقيود
+  maxPromotionsPerVendor: integer("max_promotions_per_vendor").default(10),
+  maxActivePromotionsPerVendor: integer("max_active_promotions_per_vendor").default(5),
+  
+  // إعدادات العرض
+  maxFeaturedStoresOnHomepage: integer("max_featured_stores_on_homepage").default(5),
+  maxSponsoredProductsOnHomepage: integer("max_sponsored_products_on_homepage").default(10),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Schemas for Promotions
+export const insertPromotionSchema = createInsertSchema(promotions).omit({
+  id: true,
+  viewCount: true,
+  clickCount: true,
+  conversionCount: true,
+  approvedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPromotionSettingsSchema = createInsertSchema(promotionSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types
+export type Promotion = typeof promotions.$inferSelect;
+export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
+export type PromotionSettings = typeof promotionSettings.$inferSelect;
+export type InsertPromotionSettings = z.infer<typeof insertPromotionSettingsSchema>;
