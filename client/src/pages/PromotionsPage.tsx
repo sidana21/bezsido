@@ -113,6 +113,11 @@ export default function PromotionsPage() {
     queryKey: ["/api/user/vendor"],
   });
 
+  const { data: products = [] } = useQuery<any[]>({
+    queryKey: ["/api/user/products"],
+    enabled: !!vendor?.id
+  });
+
   const { data: promotions, isLoading: isLoadingPromotions } = useQuery<any[]>({
     queryKey: ["/api/promotions/vendor", vendor?.id],
     enabled: !!vendor?.id
@@ -288,6 +293,36 @@ export default function PromotionsPage() {
                     </FormItem>
                   )}
                 />
+
+                {form.watch('promotionType') === 'sponsored_product' && (
+                  <FormField
+                    control={form.control}
+                    name="targetId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>اختر المنتج</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-product">
+                              <SelectValue placeholder="اختر المنتج للترويج له" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {products.map((product: any) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{product.name}</span>
+                                  <span className="text-xs text-muted-foreground">({product.price} د)</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

@@ -6813,12 +6813,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.userId;
       
       // التحقق من أن المستخدم لديه متجر
-      const vendors = await storage.getVendorsByUserId(userId);
-      if (!vendors || vendors.length === 0) {
+      const userVendor = await storage.getUserVendor(userId);
+      if (!userVendor) {
         return res.status(403).json({ message: "يجب أن يكون لديك متجر لإنشاء إعلان" });
       }
 
-      const vendorId = req.body.vendorId || vendors[0].id;
+      const vendorId = req.body.vendorId || userVendor.id;
       
       // حساب تاريخ الانتهاء
       const startDate = new Date();
