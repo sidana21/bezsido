@@ -183,7 +183,8 @@ async function ensureTablesExist() {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-        email VARCHAR NOT NULL UNIQUE,
+        phone VARCHAR UNIQUE,
+        email VARCHAR UNIQUE,
         password TEXT,
         name TEXT NOT NULL,
         avatar TEXT,
@@ -191,6 +192,7 @@ async function ensureTablesExist() {
         is_online BOOLEAN DEFAULT false,
         is_verified BOOLEAN DEFAULT false,
         verified_at TIMESTAMP,
+        verification_type TEXT,
         is_admin BOOLEAN DEFAULT false,
         last_seen TIMESTAMP DEFAULT NOW(),
         points INTEGER DEFAULT 0,
@@ -216,13 +218,67 @@ async function ensureTablesExist() {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS otp_codes (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-        email VARCHAR NOT NULL,
+        phone VARCHAR NOT NULL,
         code VARCHAR NOT NULL,
         expires_at TIMESTAMP NOT NULL,
         is_used BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    
+    // Migrate otp_codes table: rename email column to phone if it exists
+    try {
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'otp_codes' AND column_name = 'email'
+          ) AND NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'otp_codes' AND column_name = 'phone'
+          ) THEN
+            ALTER TABLE otp_codes RENAME COLUMN email TO phone;
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+      console.log('ℹ️ otp_codes migration skipped or already applied');
+    }
+    
+    // Add phone column to users table if not exists
+    try {
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'users' AND column_name = 'phone'
+          ) THEN
+            ALTER TABLE users ADD COLUMN phone VARCHAR UNIQUE;
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+      console.log('ℹ️ users phone column migration skipped or already applied');
+    }
+    
+    // Add verification_type column to users table if not exists
+    try {
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'users' AND column_name = 'verification_type'
+          ) THEN
+            ALTER TABLE users ADD COLUMN verification_type TEXT;
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+      console.log('ℹ️ users verification_type column migration skipped or already applied');
+    }
     
     // Create chats table
     await db.execute(sql`
