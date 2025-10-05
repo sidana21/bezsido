@@ -118,6 +118,15 @@ export default function PromotionsPage() {
     enabled: !!vendor?.id
   });
 
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/api/user/current"]
+  });
+
+  const { data: posts = [] } = useQuery<any[]>({
+    queryKey: ["/api/users", currentUser?.id, "posts"],
+    enabled: !!currentUser?.id
+  });
+
   const { data: promotions, isLoading: isLoadingPromotions } = useQuery<any[]>({
     queryKey: ["/api/promotions/vendor", vendor?.id],
     enabled: !!vendor?.id
@@ -316,6 +325,44 @@ export default function PromotionsPage() {
                                 </div>
                               </SelectItem>
                             ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {form.watch('promotionType') === 'boosted_post' && (
+                  <FormField
+                    control={form.control}
+                    name="targetId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>اختر المنشور</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-post">
+                              <SelectValue placeholder="اختر المنشور للترويج له" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {posts.length === 0 ? (
+                              <div className="p-4 text-center text-muted-foreground">
+                                لا توجد منشورات متاحة
+                              </div>
+                            ) : (
+                              posts.map((post: any) => (
+                                <SelectItem key={post.id} value={post.id}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium truncate max-w-[200px]">
+                                      {post.content?.substring(0, 50) || 'منشور'}
+                                      {post.content && post.content.length > 50 ? '...' : ''}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
