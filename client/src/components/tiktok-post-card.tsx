@@ -21,6 +21,12 @@ interface PostWithUser extends BivochatPost {
   isLiked?: boolean;
   isSaved?: boolean;
   isFollowing?: boolean;
+  isPromoted?: boolean;
+  promotionData?: {
+    vendorId: string;
+    promotionId: string;
+    description?: string | null;
+  };
 }
 
 interface TikTokPostCardProps {
@@ -103,6 +109,58 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
       toast({
         title: "تم بنجاح",
         description: "تم تحديث حالة المتابعة",
+      });
+    },
+  });
+
+  // بدء محادثة مع البائع (للمنشورات المروّجة)
+  const startChatMutation = useMutation({
+    mutationFn: async (vendorId: string) => {
+      const response = await apiRequest('/api/chats/start', {
+        method: 'POST',
+        body: JSON.stringify({ otherUserId: vendorId })
+      });
+      return response;
+    },
+    onSuccess: async (data: any) => {
+      const chatId = data.id || data.chatId;
+      if (!chatId) {
+        toast({
+          title: "خطأ",
+          description: "فشل في إنشاء المحادثة",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // إرسال رسالة تلقائية بتفاصيل الإعلان
+      const adMessage = `مرحباً! شاهدت إعلانك "${post.content?.substring(0, 50) || 'المنشور المُروّج'}"${post.promotionData?.description ? ' - ' + post.promotionData.description : ''}. هل يمكنني الحصول على المزيد من التفاصيل؟`;
+      
+      try {
+        await apiRequest(`/api/chats/${chatId}/messages`, {
+          method: 'POST',
+          body: JSON.stringify({
+            content: adMessage,
+            messageType: 'text'
+          })
+        });
+      } catch (error) {
+        console.error('Error sending initial message:', error);
+      }
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم فتح المحادثة مع البائع",
+      });
+
+      // التوجيه إلى صفحة المحادثات
+      setLocation('/');
+    },
+    onError: () => {
+      toast({
+        title: "خطأ",
+        description: "فشل في بدء المحادثة",
+        variant: "destructive",
       });
     },
   });
@@ -464,6 +522,19 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
                   </span>
                 </div>
               </div>
+
+              {/* شارة الإعلان للمنشورات المروّجة */}
+              {post.isPromoted && (
+                <div className="absolute top-4 right-4 z-30">
+                  <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 px-4 py-2 rounded-full shadow-2xl border-2 border-yellow-300 backdrop-blur-md animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-extrabold tracking-wider drop-shadow-lg">
+                        📢 إعلان
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -481,6 +552,19 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
               
               {/* طبقة التفاعل للصور */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
+              
+              {/* شارة الإعلان للمنشورات المروّجة */}
+              {post.isPromoted && (
+                <div className="absolute top-4 right-4 z-30">
+                  <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 px-4 py-2 rounded-full shadow-2xl border-2 border-yellow-300 backdrop-blur-md animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-extrabold tracking-wider drop-shadow-lg">
+                        📢 إعلان
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -605,6 +689,21 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
                   </div>
                 )}
               </div>
+
+              {/* زر التواصل مع البائع للمنشورات المُروّجة */}
+              {post.isPromoted && post.promotionData?.vendorId && post.user.id !== currentUser?.id && (
+                <div className="mt-4">
+                  <Button
+                    onClick={() => startChatMutation.mutate(post.promotionData!.vendorId)}
+                    disabled={startChatMutation.isPending}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-full shadow-2xl shadow-green-500/50 hover:shadow-green-500/80 transition-all duration-300 hover:scale-105 active:scale-95 border-2 border-green-300/50"
+                    data-testid={`button-contact-vendor-${post.id}`}
+                  >
+                    <MessageCircle className="w-5 h-5 ml-2" />
+                    تواصل مع البائع
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* أزرار التفاعل الجانبية */}
