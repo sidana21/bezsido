@@ -116,14 +116,13 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
   // بدء محادثة مع البائع (للمنشورات المروّجة)
   const startChatMutation = useMutation({
     mutationFn: async (vendorId: string) => {
-      const response = await apiRequest('/api/chats/start', {
+      return await apiRequest('/api/chats/start', {
         method: 'POST',
         body: JSON.stringify({ otherUserId: vendorId })
       });
-      return response;
     },
-    onSuccess: async (data: any) => {
-      const chatId = data.id || data.chatId;
+    onSuccess: async (response: any) => {
+      const chatId = response?.data?.chatId || response?.chatId;
       if (!chatId) {
         toast({
           title: "خطأ",
@@ -153,8 +152,8 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
         description: "تم فتح المحادثة مع البائع",
       });
 
-      // التوجيه إلى صفحة المحادثات
-      setLocation('/');
+      // التوجيه إلى صفحة الدردشة المحددة
+      setLocation(`/chat/${chatId}`);
     },
     onError: () => {
       toast({
