@@ -7103,7 +7103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const otpCode = generateOTP();
       
       // إنشاء OTP في قاعدة البيانات
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 دقائق
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 دقائق
       await storage.createOtpCode({
         phone: normalizedPhone,
         code: otpCode,
