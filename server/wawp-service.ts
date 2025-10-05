@@ -9,7 +9,7 @@ export const sendOTP = async (phone: string, otp: string): Promise<boolean> => {
     return false;
   }
 
-  const url = `https://wawp.net/wp-json/awp/v1/sendMessage`;
+  const url = `https://app.wawp.net/api/send`;
 
   try {
     const res = await axios.post(url, {
