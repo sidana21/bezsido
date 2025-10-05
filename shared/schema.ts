@@ -5,7 +5,8 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").notNull().unique(),
+  phone: varchar("phone").notNull().unique(), // رقم الهاتف كمعرّف أساسي
+  email: varchar("email"), // البريد الإلكتروني (اختياري)
   password: text("password"), // كلمة المرور المشفرة (اختيارية للمستخدمين القدامى)
   name: text("name").notNull(),
   avatar: text("avatar"),
@@ -32,6 +33,15 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// OTP codes table for phone verification
+export const otpCodes = pgTable("otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phone: varchar("phone").notNull(), // رقم الهاتف
+  code: varchar("code").notNull(), // رمز التحقق
+  expiresAt: timestamp("expires_at").notNull(), // وقت انتهاء الصلاحية
+  isUsed: boolean("is_used").default(false), // هل تم استخدام الرمز
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const chats = pgTable("chats", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -158,6 +168,11 @@ export const insertSessionSchema = createInsertSchema(sessions).omit({
   createdAt: true,
 });
 
+export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({
+  id: true,
+  isUsed: true,
+  createdAt: true,
+});
 
 export const insertChatSchema = createInsertSchema(chats).omit({
   id: true,
@@ -815,14 +830,16 @@ export const insertStoryCommentSchema = createInsertSchema(storyComments).omit({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+export type Session = typeof sessions.$inferSelect;
+export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
+export type OtpCode = typeof otpCodes.$inferSelect;
 export type InsertChat = z.infer<typeof insertChatSchema>;
 export type Chat = typeof chats.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertStory = z.infer<typeof insertStorySchema>;
 export type Story = typeof stories.$inferSelect;
-export type InsertSession = z.infer<typeof insertSessionSchema>;
-export type Session = typeof sessions.$inferSelect;
 export type InsertVendorCategory = z.infer<typeof insertVendorCategorySchema>;
 export type VendorCategory = typeof vendorCategories.$inferSelect;
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
