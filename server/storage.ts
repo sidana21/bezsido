@@ -5543,6 +5543,29 @@ export class DatabaseStorage implements IStorage {
 
       console.log(`📊 Found ${posts.length} total posts in database`);
 
+      // جلب المنشورات المروّجة النشطة
+      const now = new Date();
+      const activePromotions = await db.select()
+        .from(promotions)
+        .where(
+          and(
+            eq(promotions.status, 'active'),
+            eq(promotions.promotionType, 'boosted_post'),
+            eq(promotions.targetType, 'post'),
+            gte(promotions.endDate, now)
+          )
+        );
+
+      console.log(`📢 Found ${activePromotions.length} active promoted posts`);
+
+      // إنشاء خريطة للمنشورات المروّجة
+      const promotedPostsMap = new Map<string, any>();
+      for (const promotion of activePromotions) {
+        if (promotion.targetId) {
+          promotedPostsMap.set(promotion.targetId, promotion);
+        }
+      }
+
       // Apply location filter
       if (location && location.trim() && location !== 'undefined' && location !== 'null') {
         const beforeFilter = posts.length;
@@ -5571,11 +5594,52 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Sort by creation date (newest first)
-      posts.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+      // إضافة معلومات الترويج للمنشورات المروّجة
+      const postsWithPromotionInfo = posts.map(post => {
+        const promotion = promotedPostsMap.get(post.id);
+        if (promotion) {
+          return {
+            ...post,
+            isPromoted: true,
+            promotionData: {
+              vendorId: promotion.vendorId,
+              promotionId: promotion.id,
+              description: promotion.description
+            }
+          };
+        }
+        return { ...post, isPromoted: false };
+      });
+
+      // فصل المنشورات المروّجة عن العادية
+      const promotedPosts = postsWithPromotionInfo.filter(p => p.isPromoted);
+      const regularPosts = postsWithPromotionInfo.filter(p => !p.isPromoted);
+
+      // ترتيب المنشورات العادية حسب التاريخ
+      regularPosts.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+
+      // دمج المنشورات المروّجة بين المنشورات العادية (كل 5 منشورات)
+      const finalPosts: any[] = [];
+      let promotedIndex = 0;
       
-      console.log(`✅ Returning ${posts.length} posts`);
-      return posts;
+      for (let i = 0; i < regularPosts.length; i++) {
+        finalPosts.push(regularPosts[i]);
+        
+        // إضافة منشور مروّج كل 5 منشورات عادية
+        if ((i + 1) % 5 === 0 && promotedIndex < promotedPosts.length) {
+          finalPosts.push(promotedPosts[promotedIndex]);
+          promotedIndex++;
+        }
+      }
+
+      // إضافة أي منشورات مروّجة متبقية في النهاية
+      while (promotedIndex < promotedPosts.length) {
+        finalPosts.push(promotedPosts[promotedIndex]);
+        promotedIndex++;
+      }
+      
+      console.log(`✅ Returning ${finalPosts.length} posts (${promotedPosts.length} promoted)`);
+      return finalPosts;
     } catch (error) {
       console.error('Error fetching feed posts:', error);
       throw error;
