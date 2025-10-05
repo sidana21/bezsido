@@ -104,6 +104,78 @@ app.use((req, res, next) => {
   // Database initialization disabled to preserve existing data
   console.log('🔒 Database initialization skipped - preserving existing data');
 
+  // Critical migration: Fix otp_codes table schema
+  try {
+    const { db } = await import('./db');
+    if (db) {
+      console.log('🔄 Running critical schema migrations...');
+      
+      // Fix otp_codes table: rename email to phone if needed
+      try {
+        await db.execute(`
+          DO $$
+          BEGIN
+            IF EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name = 'otp_codes' AND column_name = 'email'
+            ) AND NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name = 'otp_codes' AND column_name = 'phone'
+            ) THEN
+              ALTER TABLE otp_codes RENAME COLUMN email TO phone;
+              RAISE NOTICE '✅ Renamed otp_codes.email to otp_codes.phone';
+            END IF;
+          END $$;
+        `);
+        console.log('✅ otp_codes table migration complete');
+      } catch (e: any) {
+        console.log('ℹ️ otp_codes migration skipped:', e.message);
+      }
+      
+      // Add phone column to users if needed
+      try {
+        await db.execute(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name = 'users' AND column_name = 'phone'
+            ) THEN
+              ALTER TABLE users ADD COLUMN phone VARCHAR UNIQUE;
+              RAISE NOTICE '✅ Added phone column to users table';
+            END IF;
+          END $$;
+        `);
+        console.log('✅ users.phone column migration complete');
+      } catch (e: any) {
+        console.log('ℹ️ users.phone migration skipped:', e.message);
+      }
+      
+      // Add verification_type column to users if needed
+      try {
+        await db.execute(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name = 'users' AND column_name = 'verification_type'
+            ) THEN
+              ALTER TABLE users ADD COLUMN verification_type TEXT;
+              RAISE NOTICE '✅ Added verification_type column to users table';
+            END IF;
+          END $$;
+        `);
+        console.log('✅ users.verification_type column migration complete');
+      } catch (e: any) {
+        console.log('ℹ️ users.verification_type migration skipped:', e.message);
+      }
+      
+      console.log('✅ All critical migrations completed');
+    }
+  } catch (error) {
+    console.error('⚠️ Migration error (non-critical):', error);
+  }
+
   // تهيئة Cloudinary لرفع الملفات
   configureCloudinary();
 
