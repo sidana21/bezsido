@@ -77,7 +77,7 @@ function toPublicUser(user: any) {
   return {
     id: user.id,
     name: user.name,
-    email: user.email,
+    phone: user.phone,
     avatar: user.avatar,
     location: user.location,
     isVerified: user.isVerified,
@@ -170,12 +170,12 @@ const audioUpload = multer({
   }
 });
 
-// Email normalization utility
-function normalizeEmail(email: string): string {
-  if (!email) return email;
+// Phone normalization utility
+function normalizePhone(phone: string): string {
+  if (!phone) return phone;
   
-  // Normalize email to lowercase and trim whitespace
-  let normalized = email.toLowerCase().trim();
+  // Remove all non-digit characters and trim whitespace
+  let normalized = phone.replace(/\D/g, '').trim();
   
   return normalized;
 }
@@ -247,22 +247,10 @@ const requireAdmin = async (req: any, res: any, next: any) => {
     return res.status(401).json({ message: "User not found" });
   }
 
-  // تحقق إضافي للتأكد من صلاحيات المشرف
-  const adminManager = new AdminManager(storage);
-  const adminConfig = adminManager.readAdminConfig();
-  
-  // التحقق من أن المستخدم مشرف (إما isAdmin في قاعدة البيانات أو البريد الإلكتروني متطابق مع admin.json)
-  const isAdmin = user.isAdmin || (adminConfig && user.email === adminConfig.email);
-  
-  if (!isAdmin) {
-    console.log(`User ${user.email} attempted admin access but lacks privileges`);
+  // تحقق إضافي للتأكد من صلاحيات المشرف - استخدام isAdmin فقط
+  if (!user.isAdmin) {
+    console.log(`User ${user.id} attempted admin access but lacks privileges`);
     return res.status(403).json({ message: "Admin access required" });
-  }
-
-  // تحديث حالة المشرف في قاعدة البيانات إذا لم تكن محدثة
-  if (!user.isAdmin && adminConfig && user.email === adminConfig.email) {
-    console.log('Updating admin status for user:', user.email);
-    await storage.updateUserAdminStatus(user.id, true);
   }
 
   req.userId = session.userId;
@@ -325,600 +313,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email + Password Authentication System
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const validation = loginUserSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({ 
-          success: false,
-          message: "البيانات المدخلة غير صحيحة",
-          errors: validation.error.errors.map(e => e.message)
-        });
-      }
+  // OLD EMAIL-BASED AUTHENTICATION ENDPOINTS REMOVED
+  // Phone-based authentication with OTP is now used instead
+  // See /api/auth/send-otp, /api/auth/verify-otp, and /api/auth/register-with-phone endpoints
 
-      const { email, password } = validation.data;
-      const normalizedEmail = email.trim().toLowerCase();
+  // 🚫 DISABLED: Direct login endpoint - REMOVED (email-based)
+  // This endpoint has been removed in favor of phone-based OTP authentication
+  // Use /api/auth/send-otp and /api/auth/verify-otp instead
 
-      // Check if user exists
-      const user = await storage.getUserByEmail(normalizedEmail);
-      if (!user) {
-        return res.status(401).json({ 
-          success: false,
-          message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" 
-        });
-      }
-
-      // Check if user has a password (for backwards compatibility)
-      if (!user.password) {
-        return res.status(400).json({ 
-          success: false,
-          message: "هذا الحساب لم يتم إعداد كلمة مرور له بعد. يرجى استخدام استعادة كلمة المرور." 
-        });
-      }
-
-      // Verify password
-      const passwordMatch = await bcrypt.compare(password, user.password);
-      if (!passwordMatch) {
-        return res.status(401).json({ 
-          success: false,
-          message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" 
-        });
-      }
-
-      // Update online status and create session
-      await storage.updateUserOnlineStatus(user.id, true);
-      
-      const token = randomUUID();
-      const sessionData = insertSessionSchema.parse({
-        userId: user.id,
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      });
-      
-      await storage.createSession(sessionData);
-      console.log(`🔑 User logged in: ${user.name} (${user.email})`);
-      
-      res.json({ 
-        success: true, 
-        user, 
-        token,
-        message: "تم تسجيل الدخول بنجاح" 
-      });
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ 
-        success: false,
-        message: "حدث خطأ أثناء تسجيل الدخول" 
-      });
-    }
-  });
-
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      const validation = registerUserSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({ 
-          success: false,
-          message: "البيانات المدخلة غير صحيحة",
-          errors: validation.error.errors.map(e => e.message)
-        });
-      }
-
-      const { email, password, name, location } = validation.data;
-      const normalizedEmail = email.trim().toLowerCase();
-
-      // Smart feature: Check if user already exists
-      const existingUser = await storage.getUserByEmail(normalizedEmail);
-      if (existingUser) {
-        return res.status(409).json({ 
-          success: false,
-          userExists: true,
-          message: "يوجد حساب مسجل بهذا البريد الإلكتروني مسبقاً. يرجى تسجيل الدخول أو استعادة كلمة المرور.",
-          suggestAction: "login" // Suggest user to login instead
-        });
-      }
-
-      // Hash password
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      // Create new user
-      const newUser = insertUserSchema.parse({
-        email: normalizedEmail,
-        password: hashedPassword,
-        name: name.trim(),
-        location: location.trim(),
-        isOnline: true,
-        isVerified: false,
-        isAdmin: false,
-      });
-
-      const createdUser = await storage.createUser(newUser);
-      
-      // Create session for immediate login
-      const token = randomUUID();
-      const sessionData = insertSessionSchema.parse({
-        userId: createdUser.id,
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      });
-      
-      await storage.createSession(sessionData);
-      console.log(`📝 New user registered: ${createdUser.name} (${createdUser.email})`);
-      
-      res.status(201).json({ 
-        success: true,
-        user: createdUser,
-        token,
-        message: "تم إنشاء الحساب وتسجيل الدخول بنجاح" 
-      });
-    } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({ 
-        success: false,
-        message: "حدث خطأ أثناء إنشاء الحساب" 
-      });
-    }
-  });
-
-  // 🚫 DISABLED: Direct login endpoint - SECURITY VULNERABILITY
-  // This endpoint bypasses OTP verification and is a critical security risk
-  app.post("/api/auth/direct-login", async (req, res) => {
-    // 🛑 CRITICAL SECURITY CHECK: Only allow in development with explicit flag
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const allowUnsafeLogin = process.env.ALLOW_UNSAFE_DIRECT_LOGIN === 'true';
-    
-    if (!isDevelopment || !allowUnsafeLogin) {
-      console.error("🚫 SECURITY: Direct login attempt blocked in production or without explicit flag");
-      return res.status(403).json({ 
-        success: false,
-        message: "هذه الخدمة غير متاحة لأسباب أمنية" 
-      });
-    }
-    
-    console.warn("⚠️ DEVELOPMENT ONLY: Unsafe direct login endpoint accessed");
-    
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
-      }
-      
-      // Clean and validate email
-      const cleanEmail = email.trim().toLowerCase();
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(cleanEmail)) {
-        return res.status(400).json({ 
-          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
-        });
-      }
-      
-      // Check if user exists
-      let user = await storage.getUserByEmail(cleanEmail);
-      
-      if (!user) {
-        // User doesn't exist - need profile setup
-        console.log(`📝 New user detected for unsafe direct login: ${cleanEmail}`);
-        return res.json({ 
-          success: true,
-          needsProfile: true,
-          email: cleanEmail,
-          message: "مرحباً! يرجى إكمال بياناتك الشخصية" 
-        });
-      } else {
-        // Existing user - update online status and create session
-        console.log(`👤 UNSAFE direct login for existing user: ${user.name} (${cleanEmail})`);
-        await storage.updateUserOnlineStatus(user.id, true);
-        
-        // Create session
-        const token = randomUUID();
-        const sessionData = insertSessionSchema.parse({
-          userId: user.id,
-          token,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        });
-        
-        await storage.createSession(sessionData);
-        console.log(`🔑 UNSAFE direct login session created for user ${user.id}`);
-        
-        res.json({ 
-          success: true, 
-          user, 
-          token,
-          message: "تم تسجيل الدخول بنجاح (وضع التطوير)" 
-        });
-      }
-    } catch (error) {
-      console.error('Direct login error:', error);
-      res.status(500).json({ message: "Failed to login directly" });
-    }
-  });
-
-  // Create new user after email OTP verification
-  app.post("/api/auth/create-user", async (req, res) => {
-    try {
-      const { email, name, location, signupToken } = req.body;
-      
-      console.log("📧 Creating user with:", { email, name, location });
-      
-      // 🔒 CRITICAL SECURITY: Validate signupToken to prevent unauthorized user creation
-      if (!signupToken || typeof signupToken !== 'string') {
-        console.error("🚫 SECURITY: Missing signupToken in create-user request");
-        return res.status(403).json({ 
-          success: false,
-          message: "رمز التسجيل غير صحيح أو مفقود" 
-        });
-      }
-      
-      // Check if storage is available
-      if (!storage) {
-        console.error("❌ Storage system not available");
-        return res.status(500).json({ 
-          success: false,
-          message: "نظام التخزين غير متاح حالياً، يرجى المحاولة مرة أخرى" 
-        });
-      }
-      
-      // Validate input data
-      if (!email || typeof email !== 'string' || !email.trim()) {
-        console.log("❌ Missing or invalid email:", email);
-        return res.status(400).json({ 
-          success: false,
-          message: "البريد الإلكتروني مطلوب وصالح" 
-        });
-      }
-      
-      if (!name || typeof name !== 'string' || !name.trim()) {
-        console.log("❌ Missing or invalid name:", name);
-        return res.status(400).json({ 
-          success: false,
-          message: "الاسم مطلوب" 
-        });
-      }
-      
-      if (!location || typeof location !== 'string' || !location.trim()) {
-        console.log("❌ Missing or invalid location:", location);
-        return res.status(400).json({ 
-          success: false,
-          message: "المنطقة مطلوبة" 
-        });
-      }
-      
-      const cleanEmail = email.trim().toLowerCase();
-      const cleanName = name.trim();
-      const cleanLocation = location.trim();
-      
-      // Additional email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(cleanEmail)) {
-        return res.status(400).json({ 
-          success: false,
-          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
-        });
-      }
-      
-      // 🔒 CRITICAL SECURITY: Validate and consume signupToken
-      const isValidToken = await storage.validateAndConsumeSignupToken(signupToken, cleanEmail);
-      if (!isValidToken) {
-        console.error(`🚫 SECURITY: Invalid or expired signupToken for ${cleanEmail}`);
-        return res.status(403).json({ 
-          success: false,
-          message: "رمز التسجيل غير صحيح أو منتهي الصلاحية. يرجى إعادة التحقق من البريد الإلكتروني" 
-        });
-      }
-      
-      // Check if user already exists - should not happen with valid signupToken, but check for safety
-      let user = await storage.getUserByEmail(cleanEmail);
-      if (user) {
-        console.error(`🚫 SECURITY: Attempt to create user that already exists: ${cleanEmail}`);
-        return res.status(409).json({ 
-          success: false,
-          message: "هذا الحساب موجود بالفعل. يرجى تسجيل الدخول بدلاً من ذلك" 
-        });
-      }
-      
-      // Create new user with enhanced data protection
-      const userData = {
-        email: cleanEmail,
-        name: cleanName,
-        location: cleanLocation,
-        avatar: null,
-        isOnline: true,
-        isAdmin: false // Regular users should not be admins by default
-      };
-      
-      console.log("📋 Creating new user with parsed data:", userData);
-      
-      // Validate with schema
-      const validatedUserData = insertUserSchema.parse(userData);
-      
-      user = await storage.createUser(validatedUserData);
-      console.log("✅ User created successfully:", user.id);
-      
-      // Create session
-      const token = randomUUID();
-      const sessionData = insertSessionSchema.parse({
-        userId: user.id,
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      });
-      
-      await storage.createSession(sessionData);
-      console.log("🔑 Session created for new user:", user.id);
-      
-      res.json({ 
-        success: true, 
-        user, 
-        token,
-        message: "تم إنشاء حسابك بنجاح! مرحباً بك في Bivochat" 
-      });
-    } catch (error: any) {
-      // Enhanced error logging for production debugging
-      const errorDetails = {
-        message: error?.message || 'Unknown error',
-        stack: error?.stack,
-        code: error?.code,
-        constraint: error?.constraint,
-        name: error?.name,
-        email: req.body?.email,
-        hasStorage: !!storage,
-        storageType: storage ? storage.constructor.name : null,
-        environment: process.env.NODE_ENV,
-        databaseUrl: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
-        timestamp: new Date().toISOString()
-      };
-      
-      console.error('❌ User creation error details:', errorDetails);
-      
-      // Handle unique constraint violations (duplicate phone)
-      if (error.code === '23505') {
-        if (error.constraint?.includes('email') || error.message?.includes('email')) {
-          return res.status(409).json({ 
-            success: false,
-            message: "هذا الرقم مسجل بالفعل، يمكنك تسجيل الدخول مباشرة" 
-          });
-        }
-        return res.status(409).json({ 
-          success: false,
-          message: "البيانات مكررة، تحقق من المعلومات المدخلة" 
-        });
-      }
-      
-      // Handle missing table errors (common on Render with failed migrations)
-      if (error.code === '42P01' || error.message?.includes('does not exist')) {
-        return res.status(503).json({ 
-          success: false,
-          message: "خطأ في إعداد قاعدة البيانات. يرجى التواصل مع الدعم الفني" 
-        });
-      }
-      
-      // Handle validation errors
-      if (error.name === 'ZodError') {
-        const zodIssues = error.issues?.map((issue: any) => issue.message).join(', ') || 'بيانات غير صحيحة';
-        return res.status(400).json({ 
-          success: false,
-          message: "تحقق من البيانات المدخلة",
-          details: process.env.NODE_ENV === 'development' ? zodIssues : "تأكد من أن جميع الحقول مكتملة وصحيحة"
-        });
-      }
-      
-      // Handle database connection errors
-      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
-          error.message?.includes('connection') || error.message?.includes('ECONNREFUSED') ||
-          error.message?.includes('timeout')) {
-        return res.status(503).json({ 
-          success: false,
-          message: "مشكلة في الاتصال بقاعدة البيانات. الخدمة مؤقتاً غير متاحة" 
-        });
-      }
-      
-      // Handle authentication/permission errors
-      if (error.code === '28P01' || error.code === '28000') {
-        return res.status(503).json({ 
-          success: false,
-          message: "خطأ في إعدادات قاعدة البيانات. يرجى التواصل مع الدعم الفني" 
-        });
-      }
-      
-      // Handle storage-specific errors
-      if (!storage) {
-        return res.status(503).json({ 
-          success: false,
-          message: "نظام التخزين غير متاح حالياً. يرجى المحاولة لاحقاً" 
-        });
-      }
-      
-      // Handle phone number format errors
-      if (error.message?.includes('phone') || error.message?.includes('format')) {
-        return res.status(400).json({ 
-          success: false,
-          message: "تأكد من صحة تنسيق رقم الهاتف (مثال: +213xxxxxxxxx)" 
-        });
-      }
-      
-      // Enhanced generic error response with more context
-      let userMessage = "حدث خطأ غير متوقع أثناء إنشاء الحساب";
-      
-      // Provide more specific guidance based on error patterns
-      if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        userMessage = "مشكلة في الشبكة، تحقق من الاتصال وحاول مرة أخرى";
-      } else if (error.message?.includes('permission') || error.message?.includes('access')) {
-        userMessage = "خطأ في الصلاحيات، يرجى التواصل مع الدعم الفني";
-      } else if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
-        userMessage = "خدمة التخزين غير مكونة بشكل صحيح";
-      }
-      
-      res.status(500).json({ 
-        success: false,
-        message: userMessage,
-        errorCode: error.code || 'UNKNOWN_ERROR',
-        debug: process.env.NODE_ENV === 'development' ? {
-          message: error.message,
-          stack: error.stack,
-          hasDatabase: !!process.env.DATABASE_URL,
-          storageType: storage ? storage.constructor.name : 'none'
-        } : undefined
-      });
-    }
-  });
+  // OLD EMAIL-BASED create-user endpoint REMOVED
+  // Use phone-based registration with OTP instead
 
   // ============================================
-  // نظام المصادقة الجديد - Smart Authentication
+  // Legacy email-based authentication endpoints REMOVED
+  // Phone-based authentication with OTP is now used instead
+  // See /api/auth/send-otp, /api/auth/verify-otp, and /api/auth/register-with-phone endpoints
   // ============================================
-  
-  // فحص حالة المستخدم (موجود أم جديد) - Smart User Detection
-  app.post("/api/auth/check-user", async (req, res) => {
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "البريد الإلكتروني مطلوب" 
-        });
-      }
-      
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const normalizedEmail = email.trim().toLowerCase();
-      
-      if (!emailRegex.test(normalizedEmail)) {
-        return res.status(400).json({ 
-          success: false,
-          message: "تأكد من صحة تنسيق البريد الإلكتروني" 
-        });
-      }
-      
-      // Check if user exists
-      const existingUser = await storage.getUserByEmail(normalizedEmail);
-      
-      if (existingUser) {
-        // User exists - check if they have a password set
-        const hasPassword = existingUser.password && existingUser.password.length > 0;
-        
-        return res.json({
-          success: true,
-          userExists: true,
-          hasPassword,
-          email: normalizedEmail,
-          name: existingUser.name,
-          action: hasPassword ? "login" : "set_password", // إما تسجيل دخول أو تعيين كلمة مرور
-          message: hasPassword ? 
-            `مرحباً ${existingUser.name}! يرجى إدخال كلمة المرور` : 
-            `مرحباً ${existingUser.name}! يرجى تعيين كلمة مرور لحسابك`
-        });
-      } else {
-        // New user - needs registration
-        return res.json({
-          success: true,
-          userExists: false,
-          hasPassword: false,
-          email: normalizedEmail,
-          action: "register",
-          message: "مرحباً! يبدو أنك مستخدم جديد، يرجى إنشاء حساب"
-        });
-      }
-    } catch (error) {
-      console.error('Check user error:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: "خطأ في فحص بيانات المستخدم" 
-      });
-    }
-  });
-  
-  // إنشاء حساب جديد بكلمة المرور - Password Registration
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      // Validate input with Zod schema
-      const validatedData = registerUserSchema.parse(req.body);
-      const { email, password, name, location } = validatedData;
-      
-      const normalizedEmail = email.trim().toLowerCase();
-      
-      
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(normalizedEmail);
-      if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          message: "هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول",
-          userExists: true
-        });
-      }
-      
-      // Hash password
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-      
-      // Create user data
-      const userData = {
-        email: normalizedEmail,
-        password: hashedPassword,
-        name: name.trim(),
-        location: location.trim(),
-        avatar: null,
-        isOnline: true,
-        isAdmin: false
-      };
-      
-      // Validate with schema (excluding password from insertUserSchema validation)
-      const userForValidation = { ...userData };
-      delete (userForValidation as any).password;
-      const validatedUserData = insertUserSchema.parse(userForValidation);
-      
-      // Add password back for storage
-      const finalUserData = { ...validatedUserData, password: hashedPassword };
-      
-      // Create user
-      const newUser = await storage.createUser(finalUserData);
-      console.log("✅ New user created with password:", newUser.id);
-      
-      // Create session
-      const token = randomUUID();
-      const sessionData = insertSessionSchema.parse({
-        userId: newUser.id,
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      });
-      
-      await storage.createSession(sessionData);
-      console.log("🔑 Registration session created for new user:", newUser.id);
-      
-      res.json({
-        success: true,
-        user: newUser,
-        token,
-        message: `مرحباً ${newUser.name}! تم إنشاء حسابك بنجاح`
-      });
-      
-    } catch (error: any) {
-      console.error('Password registration error:', error);
-      
-      if (error.name === 'ZodError') {
-        return res.status(400).json({
-          success: false,
-          message: "البيانات المدخلة غير صحيحة",
-          errors: error.errors
-        });
-      }
-      
-      // Handle unique constraint violations
-      if (error.code === '23505') {
-        return res.status(409).json({
-          success: false,
-          message: "هذا البريد الإلكتروني مسجل بالفعل"
-        });
-      }
-      
-      res.status(500).json({
-        success: false,
-        message: "خطأ في إنشاء الحساب"
-      });
-    }
-  });
 
   // Development endpoint to get last OTP
   app.get("/api/dev/last-otp", (req, res) => {
@@ -1168,19 +578,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const demoUsers = [
         {
           name: "أحمد التاجر",
-          email: "ahmed@example.com",
+          phone: "213555000001",
           avatar: null,
           location: "الجزائر"
         },
         {
           name: "فاطمة البائعة",
-          email: "fatma@example.com", 
+          phone: "213555000002", 
           avatar: null,
           location: "الجزائر"
         },
         {
           name: "محمد صاحب المتجر",
-          email: "mohamed@example.com",
+          phone: "213555000003",
           avatar: null,
           location: "الجزائر"
         }
@@ -1189,7 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = [];
       for (const userData of demoUsers) {
         // Check if user already exists
-        const existingUser = await storage.getUserByEmail(userData.email);
+        const existingUser = await storage.getUserByPhone(userData.phone);
         if (existingUser) {
           console.log(`✓ المستخدم ${userData.name} موجود بالفعل`);
           users.push(existingUser);
@@ -1211,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: "الجزائر",
         userId: users[0].id,
         imageUrl: null,
-        email: users[0].email,
+        phone: users[0].phone,
         isOpen: true,
         isActive: true
       });
@@ -1226,7 +636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: "الجزائر",
         userId: users[1].id,
         imageUrl: null,
-        email: users[1].email,
+        phone: users[1].phone,
         isOpen: true,
         isActive: true
       });
@@ -1241,7 +651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: "الجزائر",
         userId: users[2].id,
         imageUrl: null,
-        email: users[2].email,
+        phone: users[2].phone,
         isOpen: true,
         isActive: true
       });
@@ -1427,28 +837,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Development endpoint to promote any user by phone number to admin  
-  app.post("/api/dev/make-admin-by-phone", async (req: any, res) => {
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(404).json({ message: "Not found" });
-    }
-    try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: "Email required" });
-      }
-      
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const updatedUser = await storage.updateUserAdminStatus(user.id, true);
-      res.json({ success: true, user: updatedUser, message: "User promoted to admin" });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to promote user to admin" });
-    }
-  });
 
   // Development endpoint to create sample call history
   app.post("/api/dev/create-sample-calls", requireAuth, async (req: any, res) => {
@@ -1522,58 +910,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Session recovery endpoint for advanced user protection
-  app.post("/api/auth/recover-session", async (req, res) => {
-    try {
-      const { email, userId } = req.body;
-      
-      if (!email || !userId) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "بيانات الاسترداد مطلوبة" 
-        });
-      }
-      
-      console.log("🔄 Attempting session recovery for:", email);
-      
-      // Verify user exists and matches provided data
-      const user = await storage.getUserByEmail(email);
-      if (!user || user.id !== userId) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "لم يتم العثور على بيانات المستخدم" 
-        });
-      }
-      
-      console.log("✅ User verified for session recovery:", user.name);
-      
-      // Create new session for recovered user
-      const token = randomUUID();
-      const sessionData = insertSessionSchema.parse({
-        userId: user.id,
-        token,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      });
-      
-      await storage.createSession(sessionData);
-      await storage.updateUserOnlineStatus(user.id, true);
-      
-      console.log("🔑 Session recovery successful for user:", user.id);
-      
-      res.json({ 
-        success: true, 
-        user, 
-        token,
-        message: "تم استرداد جلستك بنجاح! مرحباً بعودتك" 
-      });
-    } catch (error) {
-      console.error("Session recovery error:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "فشل في استرداد الجلسة" 
-      });
-    }
-  });
 
   app.post("/api/auth/logout", requireAuth, async (req: any, res) => {
     try {
