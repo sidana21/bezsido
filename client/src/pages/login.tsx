@@ -108,24 +108,22 @@ export default function LoginPage() {
         }),
       });
 
-      if (response.success) {
-        if (response.requiresProfile && !profileData) {
-          // مستخدم جديد - يحتاج لاستكمال البيانات
-          setShowProfileForm(true);
-          setShowOtpInput(false);
-          toast({
-            title: "تم التحقق بنجاح",
-            description: "يرجى إكمال بياناتك الشخصية",
-          });
-        } else if (response.user && response.token) {
-          // مستخدم موجود أو تم إنشاء مستخدم جديد - تسجيل دخول
-          login(response.user, response.token);
-          toast({
-            title: "مرحباً " + response.user.name + "!",
-            description: "تم تسجيل الدخول بنجاح",
-          });
-        }
-      } else {
+      if (response.requiresProfile && !profileData) {
+        // مستخدم جديد - يحتاج لاستكمال البيانات
+        setShowProfileForm(true);
+        setShowOtpInput(false);
+        toast({
+          title: "تم التحقق بنجاح",
+          description: "يرجى إكمال بياناتك الشخصية",
+        });
+      } else if (response.success && response.user && response.token) {
+        // مستخدم موجود أو تم إنشاء مستخدم جديد - تسجيل دخول
+        login(response.user, response.token);
+        toast({
+          title: "مرحباً " + response.user.name + "!",
+          description: "تم تسجيل الدخول بنجاح",
+        });
+      } else if (!response.success && !response.requiresProfile) {
         throw new Error(response.message || "فشل في التحقق من الرمز");
       }
     } catch (error: any) {
