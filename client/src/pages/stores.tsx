@@ -44,8 +44,8 @@ function FeaturedPromotionsSection({ location }: { location?: string }) {
             متاجر مميزة
           </h3>
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {featuredStores.map((store: any) => (
-              <Link key={store.id} href={`/vendor/${store.id}`}>
+            {featuredStores.map((item: any) => (
+              <Link key={item.vendor?.id} href={`/vendor/${item.vendor?.id}`}>
                 <Card className="flex-shrink-0 w-64 hover:shadow-2xl transition-all cursor-pointer border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-50/80 to-amber-50/80 dark:from-yellow-900/20 dark:to-amber-900/20">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -58,11 +58,11 @@ function FeaturedPromotionsSection({ location }: { location?: string }) {
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 dark:text-white truncate">{store.displayName}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{store.description}</p>
+                        <h4 className="font-bold text-gray-900 dark:text-white truncate">{item.vendor?.displayName}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{item.vendor?.description}</p>
                         <div className="flex items-center gap-1 mt-1">
                           <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          <span className="text-sm font-medium">{parseFloat(store.averageRating).toFixed(1)}</span>
+                          <span className="text-sm font-medium">{parseFloat(item.vendor?.averageRating || 0).toFixed(1)}</span>
                         </div>
                       </div>
                     </div>
@@ -82,21 +82,21 @@ function FeaturedPromotionsSection({ location }: { location?: string }) {
             منتجات مروجة
           </h3>
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {sponsoredProducts.map((product: any) => (
-              <Link key={product.id} href={`/product/${product.id}`}>
+            {sponsoredProducts.map((item: any) => (
+              <Link key={item.product?.id} href={`/product/${item.product?.id}`}>
                 <Card className="flex-shrink-0 w-48 hover:shadow-2xl transition-all cursor-pointer border-2 border-blue-500/50 bg-gradient-to-br from-blue-50/80 to-cyan-50/80 dark:from-blue-900/20 dark:to-cyan-900/20">
                   <CardContent className="p-3">
                     <div className="relative mb-2">
                       <img 
-                        src={product.images?.[0] || '/placeholder.png'} 
-                        alt={product.name}
+                        src={item.product?.images?.[0] || '/placeholder.png'} 
+                        alt={item.product?.name}
                         className="w-full h-32 object-cover rounded-lg"
                       />
                       <Badge className="absolute top-2 right-2 bg-blue-500">مروّج</Badge>
                     </div>
-                    <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate">{product.name}</h4>
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate">{item.product?.name}</h4>
                     <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                      {parseInt(product.salePrice || product.originalPrice).toLocaleString()} دج
+                      {parseInt(item.product?.salePrice || item.product?.originalPrice).toLocaleString()} دج
                     </p>
                   </CardContent>
                 </Card>
