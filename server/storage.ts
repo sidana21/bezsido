@@ -204,9 +204,7 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
   getUserByPhone(phone: string): Promise<User | undefined>;
-  searchUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined>;
   updateUserOnlineStatus(id: string, isOnline: boolean): Promise<void>;
@@ -227,9 +225,7 @@ export interface IStorage {
   markOtpAsUsed(id: string): Promise<void>;
   cleanupExpiredOtp(): Promise<void>;
   
-  // Signup tokens for secure user creation
-  createSignupToken(email: string): Promise<string>;
-  validateAndConsumeSignupToken(token: string, email: string): Promise<boolean>;
+  // Cleanup functions
   cleanupExpiredSignupTokens(): Promise<void>;
   
   // Chats
@@ -484,7 +480,6 @@ export interface IStorage {
   
   // Additional missing methods referenced in routes.ts
   searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
-  searchUserByEmail(email: string): Promise<User | undefined>;
   getOrders(userId?: string, status?: string): Promise<Order[]>;
   
   // Social Notifications - إشعارات التفاعلات الاجتماعية
@@ -551,8 +546,6 @@ export interface IStorage {
 
 // Database Storage Implementation - uses PostgreSQL database
 export class DatabaseStorage implements IStorage {
-  // In-memory storage for short-lived signupTokens (5 min expiry)
-  private signupTokens = new Map<string, { email: string; token: string; expiresAt: Date }>();
   async getUser(id: string): Promise<User | undefined> {
     try {
       if (!db) {
@@ -570,25 +563,6 @@ export class DatabaseStorage implements IStorage {
 
   async getUserById(id: string): Promise<User | undefined> {
     return this.getUser(id);
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    try {
-      if (!db) {
-        const dbModule = await import('./db');
-        db = dbModule.db;
-      }
-      
-      const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      return result[0] || undefined;
-    } catch (error) {
-      console.error('Error getting user by email:', error);
-      return undefined;
-    }
-  }
-
-  async searchUserByEmail(email: string): Promise<User | undefined> {
-    return this.getUserByEmail(email);
   }
 
   async getUserByPhone(phone: string): Promise<User | undefined> {
@@ -622,7 +596,7 @@ export class DatabaseStorage implements IStorage {
       // Create clean user object with proper nulls for timestamp fields
       const newUser = {
         id: randomUUID(),
-        email: user.email,
+        phone: user.phone,
         password: user.password, // Fix: Include password field in database insertion
         name: user.name,
         avatar: user.avatar || null,
@@ -967,51 +941,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Signup token methods for secure user creation
-  async createSignupToken(email: string): Promise<string> {
-    const token = randomUUID();
-    const tokenData = {
-      email: email.toLowerCase().trim(),
-      token,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
-    };
-    
-    this.signupTokens.set(token, tokenData);
-    
-    // Auto cleanup expired tokens
-    setTimeout(() => this.cleanupExpiredSignupTokens(), 5 * 60 * 1000);
-    
-    return token;
-  }
-
-  async validateAndConsumeSignupToken(token: string, email: string): Promise<boolean> {
-    const tokenData = this.signupTokens.get(token);
-    
-    if (!tokenData) {
-      return false;
-    }
-    
-    if (tokenData.expiresAt < new Date()) {
-      this.signupTokens.delete(token);
-      return false;
-    }
-    
-    if (tokenData.email !== email.toLowerCase().trim()) {
-      return false;
-    }
-    
-    // Consume the token (one-time use)
-    this.signupTokens.delete(token);
-    return true;
-  }
-
   async cleanupExpiredSignupTokens(): Promise<void> {
-    const now = new Date();
-    for (const [token, tokenData] of Array.from(this.signupTokens.entries())) {
-      if (tokenData.expiresAt < now) {
-        this.signupTokens.delete(token);
-      }
-    }
   }
 
   // Chat methods
@@ -2668,10 +2598,6 @@ export class DatabaseStorage implements IStorage {
 
   async addContact(contact: InsertContact): Promise<Contact> {
     throw new Error('Not implemented');
-  }
-
-  async searchUserByEmail(email: string): Promise<User | undefined> {
-    return this.getUserByEmail(email);
   }
 
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
@@ -5365,10 +5291,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async searchUserByEmail(email: string): Promise<User | undefined> {
-    return this.getUserByEmail(email);
-  }
-
   async getServiceCategories(): Promise<ServiceCategory[]> {
     try {
       if (!db) {
@@ -6789,7 +6711,6 @@ export class MemStorage implements IStorage {
   private verificationRequests = new Map<string, VerificationRequest>();
   private storyLikes = new Map<string, StoryLike>();
   private storyComments = new Map<string, StoryComment>();
-  private signupTokens = new Map<string, { email: string; token: string; expiresAt: Date }>();
   private serviceCategories = new Map<string, ServiceCategory>();
   private services = new Map<string, Service>();
   private socialNotifications = new Map<string, SocialNotification>();
@@ -6814,15 +6735,6 @@ export class MemStorage implements IStorage {
 
   async getUserById(id: string): Promise<User | undefined> {
     return this.getUser(id);
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const e = email?.toLowerCase().trim();
-    return Array.from(this.users.values()).find(u => (u.email || '').toLowerCase().trim() === e);
-  }
-
-  async searchUserByEmail(email: string): Promise<User | undefined> {
-    return this.getUserByEmail(email);
   }
 
   async createUser(user: InsertUser): Promise<User> {
@@ -7291,51 +7203,7 @@ export class MemStorage implements IStorage {
     this.sessions.delete(token);
   }
 
-  // Signup token methods for secure user creation
-  async createSignupToken(email: string): Promise<string> {
-    const token = randomUUID();
-    const tokenData = {
-      email: email.toLowerCase().trim(),
-      token,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
-    };
-    
-    this.signupTokens.set(token, tokenData);
-    
-    // Auto cleanup expired tokens
-    setTimeout(() => this.cleanupExpiredSignupTokens(), 5 * 60 * 1000);
-    
-    return token;
-  }
-
-  async validateAndConsumeSignupToken(token: string, email: string): Promise<boolean> {
-    const tokenData = this.signupTokens.get(token);
-    
-    if (!tokenData) {
-      return false;
-    }
-    
-    if (tokenData.expiresAt < new Date()) {
-      this.signupTokens.delete(token);
-      return false;
-    }
-    
-    if (tokenData.email !== email.toLowerCase().trim()) {
-      return false;
-    }
-    
-    // Consume the token (one-time use)
-    this.signupTokens.delete(token);
-    return true;
-  }
-
   async cleanupExpiredSignupTokens(): Promise<void> {
-    const now = new Date();
-    for (const [token, tokenData] of Array.from(this.signupTokens.entries())) {
-      if (tokenData.expiresAt < now) {
-        this.signupTokens.delete(token);
-      }
-    }
   }
 
   // Chat methods
@@ -9004,10 +8872,6 @@ export class MemStorage implements IStorage {
     return newContact;
   }
 
-  async searchUserByEmail(email: string): Promise<User | undefined> {
-    return this.getUserByEmail(email);
-  }
-
   // Cart methods (stub implementation)
   async getCartItems(userId: string): Promise<CartItem[]> {
     return Array.from(this.cartItems.values()).filter(item => item.userId === userId);
@@ -9821,10 +9685,6 @@ export class MemStorage implements IStorage {
 
   async deleteInvoice(invoiceId: string): Promise<boolean> {
     return false;
-  }
-
-  async searchUserByEmail(email: string): Promise<User | undefined> {
-    return this.getUserByEmail(email);
   }
 
   async getServiceCategories(): Promise<ServiceCategory[]> {
