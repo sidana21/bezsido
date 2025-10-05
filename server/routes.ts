@@ -7084,6 +7084,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Phone + OTP Authentication System
+  app.post("/api/auth/send-otp", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      
+      if (!phone || typeof phone !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: "رقم الهاتف مطلوب"
+        });
+      }
+
+      const normalizedPhone = phone.trim();
+
+      // توليد OTP
+      const { generateOTP, sendOTP } = await import('./wawp-service');
+      const otpCode = generateOTP();
+      
+      // إنشاء OTP في قاعدة البيانات
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 دقائق
+      await storage.createOtpCode({
+        phone: normalizedPhone,
+        code: otpCode,
+        expiresAt
+      });
+
+      // إرسال OTP عبر واتساب
+      const sent = await sendOTP(normalizedPhone, otpCode);
+      
+      if (!sent) {
+        return res.status(500).json({
+          success: false,
+          message: "فشل إرسال رمز التحقق. يرجى المحاولة مرة أخرى"
+        });
+      }
+
+      console.log(`📱 OTP sent to ${normalizedPhone}: ${otpCode}`);
+      
+      res.json({
+        success: true,
+        message: "تم إرسال رمز التحقق إلى واتساب",
+        phone: normalizedPhone
+      });
+    } catch (error) {
+      console.error('Send OTP error:', error);
+      res.status(500).json({
+        success: false,
+        message: "حدث خطأ أثناء إرسال رمز التحقق"
+      });
+    }
+  });
+
+  app.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const { phone, code, name, location } = req.body;
+      
+      if (!phone || !code) {
+        return res.status(400).json({
+          success: false,
+          message: "رقم الهاتف ورمز التحقق مطلوبان"
+        });
+      }
+
+      const normalizedPhone = phone.trim();
+
+      // التحقق من OTP
+      const otpRecord = await storage.getLatestOtpByPhone(normalizedPhone);
+      
+      if (!otpRecord) {
+        return res.status(400).json({
+          success: false,
+          message: "رمز التحقق غير صحيح أو منتهي الصلاحية"
+        });
+      }
+
+      if (otpRecord.code !== code.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "رمز التحقق غير صحيح"
+        });
+      }
+
+      // تحديد OTP كمستخدم
+      await storage.markOtpAsUsed(otpRecord.id);
+
+      // التحقق من وجود المستخدم
+      let user = await storage.getUserByPhone(normalizedPhone);
+      
+      if (!user) {
+        // مستخدم جديد - يحتاج لاستكمال البيانات
+        if (!name || !location) {
+          return res.status(400).json({
+            success: false,
+            requiresProfile: true,
+            message: "يرجى إدخال الاسم والموقع لإكمال التسجيل"
+          });
+        }
+
+        // إنشاء مستخدم جديد
+        user = await storage.createUser({
+          phone: normalizedPhone,
+          name: name.trim(),
+          location: location.trim(),
+          isOnline: true,
+          isVerified: true,
+          verifiedAt: new Date()
+        });
+        
+        console.log(`📝 New user registered via OTP: ${user.name} (${user.phone})`);
+      } else {
+        // تحديث حالة المستخدم
+        await storage.updateUserOnlineStatus(user.id, true);
+        console.log(`🔑 User logged in via OTP: ${user.name} (${user.phone})`);
+      }
+
+      // إنشاء session
+      const token = randomUUID();
+      const sessionData = insertSessionSchema.parse({
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 أيام
+      });
+      
+      await storage.createSession(sessionData);
+      
+      res.json({
+        success: true,
+        user,
+        token,
+        message: user ? "تم تسجيل الدخول بنجاح" : "تم إنشاء الحساب بنجاح"
+      });
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      res.status(500).json({
+        success: false,
+        message: "حدث خطأ أثناء التحقق من رمز التحقق"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
