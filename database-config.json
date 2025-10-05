@@ -1,5 +1,5 @@
 {
   "DATABASE_URL": "postgresql://postgres:password@helium/heliumdb?sslmode=disable",
-  "lastUpdated": "2025-10-05T17:02:56.621Z",
+  "lastUpdated": "2025-10-05T17:37:47.908Z",
   "note": "رابط قاعدة البيانات الخارجية المحفوظ تلقائياً"
 }
