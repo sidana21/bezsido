@@ -15,20 +15,18 @@ export const sendOTP = async (phone: string, otp: string): Promise<boolean> => {
   console.log(`   Instance ID: ${instanceId.substring(0, 8)}...`);
   console.log(`   Phone: ${phone}`);
 
-  const url = `https://app.wawp.net/api/send`;
+  const message = `رمز التحقق الخاص بك: ${otp}`;
+  const url = `https://wawp.net/wp-json/awp/v1/send`;
 
   try {
-    const res = await axios.post(url, {
-      number: phone,
-      type: "text",
-      message: `رمز التحقق الخاص بك: ${otp}`,
-      instance_id: instanceId,
-      access_token: token
-    }, {
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json'
-      }
+    const res = await axios.get(url, {
+      params: {
+        instance_id: instanceId,
+        access_token: token,
+        chatId: phone,
+        message: message
+      },
+      timeout: 30000
     });
     console.log("✅ تم إرسال OTP بنجاح:", res.data);
     return true;
