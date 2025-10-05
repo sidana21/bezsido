@@ -6,6 +6,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   phone: varchar("phone").notNull().unique(), // رقم الهاتف (مطلوب وفريد)
+  email: text("email"), // البريد الإلكتروني (اختياري)
   password: text("password"), // كلمة المرور المشفرة (اختيارية للمستخدمين القدامى)
   name: text("name").notNull(),
   avatar: text("avatar"),
