@@ -9,14 +9,15 @@ export const sendOTP = async (phone: string, otp: string): Promise<boolean> => {
     return false;
   }
 
-  const url = `https://wawp.net/wp-json/awp/v1/send`;
+  const url = `https://wawp.net/wp-json/awp/v1/sendMessage`;
 
   try {
     const res = await axios.post(url, {
+      number: phone,
+      type: "text",
+      message: `رمز التحقق الخاص بك: ${otp}`,
       instance_id: instanceId,
-      access_token: token,
-      phone: phone,
-      message: `رمز التحقق الخاص بك: ${otp}`
+      access_token: token
     });
     console.log("✅ تم إرسال OTP بنجاح:", res.data);
     return true;
