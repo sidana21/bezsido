@@ -9,10 +9,12 @@ export const sendOTP = async (phone: string, otp: string): Promise<boolean> => {
     return false;
   }
 
-  const url = `https://api.wawp.com/instance${instanceId}/sendMessage?token=${token}`;
+  const url = `https://wawp.net/wp-json/awp/v1/send`;
 
   try {
     const res = await axios.post(url, {
+      instance_id: instanceId,
+      access_token: token,
       phone: phone,
       message: `رمز التحقق الخاص بك: ${otp}`
     });
@@ -20,6 +22,9 @@ export const sendOTP = async (phone: string, otp: string): Promise<boolean> => {
     return true;
   } catch (err: any) {
     console.error("❌ خطأ في إرسال OTP:", err.message);
+    if (err.response) {
+      console.error("📋 تفاصيل الخطأ:", err.response.data);
+    }
     return false;
   }
 };
