@@ -8,7 +8,9 @@ import {
   type Story, 
   type InsertStory, 
   type Session, 
-  type InsertSession, 
+  type InsertSession,
+  type OtpCode,
+  type InsertOtpCode,
   type Vendor,
   type InsertVendor,
   type VendorCategory,
@@ -95,7 +97,7 @@ import {
   type InsertPromotionSettings
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, privacyPolicy, users, sessions, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows, promotions, promotionSettings } from '@shared/schema';
+import { adminCredentials, appFeatures, privacyPolicy, users, sessions, otpCodes, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows, promotions, promotionSettings } from '@shared/schema';
 import { sql, or, gt, gte, count, sum, isNotNull } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
@@ -203,6 +205,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByPhone(phone: string): Promise<User | undefined>;
   searchUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined>;
@@ -217,6 +220,12 @@ export interface IStorage {
   createSession(session: InsertSession): Promise<Session>;
   getSessionByToken(token: string): Promise<Session | undefined>;
   deleteSession(token: string): Promise<void>;
+  
+  // OTP
+  createOtpCode(otpData: InsertOtpCode): Promise<OtpCode>;
+  getLatestOtpByPhone(phone: string): Promise<OtpCode | undefined>;
+  markOtpAsUsed(id: string): Promise<void>;
+  cleanupExpiredOtp(): Promise<void>;
   
   // Signup tokens for secure user creation
   createSignupToken(email: string): Promise<string>;
@@ -582,20 +591,23 @@ export class DatabaseStorage implements IStorage {
     return this.getUserByEmail(email);
   }
 
-  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+  async getUserByPhone(phone: string): Promise<User | undefined> {
     try {
       if (!db) {
         const dbModule = await import('./db');
         db = dbModule.db;
       }
       
-      // For now, since we don't have phone number in schema, return undefined
-      // This method exists to satisfy the interface
-      return undefined;
+      const result = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+      return result[0] || undefined;
     } catch (error) {
-      console.error('Error searching user by phone number:', error);
+      console.error('Error getting user by phone:', error);
       return undefined;
     }
+  }
+
+  async searchUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+    return this.getUserByPhone(phoneNumber);
   }
 
   async createUser(user: InsertUser): Promise<User> {
@@ -873,6 +885,85 @@ export class DatabaseStorage implements IStorage {
       await db.delete(sessions).where(eq(sessions.token, token));
     } catch (error) {
       console.error('Error deleting session:', error);
+    }
+  }
+
+  // OTP methods
+  async createOtpCode(otpData: InsertOtpCode): Promise<OtpCode> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const newOtp = {
+        id: randomUUID(),
+        ...otpData,
+        isUsed: false,
+        createdAt: new Date(),
+      };
+
+      const result = await db.insert(otpCodes).values(newOtp).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating OTP code:', error);
+      throw error;
+    }
+  }
+
+  async getLatestOtpByPhone(phone: string): Promise<OtpCode | undefined> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      const result = await db.select()
+        .from(otpCodes)
+        .where(and(
+          eq(otpCodes.phone, phone),
+          eq(otpCodes.isUsed, false),
+          gt(otpCodes.expiresAt, new Date())
+        ))
+        .orderBy(desc(otpCodes.createdAt))
+        .limit(1);
+      
+      return result[0] || undefined;
+    } catch (error) {
+      console.error('Error getting latest OTP by phone:', error);
+      return undefined;
+    }
+  }
+
+  async markOtpAsUsed(id: string): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.update(otpCodes)
+        .set({ isUsed: true })
+        .where(eq(otpCodes.id, id));
+    } catch (error) {
+      console.error('Error marking OTP as used:', error);
+    }
+  }
+
+  async cleanupExpiredOtp(): Promise<void> {
+    try {
+      if (!db) {
+        const dbModule = await import('./db');
+        db = dbModule.db;
+      }
+      
+      await db.delete(otpCodes)
+        .where(or(
+          eq(otpCodes.isUsed, true),
+          gt(new Date(), otpCodes.expiresAt)
+        ));
+    } catch (error) {
+      console.error('Error cleaning up expired OTP:', error);
     }
   }
 
