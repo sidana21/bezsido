@@ -7166,9 +7166,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // تحديد OTP كمستخدم
-      await storage.markOtpAsUsed(otpRecord.id);
-
       // التحقق من وجود المستخدم
       let user = await storage.getUserByPhone(normalizedPhone);
       
@@ -7193,10 +7190,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`📝 New user registered via OTP: ${user.name} (${user.phone})`);
+        
+        // تحديد OTP كمستخدم بعد إنشاء المستخدم بنجاح
+        await storage.markOtpAsUsed(otpRecord.id);
       } else {
         // تحديث حالة المستخدم
         await storage.updateUserOnlineStatus(user.id, true);
         console.log(`🔑 User logged in via OTP: ${user.name} (${user.phone})`);
+        
+        // تحديد OTP كمستخدم بعد تسجيل الدخول بنجاح
+        await storage.markOtpAsUsed(otpRecord.id);
       }
 
       // إنشاء session
