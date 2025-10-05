@@ -11,6 +11,7 @@ import { MessageCircle, KeyRound, Phone } from "lucide-react";
 import appIconUrl from '@/assets/app-icon.png';
 
 export default function LoginPage() {
+  const [countryCode, setCountryCode] = useState("+213");
   const [phone, setPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [name, setName] = useState("");
@@ -20,6 +21,19 @@ export default function LoginPage() {
   const [showProfileForm, setShowProfileForm] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
+
+  const countryCodes = [
+    { code: "+213", country: "الجزائر", flag: "🇩🇿" },
+    { code: "+966", country: "السعودية", flag: "🇸🇦" },
+    { code: "+971", country: "الإمارات", flag: "🇦🇪" },
+    { code: "+20", country: "مصر", flag: "🇪🇬" },
+    { code: "+212", country: "المغرب", flag: "🇲🇦" },
+    { code: "+216", country: "تونس", flag: "🇹🇳" },
+    { code: "+218", country: "ليبيا", flag: "🇱🇾" },
+    { code: "+962", country: "الأردن", flag: "🇯🇴" },
+    { code: "+964", country: "العراق", flag: "🇮🇶" },
+    { code: "+965", country: "الكويت", flag: "🇰🇼" },
+  ];
 
   const locations = [
     "تندوف", "الجزائر", "وهران", "قسنطينة", "عنابة", "سطيف", "باتنة", "تيزي وزو", "بجاية", "مستغانم"
@@ -36,7 +50,7 @@ export default function LoginPage() {
       return;
     }
 
-    const cleanPhone = phone.trim();
+    const fullPhone = countryCode + phone.trim();
 
     setIsLoading(true);
 
@@ -44,7 +58,7 @@ export default function LoginPage() {
       const response = await apiRequest("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: cleanPhone }),
+        body: JSON.stringify({ phone: fullPhone }),
       });
 
       if (response.success) {
@@ -69,7 +83,7 @@ export default function LoginPage() {
   };
 
   // التحقق من OTP
-  const handleVerifyOTP = async () => {
+  const handleVerifyOTP = async (profileData?: { name: string; location: string }) => {
     if (!otpCode.trim() || otpCode.length !== 6) {
       toast({
         title: "خطأ",
@@ -80,22 +94,22 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    const cleanPhone = phone.trim();
+    const fullPhone = countryCode + phone.trim();
 
     try {
       const response = await apiRequest("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          phone: cleanPhone, 
+          phone: fullPhone, 
           code: otpCode,
-          name: name.trim(),
-          location
+          name: profileData?.name || "",
+          location: profileData?.location || ""
         }),
       });
 
       if (response.success) {
-        if (response.requiresProfile) {
+        if (response.requiresProfile && !profileData) {
           // مستخدم جديد - يحتاج لاستكمال البيانات
           setShowProfileForm(true);
           setShowOtpInput(false);
@@ -104,7 +118,7 @@ export default function LoginPage() {
             description: "يرجى إكمال بياناتك الشخصية",
           });
         } else if (response.user && response.token) {
-          // مستخدم موجود - تسجيل دخول
+          // مستخدم موجود أو تم إنشاء مستخدم جديد - تسجيل دخول
           login(response.user, response.token);
           toast({
             title: "مرحباً " + response.user.name + "!",
@@ -147,7 +161,7 @@ export default function LoginPage() {
     }
 
     // إرسال طلب التحقق مع البيانات الكاملة
-    handleVerifyOTP();
+    handleVerifyOTP({ name: name.trim(), location });
   };
 
   // شاشة إكمال الملف الشخصي
@@ -244,7 +258,7 @@ export default function LoginPage() {
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-lg font-semibold">التحقق من الهاتف</CardTitle>
               <CardDescription>
-                <div className="text-sm text-muted-foreground">{phone}</div>
+                <div className="text-sm text-muted-foreground">{countryCode + phone}</div>
                 <div className="text-xs mt-1">رمز التحقق مكون من 6 أرقام</div>
               </CardDescription>
             </CardHeader>
@@ -270,7 +284,7 @@ export default function LoginPage() {
 
               <div className="space-y-3 pt-2">
                 <Button 
-                  onClick={handleVerifyOTP} 
+                  onClick={() => handleVerifyOTP()} 
                   data-testid="button-verify-otp"
                   className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white"
                   disabled={isLoading || otpCode.length !== 6}
@@ -335,21 +349,38 @@ export default function LoginPage() {
                 <Phone className="w-4 h-4" />
                 رقم الهاتف
               </Label>
-              <Input
-                id="phone"
-                data-testid="input-phone"
-                type="tel"
-                dir="ltr"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+213xxxxxxxxx"
-                className="text-right"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && phone.trim()) {
-                    handleSendOTP();
-                  }
-                }}
-              />
+              <div className="flex gap-2">
+                <Select value={countryCode} onValueChange={setCountryCode}>
+                  <SelectTrigger data-testid="select-country-code" className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryCodes.map((item) => (
+                      <SelectItem key={item.code} value={item.code}>
+                        {item.flag} {item.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="phone"
+                  data-testid="input-phone"
+                  type="tel"
+                  dir="ltr"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                  placeholder="666303917"
+                  className="text-left flex-1"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && phone.trim()) {
+                      handleSendOTP();
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                مثال: {countryCode}666303917
+              </p>
             </div>
 
             <Button 
