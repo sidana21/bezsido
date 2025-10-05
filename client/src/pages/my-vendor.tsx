@@ -539,41 +539,71 @@ export default function MyVendorPage() {
 
           {/* Mobile Product Upload */}
           {isMobile && (
-            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-700">
-                  <Smartphone className="h-5 w-5" />
-                  إضافة منتجات عبر الهاتف
-                </CardTitle>
-                <CardDescription>
-                  أضف منتجاتك بسهولة من خلال كاميرا الهاتف
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-3">
-                  <Button 
-                    onClick={() => setShowMobileUpload(true)}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    size="lg"
-                  >
-                    <Camera className="h-5 w-5 ml-2" />
-                    رفع من الكاميرا
-                  </Button>
-                  <Button 
-                    onClick={() => setShowMobileUpload(true)}
-                    variant="outline" 
-                    className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
-                    size="lg"
-                  >
-                    <Upload className="h-5 w-5 ml-2" />
-                    رفع من المعرض
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-600 mt-3 text-center">
-                  واجهة محسنة للهواتف الذكية مع رفع سريع للصور
-                </p>
-              </CardContent>
-            </Card>
+            <>
+              <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-blue-700">
+                    <Smartphone className="h-5 w-5" />
+                    إضافة منتجات عبر الهاتف
+                  </CardTitle>
+                  <CardDescription>
+                    أضف منتجاتك بسهولة من خلال كاميرا الهاتف
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={() => setShowMobileUpload(true)}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      size="lg"
+                    >
+                      <Camera className="h-5 w-5 ml-2" />
+                      رفع من الكاميرا
+                    </Button>
+                    <Button 
+                      onClick={() => setShowMobileUpload(true)}
+                      variant="outline" 
+                      className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                      size="lg"
+                    >
+                      <Upload className="h-5 w-5 ml-2" />
+                      رفع من المعرض
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-3 text-center">
+                    واجهة محسنة للهواتف الذكية مع رفع سريع للصور
+                  </p>
+                </CardContent>
+              </Card>
+              
+              {/* Mobile Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    إجراءات سريعة
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" className="h-20 flex-col space-y-2">
+                      <Settings className="w-6 h-6" />
+                      <span className="text-sm">إدارة المتجر</span>
+                    </Button>
+                    <Link href="/promotions" className="w-full">
+                      <Button 
+                        variant="outline" 
+                        className="h-20 flex-col space-y-2 w-full" 
+                        data-testid="button-promotions-mobile"
+                      >
+                        <Megaphone className="w-6 h-6 text-primary" />
+                        <span className="text-sm">الإعلانات</span>
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
 
           {/* Desktop Quick Actions */}
