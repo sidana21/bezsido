@@ -369,7 +369,7 @@ export default function LoginPage() {
                   dir="ltr"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="666303917"
+                  placeholder=""
                   className="text-left flex-1"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && phone.trim()) {
@@ -378,9 +378,6 @@ export default function LoginPage() {
                   }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                مثال: {countryCode}666303917
-              </p>
             </div>
 
             <Button 
