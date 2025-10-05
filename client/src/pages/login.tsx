@@ -128,11 +128,23 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("OTP verification error:", error);
-      toast({
-        title: "خطأ",
-        description: error.message || "رمز التحقق غير صحيح أو منتهي الصلاحية",
-        variant: "destructive",
-      });
+      
+      // التحقق من حالة requiresProfile في الخطأ
+      if (error.status === 400 && error.message?.includes("يرجى إدخال الاسم والموقع")) {
+        // مستخدم جديد - يحتاج لاستكمال البيانات
+        setShowProfileForm(true);
+        setShowOtpInput(false);
+        toast({
+          title: "تم التحقق بنجاح",
+          description: "يرجى إكمال بياناتك الشخصية",
+        });
+      } else {
+        toast({
+          title: "خطأ",
+          description: error.message || "رمز التحقق غير صحيح أو منتهي الصلاحية",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
