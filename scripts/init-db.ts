@@ -1,8 +1,8 @@
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { neon } from '@neondatabase/serverless';
 
-// This script runs the latest migration SQL file directly
+// This script runs all migration SQL files directly
 // It's called automatically on server startup to ensure all tables exist
 export async function initializeDatabase() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -16,9 +16,21 @@ export async function initializeDatabase() {
     console.log('🔄 Checking database tables...');
     const sql = neon(databaseUrl);
     
-    // Read the migration SQL file
-    const migrationPath = join(process.cwd(), 'migrations', '0000_nervous_violations.sql');
-    let migrationSQL = readFileSync(migrationPath, 'utf-8');
+    // Read ALL migration SQL files
+    const migrationsDir = join(process.cwd(), 'migrations');
+    const migrationFiles = readdirSync(migrationsDir)
+      .filter(file => file.endsWith('.sql'))
+      .sort(); // Process in order (0000, 0001, etc.)
+    
+    console.log(`📋 Found ${migrationFiles.length} migration file(s): ${migrationFiles.join(', ')}`);
+    
+    let migrationSQL = '';
+    
+    // Combine all migration files
+    for (const file of migrationFiles) {
+      const filePath = join(migrationsDir, file);
+      migrationSQL += readFileSync(filePath, 'utf-8') + '\n';
+    }
     
     // Remove statement breakpoints and split into individual statements
     migrationSQL = migrationSQL.replace(/--> statement-breakpoint/g, '');
