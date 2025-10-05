@@ -208,7 +208,7 @@ export default function AdminPromotionsPage() {
     updatePaymentMutation.mutate({
       promotionId: promotion.id,
       paymentStatus: 'paid',
-      paidAmount: promotion.totalPrice
+      paidAmount: promotion.price
     });
   };
 
@@ -270,7 +270,7 @@ export default function AdminPromotionsPage() {
               
               <div className="text-left">
                 <div className="text-2xl font-bold text-primary mb-1">
-                  {promotion.totalPrice} د
+                  {promotion.price} د
                 </div>
                 <Badge 
                   variant={promotion.paymentStatus === 'paid' ? 'default' : 'secondary'}

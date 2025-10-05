@@ -6842,7 +6842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         durationDays: req.body.durationDays,
         location: req.body.location,
         description: req.body.description,
-        totalPrice: req.body.totalPrice,
+        price: req.body.totalPrice,
         startDate,
         endDate,
         status: 'pending',

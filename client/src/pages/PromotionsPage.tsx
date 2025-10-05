@@ -488,7 +488,7 @@ export default function PromotionsPage() {
                       
                       <div className="text-left md:text-right">
                         <div className="text-2xl font-bold text-primary mb-1">
-                          {promotion.totalPrice} د
+                          {promotion.price} د
                         </div>
                         <Badge variant={promotion.paymentStatus === 'paid' ? 'default' : 'secondary'}>
                           {promotion.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع'}
