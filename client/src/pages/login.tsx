@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [showProfileForm, setShowProfileForm] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -131,7 +132,8 @@ export default function LoginPage() {
       
       // التحقق من حالة requiresProfile في الخطأ
       if (error.status === 400 && error.message?.includes("يرجى إدخال الاسم والموقع")) {
-        // مستخدم جديد - يحتاج لاستكمال البيانات
+        // مستخدم جديد - يحتاج لاستكمال البيانات - OTP صحيح
+        setOtpVerified(true);
         setShowProfileForm(true);
         setShowOtpInput(false);
         toast({
@@ -170,8 +172,50 @@ export default function LoginPage() {
       return;
     }
 
+    if (!otpVerified) {
+      toast({
+        title: "خطأ",
+        description: "يرجى التحقق من رمز OTP أولاً",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // إرسال طلب التحقق مع البيانات الكاملة
-    handleVerifyOTP({ name: name.trim(), location });
+    const fullPhone = countryCode + phone.trim();
+    setIsLoading(true);
+
+    try {
+      const response = await apiRequest("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          phone: fullPhone, 
+          code: otpCode,
+          name: name.trim(),
+          location: location.trim()
+        }),
+      });
+
+      if (response.success && response.user && response.token) {
+        login(response.user, response.token);
+        toast({
+          title: "مرحباً " + response.user.name + "!",
+          description: "تم إنشاء حسابك بنجاح",
+        });
+      } else {
+        throw new Error(response.message || "فشل في إنشاء الحساب");
+      }
+    } catch (error: any) {
+      console.error("Profile completion error:", error);
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في إنشاء الحساب",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // شاشة إكمال الملف الشخصي
