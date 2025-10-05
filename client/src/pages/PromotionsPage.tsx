@@ -107,16 +107,15 @@ const SUBSCRIPTION_TIERS = [
 
 export default function PromotionsPage() {
   const { toast } = useToast();
-  const [selectedVendor, setSelectedVendor] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { data: vendors } = useQuery<any[]>({
-    queryKey: ["/api/vendor/my-vendors"],
+  const { data: vendor } = useQuery<any>({
+    queryKey: ["/api/user/vendor"],
   });
 
   const { data: promotions, isLoading: isLoadingPromotions } = useQuery<any[]>({
-    queryKey: ["/api/promotions/vendor", selectedVendor],
-    enabled: !!selectedVendor
+    queryKey: ["/api/promotions/vendor", vendor?.id],
+    enabled: !!vendor?.id
   });
 
   const { data: settings } = useQuery<any>({
@@ -147,13 +146,13 @@ export default function PromotionsPage() {
         method: 'POST',
         body: JSON.stringify({
           ...data,
-          vendorId: selectedVendor,
+          vendorId: vendor?.id,
           totalPrice
         })
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/promotions/vendor", selectedVendor] });
+      queryClient.invalidateQueries({ queryKey: ["/api/promotions/vendor", vendor?.id] });
       toast({
         title: "تم إنشاء الطلب",
         description: "تم إرسال طلب الترويج وسيتم مراجعته قريباً",
@@ -193,21 +192,17 @@ export default function PromotionsPage() {
     );
   };
 
-  if (!vendors || vendors.length === 0) {
+  if (!vendor) {
     return (
       <div className="container mx-auto p-6 text-center">
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground mb-4">يجب أن يكون لديك متجر لاستخدام خدمات الترويج</p>
-            <Button>إنشاء متجر</Button>
+            <Button onClick={() => window.location.href = '/my-store'}>إنشاء متجر</Button>
           </CardContent>
         </Card>
       </div>
     );
-  }
-
-  if (!selectedVendor && vendors.length > 0) {
-    setSelectedVendor(vendors[0].id);
   }
 
   return (
