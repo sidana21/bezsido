@@ -6825,12 +6825,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + req.body.durationDays);
 
+      // تحديد نوع المدة بناءً على عدد الأيام
+      let duration = 'daily';
+      if (req.body.durationDays >= 30) {
+        duration = 'monthly';
+      } else if (req.body.durationDays >= 7) {
+        duration = 'weekly';
+      }
+
       const promotionData = {
         vendorId,
         promotionType: req.body.promotionType,
         targetId: req.body.targetId,
         subscriptionTier: req.body.subscriptionTier,
-        duration: req.body.durationDays,
+        duration,
+        durationDays: req.body.durationDays,
         location: req.body.location,
         description: req.body.description,
         totalPrice: req.body.totalPrice,
