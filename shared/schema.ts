@@ -5,8 +5,7 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  phone: varchar("phone").unique(), // رقم الهاتف (اختياري للمستخدمين القدامى)
-  email: varchar("email").unique(), // البريد الإلكتروني (اختياري)
+  phone: varchar("phone").notNull().unique(), // رقم الهاتف (مطلوب وفريد)
   password: text("password"), // كلمة المرور المشفرة (اختيارية للمستخدمين القدامى)
   name: text("name").notNull(),
   avatar: text("avatar"),
@@ -149,16 +148,15 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
-// Schema for login validation
-export const loginUserSchema = z.object({
-  email: z.string().email("تأكد من صحة تنسيق البريد الإلكتروني"),
-  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+// Schema for phone login/registration validation
+export const phoneAuthSchema = z.object({
+  phone: z.string().min(10, "رقم الهاتف يجب أن يكون 10 أرقام على الأقل"),
+  code: z.string().length(6, "رمز التحقق يجب أن يكون 6 أرقام"),
 });
 
-// Schema for registration validation
+// Schema for user registration with phone
 export const registerUserSchema = z.object({
-  email: z.string().email("تأكد من صحة تنسيق البريد الإلكتروني"),
-  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+  phone: z.string().min(10, "رقم الهاتف يجب أن يكون 10 أرقام على الأقل"),
   name: z.string().min(2, "الاسم يجب أن يكون حرفان على الأقل"),
   location: z.string().min(2, "الموقع مطلوب"),
 });
