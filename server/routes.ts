@@ -6826,12 +6826,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       endDate.setDate(endDate.getDate() + req.body.durationDays);
 
       const promotionData = {
-        ...req.body,
         vendorId,
+        promotionType: req.body.promotionType,
+        targetId: req.body.targetId,
+        subscriptionTier: req.body.subscriptionTier,
+        duration: req.body.durationDays,
+        location: req.body.location,
+        description: req.body.description,
+        totalPrice: req.body.totalPrice,
         startDate,
         endDate,
         status: 'pending',
-        paymentStatus: 'unpaid'
+        paymentStatus: 'unpaid',
+        paymentMethod: 'cash'
       };
 
       const promotion = await storage.createPromotion(promotionData);
