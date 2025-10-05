@@ -15,15 +15,19 @@ export const sendOTP = async (phone: string, otp: string): Promise<boolean> => {
   console.log(`   Instance ID: ${instanceId.substring(0, 8)}...`);
   console.log(`   Phone: ${phone}`);
 
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const chatId = `${cleanPhone}@c.us`;
   const message = `رمز التحقق الخاص بك: ${otp}`;
   const url = `https://wawp.net/wp-json/awp/v1/send`;
+
+  console.log(`   Chat ID: ${chatId}`);
 
   try {
     const res = await axios.get(url, {
       params: {
         instance_id: instanceId,
         access_token: token,
-        chatId: phone,
+        chatId: chatId,
         message: message
       },
       timeout: 30000
