@@ -311,6 +311,27 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-3 pt-2">
+                <p className="text-xs text-center text-muted-foreground">
+                  بإنشاء حساب، أنت توافق على{" "}
+                  <a 
+                    href="/terms" 
+                    target="_blank" 
+                    className="text-blue-600 hover:underline"
+                    data-testid="link-terms"
+                  >
+                    شروط الاستخدام
+                  </a>
+                  {" "}و{" "}
+                  <a 
+                    href="/privacy-policy" 
+                    target="_blank" 
+                    className="text-blue-600 hover:underline"
+                    data-testid="link-privacy"
+                  >
+                    سياسة الخصوصية
+                  </a>
+                </p>
+
                 <Button 
                   onClick={handleCompleteProfile} 
                   data-testid="button-complete-profile"
