@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   avatar: text("avatar"),
   location: text("location").notNull(), // المنطقة الجغرافية
+  dateOfBirth: timestamp("date_of_birth"), // تاريخ الميلاد (للتحقق من العمر 18+)
   isOnline: boolean("is_online").default(false),
   isVerified: boolean("is_verified").default(false), // Account verification status
   verifiedAt: timestamp("verified_at"), // When account was verified
@@ -160,6 +161,14 @@ export const registerUserSchema = z.object({
   phone: z.string().min(10, "رقم الهاتف يجب أن يكون 10 أرقام على الأقل"),
   name: z.string().min(2, "الاسم يجب أن يكون حرفان على الأقل"),
   location: z.string().min(2, "الموقع مطلوب"),
+  dateOfBirth: z.string().refine((date) => {
+    const birthDate = new Date(date);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+    return actualAge >= 18;
+  }, "يجب أن يكون عمرك 18 عاماً أو أكثر للتسجيل"),
 });
 
 export const insertSessionSchema = createInsertSchema(sessions).omit({
@@ -1670,3 +1679,94 @@ export type Promotion = typeof promotions.$inferSelect;
 export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
 export type PromotionSettings = typeof promotionSettings.$inferSelect;
 export type InsertPromotionSettings = z.infer<typeof insertPromotionSettingsSchema>;
+
+// ======== Play Store Safety Requirements ========
+
+// نظام الإبلاغ عن المحتوى والمستخدمين - Content & User Reports System
+export const reports = pgTable("reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reporterId: varchar("reporter_id").notNull().references(() => users.id), // من قام بالإبلاغ
+  
+  // نوع الإبلاغ
+  reportType: text("report_type").notNull(), // 'user', 'message', 'post', 'story', 'product', 'comment'
+  reportedItemId: varchar("reported_item_id").notNull(), // معرف العنصر المبلغ عنه
+  reportedUserId: varchar("reported_user_id").references(() => users.id), // المستخدم المبلغ عنه (إن وجد)
+  
+  // سبب الإبلاغ
+  reason: text("reason").notNull(), // 'spam', 'harassment', 'inappropriate_content', 'violence', 'hate_speech', 'child_safety', 'other'
+  description: text("description"), // تفاصيل إضافية
+  
+  // حالة الإبلاغ
+  status: text("status").notNull().default("pending"), // 'pending', 'under_review', 'resolved', 'rejected'
+  reviewedBy: varchar("reviewed_by").references(() => users.id), // المشرف الذي راجع الإبلاغ
+  reviewedAt: timestamp("reviewed_at"),
+  adminNotes: text("admin_notes"), // ملاحظات الإدارة
+  actionTaken: text("action_taken"), // 'content_removed', 'user_warned', 'user_suspended', 'no_action'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// نظام حظر المستخدمين - User Block System
+export const blockedUsers = pgTable("blocked_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id), // من قام بالحظر
+  blockedUserId: varchar("blocked_user_id").notNull().references(() => users.id), // المستخدم المحظور
+  reason: text("reason"), // سبب الحظر (اختياري)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// شروط الاستخدام - Terms of Service
+export const termsOfService = pgTable("terms_of_service", {
+  id: varchar("id").primaryKey().default("terms_of_service"),
+  content: text("content").notNull(),
+  version: text("version").notNull().default("1.0"),
+  effectiveDate: timestamp("effective_date").defaultNow(),
+  lastUpdatedBy: varchar("last_updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// قبول شروط الاستخدام من المستخدمين - User Terms Acceptance
+export const userTermsAcceptance = pgTable("user_terms_acceptance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  termsVersion: text("terms_version").notNull(),
+  acceptedAt: timestamp("accepted_at").defaultNow(),
+  ipAddress: text("ip_address"),
+});
+
+// Insert Schemas for Safety Features
+export const insertReportSchema = createInsertSchema(reports).omit({
+  id: true,
+  status: true,
+  reviewedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBlockedUserSchema = createInsertSchema(blockedUsers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTermsOfServiceSchema = createInsertSchema(termsOfService).omit({
+  id: true,
+  updatedAt: true,
+  createdAt: true,
+});
+
+export const insertUserTermsAcceptanceSchema = createInsertSchema(userTermsAcceptance).omit({
+  id: true,
+  acceptedAt: true,
+});
+
+// Types for Safety Features
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = z.infer<typeof insertReportSchema>;
+export type BlockedUser = typeof blockedUsers.$inferSelect;
+export type InsertBlockedUser = z.infer<typeof insertBlockedUserSchema>;
+export type TermsOfService = typeof termsOfService.$inferSelect;
+export type InsertTermsOfService = z.infer<typeof insertTermsOfServiceSchema>;
+export type UserTermsAcceptance = typeof userTermsAcceptance.$inferSelect;
+export type InsertUserTermsAcceptance = z.infer<typeof insertUserTermsAcceptanceSchema>;
