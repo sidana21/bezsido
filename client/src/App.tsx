@@ -33,6 +33,7 @@ import TaxiDriver from "@/pages/taxi-driver";
 import HomeServices from "@/pages/home-services";
 import BeautyServices from "@/pages/beauty-services";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import TermsOfService from "@/pages/TermsOfService";
 import PromotionsPage from "@/pages/PromotionsPage";
 // Admin Pages
 import { AdminLogin } from "@/pages/admin/admin-login";
@@ -125,6 +126,7 @@ function Router() {
       <Switch>
         {/* Public Routes */}
         <Route path="/privacy-policy" component={PrivacyPolicy} />
+        <Route path="/terms" component={TermsOfService} />
         
         {/* Admin Routes - Public */}
         <Route path="/admin/login" component={AdminLogin} />
