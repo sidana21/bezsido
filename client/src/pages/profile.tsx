@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +29,7 @@ export default function Profile() {
   const { toast } = useToast();
   const { logout } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocationPath] = useLocation();
 
   const { data: currentUser, isLoading } = useQuery<User>({
     queryKey: ["/api/user/current"],
@@ -746,16 +747,15 @@ export default function Profile() {
               تسجيل الخروج
             </Button>
             
-            <Link href="/privacy-policy">
-              <Button
-                variant="ghost"
-                className="w-full h-12 text-lg rounded-xl"
-                data-testid="button-privacy-policy"
-              >
-                <ShieldCheck className="w-5 h-5 ml-2" />
-                سياسة الخصوصية
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              onClick={() => setLocationPath('/privacy-policy')}
+              className="w-full h-12 text-lg rounded-xl"
+              data-testid="button-privacy-policy"
+            >
+              <ShieldCheck className="w-5 h-5 ml-2" />
+              سياسة الخصوصية
+            </Button>
             
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <DialogTrigger asChild>

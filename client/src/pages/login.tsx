@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { MessageCircle, KeyRound, Phone } from "lucide-react";
 import appIconUrl from '@/assets/app-icon.png';
+import { useLocation } from "wouter";
 
 export default function LoginPage() {
   const [countryCode, setCountryCode] = useState("+213");
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const [otpVerified, setOtpVerified] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
+  const [, setLocationPath] = useLocation();
 
   const countryCodes = [
     { code: "+213", country: "الجزائر", flag: "🇩🇿" },
@@ -457,8 +459,9 @@ export default function LoginPage() {
 
             <Button 
               variant="ghost" 
-              onClick={() => {}}
+              onClick={() => setLocationPath('/privacy-policy')}
               className="w-full text-sm text-muted-foreground hover:text-foreground"
+              data-testid="button-privacy-policy"
             >
               سياسة الخصوصية
             </Button>
