@@ -5420,9 +5420,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // جلب الترويجات النشطة للمنشورات
       const activePromotions = await storage.getActivePromotions();
-      const postPromotions = activePromotions.filter(p => p.promotionType === 'post' && p.targetId);
+      const postPromotions = activePromotions.filter(p => p.promotionType === 'boosted_post' && p.targetId);
       
-      console.log(`📢 Found ${postPromotions.length} active post promotions`);
+      console.log(`📢 Found ${postPromotions.length} active boosted_post promotions`);
       
       // جلب المنشورات المروجة
       const promotedPostsData = await Promise.all(

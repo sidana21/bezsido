@@ -26,6 +26,7 @@ interface PostWithUser extends BivochatPost {
     vendorId: string;
     promotionId: string;
     description?: string | null;
+    subscriptionTier?: 'bronze' | 'silver' | 'gold';
   };
 }
 
@@ -525,11 +526,22 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
               {/* شارة الإعلان للمنشورات المروّجة */}
               {post.isPromoted && (
                 <div className="absolute top-4 right-4 z-30">
-                  <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 px-4 py-2 rounded-full shadow-2xl border-2 border-yellow-300 backdrop-blur-md animate-pulse">
+                  <div className={`px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md animate-pulse border-2 ${
+                    post.promotionData?.subscriptionTier === 'gold' 
+                      ? 'bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 border-yellow-300' 
+                      : post.promotionData?.subscriptionTier === 'silver'
+                      ? 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 border-gray-200'
+                      : 'bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 border-amber-500'
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <span className="text-white text-sm font-extrabold tracking-wider drop-shadow-lg">
-                        📢 إعلان
-                      </span>
+                      <span className="text-3xl">🎯</span>
+                      <div className="flex flex-col">
+                        <span className="text-white text-xs font-extrabold tracking-wider drop-shadow-lg uppercase">
+                          {post.promotionData?.subscriptionTier === 'gold' ? '⭐ ذهبي' : 
+                           post.promotionData?.subscriptionTier === 'silver' ? '💎 فضي' : '🥉 برونزي'}
+                        </span>
+                        <span className="text-white/90 text-[10px] font-bold">ممول</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -555,11 +567,22 @@ export function TikTokPostCard({ post, currentUser, isActive = false }: TikTokPo
               {/* شارة الإعلان للمنشورات المروّجة */}
               {post.isPromoted && (
                 <div className="absolute top-4 right-4 z-30">
-                  <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 px-4 py-2 rounded-full shadow-2xl border-2 border-yellow-300 backdrop-blur-md animate-pulse">
+                  <div className={`px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md animate-pulse border-2 ${
+                    post.promotionData?.subscriptionTier === 'gold' 
+                      ? 'bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 border-yellow-300' 
+                      : post.promotionData?.subscriptionTier === 'silver'
+                      ? 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 border-gray-200'
+                      : 'bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 border-amber-500'
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <span className="text-white text-sm font-extrabold tracking-wider drop-shadow-lg">
-                        📢 إعلان
-                      </span>
+                      <span className="text-3xl">🎯</span>
+                      <div className="flex flex-col">
+                        <span className="text-white text-xs font-extrabold tracking-wider drop-shadow-lg uppercase">
+                          {post.promotionData?.subscriptionTier === 'gold' ? '⭐ ذهبي' : 
+                           post.promotionData?.subscriptionTier === 'silver' ? '💎 فضي' : '🥉 برونزي'}
+                        </span>
+                        <span className="text-white/90 text-[10px] font-bold">ممول</span>
+                      </div>
                     </div>
                   </div>
                 </div>

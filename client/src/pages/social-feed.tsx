@@ -22,7 +22,7 @@ interface PostWithUser extends BivochatPost {
     vendorId: string;
     promotionId: string;
     description?: string | null;
-    subscriptionTier?: string;
+    subscriptionTier?: 'bronze' | 'silver' | 'gold';
   };
 }
 
