@@ -94,10 +94,18 @@ import {
   type Promotion,
   type InsertPromotion,
   type PromotionSettings,
-  type InsertPromotionSettings
+  type InsertPromotionSettings,
+  type Report,
+  type InsertReport,
+  type BlockedUser,
+  type InsertBlockedUser,
+  type TermsOfService,
+  type InsertTermsOfService,
+  type UserTermsAcceptance,
+  type InsertUserTermsAcceptance
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { adminCredentials, appFeatures, privacyPolicy, users, sessions, otpCodes, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows, promotions, promotionSettings } from '@shared/schema';
+import { adminCredentials, appFeatures, privacyPolicy, users, sessions, otpCodes, chats, messages, stories, storyLikes, storyComments, vendorCategories, vendors, vendorRatings, vendorSubscriptions, productCategories, products, productReviews, verificationRequests, cartItems, stickers, affiliateLinks, commissions, contacts, orders, orderItems, calls, neighborhoodGroups, helpRequests, pointTransactions, dailyMissions, userMissions, reminders, customerTags, quickReplies, invoices, invoiceItems, serviceCategories, services, businessPosts, businessStories, postLikes, postSaves, postComments, postViews, storyViews, socialNotifications, follows, promotions, promotionSettings, reports, blockedUsers, termsOfService, userTermsAcceptance } from '@shared/schema';
 import { sql, or, gt, gte, count, sum, isNotNull } from 'drizzle-orm';
 import { eq, and, desc, ne } from 'drizzle-orm';
 
@@ -542,6 +550,27 @@ export interface IStorage {
   // Promotion Settings - إعدادات الإعلانات
   getPromotionSettings(): Promise<PromotionSettings | undefined>;
   updatePromotionSettings(settings: Partial<InsertPromotionSettings>): Promise<PromotionSettings>;
+  
+  // ======== Play Store Safety Features ========
+  
+  // Reports System - نظام الإبلاغات
+  createReport(report: InsertReport): Promise<Report>;
+  getAllReports(status?: string): Promise<Report[]>;
+  getReport(reportId: string): Promise<Report | undefined>;
+  updateReport(reportId: string, updates: Partial<Report>): Promise<void>;
+  
+  // Block System - نظام الحظر
+  createBlockedUser(block: InsertBlockedUser): Promise<BlockedUser>;
+  getBlockedUser(userId: string, blockedUserId: string): Promise<BlockedUser | undefined>;
+  removeBlockedUser(userId: string, blockedUserId: string): Promise<void>;
+  getBlockedUsers(userId: string): Promise<BlockedUser[]>;
+  isUserBlocked(userId: string, blockedUserId: string): Promise<boolean>;
+  
+  // Terms of Service - شروط الاستخدام
+  getTermsOfService(): Promise<TermsOfService | undefined>;
+  updateTermsOfService(updates: Partial<InsertTermsOfService>): Promise<void>;
+  acceptTermsOfService(acceptance: InsertUserTermsAcceptance): Promise<void>;
+  hasUserAcceptedTerms(userId: string, version: string): Promise<boolean>;
 }
 
 // Database Storage Implementation - uses PostgreSQL database
@@ -6672,6 +6701,168 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedSettings;
+  }
+
+  // ======== Play Store Safety Features Implementation ========
+  
+  // Reports System
+  async createReport(report: InsertReport): Promise<Report> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    const [newReport] = await db.insert(reports).values(report).returning();
+    return newReport;
+  }
+
+  async getAllReports(status?: string): Promise<Report[]> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    let query = db.select().from(reports);
+    
+    if (status) {
+      query = query.where(eq(reports.status, status)) as any;
+    }
+    
+    return await query.orderBy(desc(reports.createdAt));
+  }
+
+  async getReport(reportId: string): Promise<Report | undefined> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    const [report] = await db.select().from(reports).where(eq(reports.id, reportId));
+    return report;
+  }
+
+  async updateReport(reportId: string, updates: Partial<Report>): Promise<void> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    await db.update(reports)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(reports.id, reportId));
+  }
+
+  // Block System
+  async createBlockedUser(block: InsertBlockedUser): Promise<BlockedUser> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    const [newBlock] = await db.insert(blockedUsers).values(block).returning();
+    return newBlock;
+  }
+
+  async getBlockedUser(userId: string, blockedUserId: string): Promise<BlockedUser | undefined> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    const [block] = await db.select().from(blockedUsers)
+      .where(and(
+        eq(blockedUsers.userId, userId),
+        eq(blockedUsers.blockedUserId, blockedUserId)
+      ));
+    
+    return block;
+  }
+
+  async removeBlockedUser(userId: string, blockedUserId: string): Promise<void> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    await db.delete(blockedUsers)
+      .where(and(
+        eq(blockedUsers.userId, userId),
+        eq(blockedUsers.blockedUserId, blockedUserId)
+      ));
+  }
+
+  async getBlockedUsers(userId: string): Promise<BlockedUser[]> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    return await db.select().from(blockedUsers)
+      .where(eq(blockedUsers.userId, userId));
+  }
+
+  async isUserBlocked(userId: string, blockedUserId: string): Promise<boolean> {
+    const block = await this.getBlockedUser(userId, blockedUserId);
+    return !!block;
+  }
+
+  // Terms of Service
+  async getTermsOfService(): Promise<TermsOfService | undefined> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    const [terms] = await db.select().from(termsOfService)
+      .where(eq(termsOfService.id, 'terms_of_service'));
+    
+    return terms;
+  }
+
+  async updateTermsOfService(updates: Partial<InsertTermsOfService>): Promise<void> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    const existing = await this.getTermsOfService();
+    
+    if (!existing) {
+      await db.insert(termsOfService).values({
+        id: 'terms_of_service',
+        content: updates.content || '',
+        version: updates.version || '1.0',
+        lastUpdatedBy: updates.lastUpdatedBy
+      });
+    } else {
+      await db.update(termsOfService)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(termsOfService.id, 'terms_of_service'));
+    }
+  }
+
+  async acceptTermsOfService(acceptance: InsertUserTermsAcceptance): Promise<void> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    await db.insert(userTermsAcceptance).values(acceptance);
+  }
+
+  async hasUserAcceptedTerms(userId: string, version: string): Promise<boolean> {
+    if (!db) {
+      const dbModule = await import('./db');
+      db = dbModule.db;
+    }
+    
+    const [acceptance] = await db.select().from(userTermsAcceptance)
+      .where(and(
+        eq(userTermsAcceptance.userId, userId),
+        eq(userTermsAcceptance.termsVersion, version)
+      ));
+    
+    return !!acceptance;
   }
 }
 

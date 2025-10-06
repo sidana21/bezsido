@@ -44,6 +44,10 @@ import {
   insertServiceSchema,
   insertInvoiceSchema,
   insertInvoiceItemSchema,
+  insertReportSchema,
+  insertBlockedUserSchema,
+  insertTermsOfServiceSchema,
+  insertUserTermsAcceptanceSchema,
   type Vendor,
   type VendorCategory,
   type VendorRating,
@@ -6563,7 +6567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/verify-otp", async (req, res) => {
     try {
-      const { phone, code, name, location } = req.body;
+      const { phone, code, name, location, dateOfBirth } = req.body;
       
       if (!phone || !code) {
         return res.status(400).json({
@@ -6596,11 +6600,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user) {
         // مستخدم جديد - يحتاج لاستكمال البيانات
-        if (!name || !location) {
+        if (!name || !location || !dateOfBirth) {
           return res.status(400).json({
             success: false,
             requiresProfile: true,
-            message: "يرجى إدخال الاسم والموقع لإكمال التسجيل"
+            message: "يرجى إدخال جميع البيانات المطلوبة لإكمال التسجيل"
+          });
+        }
+
+        // التحقق من العمر 18+
+        const birthDate = new Date(dateOfBirth);
+        const today = new Date();
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+        
+        if (actualAge < 18) {
+          return res.status(400).json({
+            success: false,
+            message: "يجب أن يكون عمرك 18 عاماً أو أكثر للتسجيل"
           });
         }
 
@@ -6609,6 +6627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: normalizedPhone,
           name: name.trim(),
           location: location.trim(),
+          dateOfBirth: birthDate,
           isOnline: true,
           isVerified: true,
           verifiedAt: new Date()
@@ -6649,6 +6668,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: "حدث خطأ أثناء التحقق من رمز التحقق"
       });
+    }
+  });
+
+  // ======== Play Store Safety Features ========
+  
+  // نظام الإبلاغ - Reports System
+  app.post("/api/reports", requireAuth, async (req: any, res) => {
+    try {
+      const reportData = insertReportSchema.parse({
+        reporterId: req.userId,
+        ...req.body
+      });
+      
+      const report = await storage.createReport(reportData);
+      res.status(201).json({ 
+        success: true, 
+        report,
+        message: "تم إرسال البلاغ بنجاح. سيتم مراجعته من قبل الإدارة" 
+      });
+    } catch (error) {
+      console.error('Error creating report:', error);
+      res.status(500).json({ message: "خطأ في إرسال البلاغ" });
+    }
+  });
+
+  // جلب البلاغات (للمشرفين فقط)
+  app.get("/api/reports", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بالوصول للبلاغات" });
+      }
+      
+      const reports = await storage.getAllReports();
+      res.json({ reports });
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      res.status(500).json({ message: "خطأ في جلب البلاغات" });
+    }
+  });
+
+  // تحديث حالة البلاغ (للمشرفين فقط)
+  app.patch("/api/reports/:reportId", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بتحديث البلاغات" });
+      }
+      
+      const { reportId } = req.params;
+      const { status, actionTaken, adminNotes } = req.body;
+      
+      await storage.updateReport(reportId, {
+        status,
+        actionTaken,
+        adminNotes,
+        reviewedBy: req.userId,
+        reviewedAt: new Date()
+      });
+      
+      res.json({ success: true, message: "تم تحديث البلاغ بنجاح" });
+    } catch (error) {
+      console.error('Error updating report:', error);
+      res.status(500).json({ message: "خطأ في تحديث البلاغ" });
+    }
+  });
+
+  // نظام الحظر - Block System
+  app.post("/api/users/:userId/block", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { reason } = req.body;
+      
+      if (userId === req.userId) {
+        return res.status(400).json({ message: "لا يمكنك حظر نفسك" });
+      }
+      
+      const existingBlock = await storage.getBlockedUser(req.userId, userId);
+      if (existingBlock) {
+        return res.status(400).json({ message: "المستخدم محظور بالفعل" });
+      }
+      
+      await storage.createBlockedUser({
+        userId: req.userId,
+        blockedUserId: userId,
+        reason
+      });
+      
+      res.status(201).json({ success: true, message: "تم حظر المستخدم بنجاح" });
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      res.status(500).json({ message: "خطأ في حظر المستخدم" });
+    }
+  });
+
+  // إلغاء الحظر
+  app.delete("/api/users/:userId/block", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      await storage.removeBlockedUser(req.userId, userId);
+      res.json({ success: true, message: "تم إلغاء حظر المستخدم بنجاح" });
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      res.status(500).json({ message: "خطأ في إلغاء الحظر" });
+    }
+  });
+
+  // جلب قائمة المحظورين
+  app.get("/api/users/blocked", requireAuth, async (req: any, res) => {
+    try {
+      const blockedUsers = await storage.getBlockedUsers(req.userId);
+      res.json({ blockedUsers });
+    } catch (error) {
+      console.error('Error fetching blocked users:', error);
+      res.status(500).json({ message: "خطأ في جلب المحظورين" });
+    }
+  });
+
+  // التحقق من حالة الحظر
+  app.get("/api/users/:userId/block-status", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const isBlocked = await storage.isUserBlocked(req.userId, userId);
+      res.json({ isBlocked });
+    } catch (error) {
+      console.error('Error checking block status:', error);
+      res.status(500).json({ message: "خطأ في التحقق من الحظر" });
+    }
+  });
+
+  // شروط الاستخدام - Terms of Service
+  app.get("/api/terms", async (req, res) => {
+    try {
+      const terms = await storage.getTermsOfService();
+      res.json({ terms });
+    } catch (error) {
+      console.error('Error fetching terms:', error);
+      res.status(500).json({ message: "خطأ في جلب شروط الاستخدام" });
+    }
+  });
+
+  // تحديث شروط الاستخدام (للمشرفين فقط)
+  app.patch("/api/terms", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "غير مسموح لك بتحديث شروط الاستخدام" });
+      }
+      
+      const { content, version } = req.body;
+      await storage.updateTermsOfService({
+        content,
+        version,
+        lastUpdatedBy: req.userId
+      });
+      
+      res.json({ success: true, message: "تم تحديث شروط الاستخدام بنجاح" });
+    } catch (error) {
+      console.error('Error updating terms:', error);
+      res.status(500).json({ message: "خطأ في تحديث شروط الاستخدام" });
+    }
+  });
+
+  // قبول شروط الاستخدام
+  app.post("/api/terms/accept", requireAuth, async (req: any, res) => {
+    try {
+      const { termsVersion, ipAddress } = req.body;
+      
+      await storage.acceptTermsOfService({
+        userId: req.userId,
+        termsVersion,
+        ipAddress
+      });
+      
+      res.json({ success: true, message: "تم قبول شروط الاستخدام" });
+    } catch (error) {
+      console.error('Error accepting terms:', error);
+      res.status(500).json({ message: "خطأ في قبول شروط الاستخدام" });
     }
   });
 
