@@ -5416,7 +5416,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get posts from storage with proper filtering
       const posts = await storage.getFeedPosts(location, filter, currentUserId);
       
-      console.log(`📊 getFeedPosts returned ${posts.length} posts:`, posts.map(p => ({ id: p.id, content: p.content.substring(0, 30), locationInfo: p.locationInfo })));
+      console.log(`📊 getFeedPosts returned ${posts.length} posts`);
+      
+      // جلب الترويجات النشطة للمنشورات
+      const activePromotions = await storage.getActivePromotions();
+      const postPromotions = activePromotions.filter(p => p.promotionType === 'post' && p.targetId);
+      
+      console.log(`📢 Found ${postPromotions.length} active post promotions`);
+      
+      // جلب المنشورات المروجة
+      const promotedPostsData = await Promise.all(
+        postPromotions.map(async (promotion) => {
+          try {
+            const post = await storage.getBusinessPost(promotion.targetId!);
+            if (post && post.status === 'published' && post.isActive) {
+              // تحقق من الموقع إذا كان محددًا
+              if (!location || !promotion.location || promotion.location === location) {
+                return { post, promotion };
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching promoted post ${promotion.targetId}:`, err);
+          }
+          return null;
+        })
+      );
+      
+      const validPromotedPosts = promotedPostsData.filter(Boolean) as Array<{post: any, promotion: any}>;
+      console.log(`✅ Found ${validPromotedPosts.length} valid promoted posts`);
       
       // Enhance posts with user data and interaction status
       const enhancedPosts = await Promise.all(posts.map(async (post) => {
@@ -5448,11 +5475,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: safeUser,
           isLiked,
           isSaved,
-          isFollowing
+          isFollowing,
+          isPromoted: false
         };
       }));
       
-      res.json(enhancedPosts);
+      // إضافة المنشورات المروجة مع علامة isPromoted
+      const enhancedPromotedPosts = await Promise.all(validPromotedPosts.map(async ({post, promotion}) => {
+        const user = await storage.getUserById(post.userId);
+        const isLiked = await storage.hasUserLikedPost(post.id, currentUserId);
+        const isSaved = await storage.hasUserSavedPost(post.id, currentUserId);
+        const isFollowing = await storage.isUserFollowing(currentUserId, post.userId);
+        
+        const likesCount = await storage.getPostLikesCount(post.id);
+        const commentsCount = await storage.getPostCommentsCount(post.id);
+        const viewsCount = await storage.getPostViewsCount(post.id);
+        
+        const safeUser = user ? {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          location: user.location,
+          isVerified: user.isVerified,
+          isOnline: user.isOnline
+        } : null;
+        
+        return {
+          ...post,
+          likesCount,
+          commentsCount,
+          viewsCount,
+          user: safeUser,
+          isLiked,
+          isSaved,
+          isFollowing,
+          isPromoted: true,
+          promotionData: {
+            vendorId: promotion.vendorId,
+            promotionId: promotion.id,
+            description: promotion.description,
+            subscriptionTier: promotion.subscriptionTier
+          }
+        };
+      }));
+      
+      // دمج المنشورات العادية والمروجة
+      // نضع المنشورات المروجة كل 3-4 منشورات عادية
+      const mergedPosts: any[] = [];
+      let promotionIndex = 0;
+      
+      enhancedPosts.forEach((post, index) => {
+        mergedPosts.push(post);
+        
+        // أضف منشور مروج كل 3 منشورات
+        if ((index + 1) % 3 === 0 && promotionIndex < enhancedPromotedPosts.length) {
+          mergedPosts.push(enhancedPromotedPosts[promotionIndex]);
+          promotionIndex++;
+        }
+      });
+      
+      // أضف باقي المنشورات المروجة في النهاية
+      while (promotionIndex < enhancedPromotedPosts.length) {
+        mergedPosts.push(enhancedPromotedPosts[promotionIndex]);
+        promotionIndex++;
+      }
+      
+      console.log(`📱 Returning ${mergedPosts.length} posts (${enhancedPosts.length} regular + ${enhancedPromotedPosts.length} promoted)`);
+      
+      res.json(mergedPosts);
     } catch (error) {
       console.error('Error fetching social feed:', error);
       res.status(500).json({ message: "خطأ في جلب المنشورات" });

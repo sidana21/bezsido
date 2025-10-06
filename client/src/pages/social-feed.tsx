@@ -17,6 +17,13 @@ interface PostWithUser extends BivochatPost {
   isLiked?: boolean;
   isSaved?: boolean;
   isFollowing?: boolean;
+  isPromoted?: boolean;
+  promotionData?: {
+    vendorId: string;
+    promotionId: string;
+    description?: string | null;
+    subscriptionTier?: string;
+  };
 }
 
 export default function SocialFeed() {
