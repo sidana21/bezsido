@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [otpCode, setOtpCode] = useState("");
   const [name, setName] = useState("");
   const [location, setLocation] = useState("الجزائر");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [showProfileForm, setShowProfileForm] = useState(false);
@@ -165,6 +166,31 @@ export default function LoginPage() {
       return;
     }
 
+    if (!dateOfBirth) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال تاريخ الميلاد",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // التحقق من العمر 18+
+    const birthDate = new Date(dateOfBirth);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+    
+    if (actualAge < 18) {
+      toast({
+        title: "عذراً",
+        description: "يجب أن يكون عمرك 18 عاماً أو أكثر للتسجيل في التطبيق",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!location) {
       toast({
         title: "خطأ",
@@ -195,6 +221,7 @@ export default function LoginPage() {
           phone: fullPhone, 
           code: otpCode,
           name: name.trim(),
+          dateOfBirth: dateOfBirth,
           location: location.trim()
         }),
       });
@@ -252,6 +279,22 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">تاريخ الميلاد</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  data-testid="input-dateofbirth"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                  className="text-right"
+                />
+                <p className="text-xs text-muted-foreground">
+                  يجب أن يكون عمرك 18 عاماً أو أكثر
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="location">المنطقة</Label>
                 <Select value={location} onValueChange={setLocation}>
                   <SelectTrigger data-testid="select-location">
@@ -272,7 +315,7 @@ export default function LoginPage() {
                   onClick={handleCompleteProfile} 
                   data-testid="button-complete-profile"
                   className="w-full bg-[#25d366] hover:bg-[#22c55e] text-white"
-                  disabled={isLoading || !name.trim()}
+                  disabled={isLoading || !name.trim() || !dateOfBirth || !location}
                 >
                   {isLoading ? "جارِ الإنشاء..." : "إنشاء الحساب"}
                 </Button>
