@@ -630,6 +630,7 @@ export class DatabaseStorage implements IStorage {
         name: user.name,
         avatar: user.avatar || null,
         location: user.location,
+        dateOfBirth: user.dateOfBirth || null,
         isOnline: user.isOnline ?? true,
         isVerified: false,
         verifiedAt: null,

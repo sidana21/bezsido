@@ -171,6 +171,25 @@ app.use((req, res, next) => {
         console.log('ℹ️ users.verification_type migration skipped:', e.message);
       }
       
+      // Add date_of_birth column to users if needed
+      try {
+        await db.execute(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name = 'users' AND column_name = 'date_of_birth'
+            ) THEN
+              ALTER TABLE users ADD COLUMN date_of_birth TIMESTAMP;
+              RAISE NOTICE '✅ Added date_of_birth column to users table';
+            END IF;
+          END $$;
+        `);
+        console.log('✅ users.date_of_birth column migration complete');
+      } catch (e: any) {
+        console.log('ℹ️ users.date_of_birth migration skipped:', e.message);
+      }
+      
       console.log('✅ All critical migrations completed');
     }
   } catch (error) {
