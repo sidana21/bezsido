@@ -267,6 +267,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trust proxy for accurate IP addresses behind load balancers
   app.set('trust proxy', 1);
   
+  // Serve Digital Asset Links for Android App Links (highest priority)
+  app.get('/.well-known/assetlinks.json', (_req, res) => {
+    console.log('📱 Serving assetlinks.json for Android App Links');
+    try {
+      const filePath = path.join(process.cwd(), '.well-known/assetlinks.json');
+      const fileContent = fs.readFileSync(filePath, 'utf-8');
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.send(fileContent);
+    } catch (error) {
+      console.error('Error serving assetlinks.json:', error);
+      res.status(404).json({ error: 'File not found' });
+    }
+  });
+  
   // File upload endpoint for images and videos - uploads to Cloudinary
   app.post("/api/upload/media", requireAuth, upload.single('media'), async (req: any, res) => {
     try {

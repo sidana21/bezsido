@@ -50,6 +50,11 @@ export async function setupVite(app: Express, server: Server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
+    // Skip .well-known paths (for Android App Links, etc.)
+    if (url.startsWith('/.well-known/')) {
+      return next();
+    }
+
     try {
       const clientTemplate = path.resolve(
         __dirname,

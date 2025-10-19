@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bivochat.bivo",
+      "sha256_cert_fingerprints": [
+        "FC:5B:C3:AE:01:76:4B:68:77:A5:3E:C4:AA:6D:36:ED:4E:45:19:D1:9F:EB:2B:DE:75:3C:99:B6:EB:FC:CE:B9"
+      ]
+    }
+  }
+]
