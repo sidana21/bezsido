@@ -332,9 +332,9 @@ export default function SocialFeed() {
         </div>
       </div>
 
-      {/* مؤشر المنشورات الجانبي */}
+      {/* مؤشر المنشورات الجانبي - مخفي */}
       {posts.length > 1 && (
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-40 flex flex-col gap-2">
+        <div className="hidden absolute right-2 top-1/2 transform -translate-y-1/2 z-40 flex flex-col gap-2">
           {posts.map((_, index) => (
             <button
               key={index}
